@@ -1,17 +1,17 @@
-from pydantic import BaseModel
-from typing import Optional
+from .Wheather import Clima
 
+class Campo:
+    def __init__(self, nombre: str, ubicacion: str):
+        self.nombre = nombre
+        self.ubicacion = ubicacion
+        self.techo_activo = False
+        self.clima_actual = None  # Objeto Clima
 
-class Field(BaseModel):
-    id: int
-    nombre: str
-    ubicacion: str
-    municipio_id: str
-    estado: str
-    automatico: bool = True
+    def activar_techo(self):
+        self.techo_activo = True
 
+    def desactivar_techo(self):
+        self.techo_activo = False
 
-class FieldStatusResponse(BaseModel):
-    campo_id: int
-    estado: str
-    mensaje: Optional[str] = None
+    def actualizar_clima(self, clima):
+        self.clima_actual = clima
