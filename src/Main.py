@@ -3,23 +3,36 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Importar tus clases
-from models.User import User
-from models.Field import Field
-from models.Point import Point
-
+# ----- APP -----
 app = FastAPI()
 
-# Montar carpeta estática
+# Montar carpeta static
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Plantillas HTML
+# Plantillas
 templates = Jinja2Templates(directory="templates")
 
-# Base de datos temporal en memoria
+# ----- DATOS EN MEMORIA -----
 users = []
 fields = []
 current_user = None
+
+
+# --- MODELOS SIMPLES ---
+class User:
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
+
+    def login(self, username, password):
+        return self.username == username and self.password == password
+
+
+class Field:
+    def __init__(self, name, location, state="open"):
+        self.name = name
+        self.location = location
+        self.state = state
 
 
 # --- RUTAS ---
@@ -36,8 +49,9 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         if user.login(username, password):
             current_user = user
             return RedirectResponse(url="/main", status_code=303)
-    # Fallo de login
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Usuario o contraseña incorrectos"})
+    return templates.TemplateResponse(
+        "login.html", {"request": request, "error": "Usuario o contraseña incorrectos"}
+    )
 
 
 @app.get("/register", response_class=HTMLResponse)
@@ -47,12 +61,11 @@ def register_page(request: Request):
 
 @app.post("/register")
 def register(request: Request, username: str = Form(...), password: str = Form(...)):
-    global users
-    # Comprobar si el usuario ya existe
     for u in users:
         if u.username == username:
-            return templates.TemplateResponse("register.html", {"request": request, "error": "Usuario ya existe"})
-    # Crear nuevo usuario
+            return templates.TemplateResponse(
+                "register.html", {"request": request, "error": "Usuario ya existe"}
+            )
     user = User(username, password)
     users.append(user)
     return RedirectResponse(url="/", status_code=303)
@@ -62,4 +75,12 @@ def register(request: Request, username: str = Form(...), password: str = Form(.
 def main_page(request: Request):
     if current_user is None:
         return RedirectResponse(url="/", status_code=303)
+    # Inicializamos campos si está vacío
+    if not fields:
+        fields.extend([
+            Field("Campo 1", "Briñas, La Rioja", "open"),
+            Field("Campo 2", "Haro, La Rioja", "open"),
+            Field("Campo 3", "Casalarreina, La Rioja", "closed"),
+            Field("Campo 4", "Haro, La Rioja", "closed")
+        ])
     return templates.TemplateResponse("main.html", {"request": request, "fields": fields, "user": current_user})

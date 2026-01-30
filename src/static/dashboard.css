@@ -1,5 +1,7 @@
+/* ===== Contenedor de hora y fecha ===== */
 .time-container {
     margin: 30px;
+    text-align: center;
 }
 
 .time {
@@ -9,8 +11,10 @@
 
 .date {
     font-size: 24px;
+    color: #333;
 }
 
+/* ===== Dashboard ===== */
 .dashboard {
     background: #dfffd6;
     margin: 20px;
@@ -18,9 +22,10 @@
     border-radius: 20px;
 }
 
+/* ===== Campos ===== */
 .field-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1.2fr;
+    grid-template-columns: 2fr 1fr 1.5fr;
     align-items: center;
     background: #90ee90;
     border-radius: 15px;
@@ -43,6 +48,7 @@
     padding: 12px;
     border-radius: 25px;
     font-weight: bold;
+    min-width: 90px;
 }
 
 /* Estados */
@@ -51,20 +57,26 @@
     color: white;
 }
 
-.status-opening {
-    background: #fff176;
-}
-
 .status-closed {
     background: red;
     color: white;
 }
 
-.status-closing {
-    background: orange;
+.status-opening {
+    background: #fff176;
 }
 
-/* Botones */
+.status-closing {
+    background: orange;
+    color: black;
+}
+
+/* ===== Botones ===== */
+.field-buttons {
+    display: flex;
+    gap: 10px;
+}
+
 .action-btn {
     padding: 12px;
     border-radius: 15px;
@@ -79,6 +91,16 @@
     cursor: not-allowed;
 }
 
+.delete-btn {
+    background-color: #ff4d4d;
+    color: white;
+}
+
+.delete-btn:hover {
+    background-color: #e60000;
+}
+
+/* Botón añadir campo */
 .add-field-btn {
     margin: 30px auto 0;
     display: block;
@@ -89,4 +111,8 @@
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
+}
+
+.add-field-btn:hover {
+    background: #00cc00;
 }
