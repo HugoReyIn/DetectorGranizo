@@ -1,28 +1,77 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Mis Campos</title>
-  <link rel="stylesheet" href="../static/style.css">
+    <meta charset="UTF-8">
+    <title>Detector Granizo</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
-  <header>Mis Campos</header>
-  <div class="container">
-    <div class="field-card">
-      <h3>Campo Norte</h3>
-      <p>Municipio: Madrid</p>
-      <p>Puntos: 3</p>
-      <button>Ver en mapa</button>
+
+<div class="time-container">
+    <div class="time">23:50</div>
+    <div class="date">Lunes, 18 de noviembre 2025</div>
+</div>
+
+<div class="dashboard">
+
+    <!-- CAMPO -->
+    <div class="field-row" data-state="open">
+        <div class="field-info">
+            <h3>Campo 1</h3>
+            <span>Briñas, La Rioja</span>
+        </div>
+
+        <div class="field-status status-open">Abierto</div>
+
+        <button class="action-btn" onclick="toggleRoof(this)">
+            Cierre manual
+        </button>
     </div>
 
-    <div class="field-card">
-      <h3>Campo Sur</h3>
-      <p>Municipio: Valencia</p>
-      <p>Puntos: 5</p>
-      <button>Ver en mapa</button>
+    <div class="field-row" data-state="closing">
+        <div class="field-info">
+            <h3>Campo 2</h3>
+            <span>Haro, La Rioja</span>
+        </div>
+
+        <div class="field-status status-closing">Cerrando...</div>
+
+        <button class="action-btn disabled" disabled>
+            Cierre manual
+        </button>
     </div>
 
-    <button>Agregar nuevo campo</button>
-  </div>
+    <div class="field-row" data-state="closed">
+        <div class="field-info">
+            <h3>Campo 3</h3>
+            <span>Casalarreina, La Rioja</span>
+        </div>
+
+        <div class="field-status status-closed">Cerrado</div>
+
+        <button class="action-btn" onclick="toggleRoof(this)">
+            Apertura manual
+        </button>
+    </div>
+
+    <div class="field-row" data-state="opening">
+        <div class="field-info">
+            <h3>Campo 4</h3>
+            <span>Haro, La Rioja</span>
+        </div>
+
+        <div class="field-status status-opening">Abriendo...</div>
+
+        <button class="action-btn disabled" disabled>
+            Apertura manual
+        </button>
+    </div>
+
+    <button class="add-field-btn">+ Añadir campo</button>
+
+</div>
+
+<script src="/static/dashboard.js"></script>
 </body>
 </html>

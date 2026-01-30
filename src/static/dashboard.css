@@ -1,0 +1,92 @@
+.time-container {
+    margin: 30px;
+}
+
+.time {
+    font-size: 64px;
+    font-weight: bold;
+}
+
+.date {
+    font-size: 24px;
+}
+
+.dashboard {
+    background: #dfffd6;
+    margin: 20px;
+    padding: 30px;
+    border-radius: 20px;
+}
+
+.field-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1.2fr;
+    align-items: center;
+    background: #90ee90;
+    border-radius: 15px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+}
+
+.field-info h3 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.field-info span {
+    color: #6a6a6a;
+    font-size: 16px;
+}
+
+.field-status {
+    text-align: center;
+    padding: 12px;
+    border-radius: 25px;
+    font-weight: bold;
+}
+
+/* Estados */
+.status-open {
+    background: #00c800;
+    color: white;
+}
+
+.status-opening {
+    background: #fff176;
+}
+
+.status-closed {
+    background: red;
+    color: white;
+}
+
+.status-closing {
+    background: orange;
+}
+
+/* Botones */
+.action-btn {
+    padding: 12px;
+    border-radius: 15px;
+    border: none;
+    background: #d9d9d9;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.action-btn.disabled {
+    background: #bdbdbd;
+    cursor: not-allowed;
+}
+
+.add-field-btn {
+    margin: 30px auto 0;
+    display: block;
+    padding: 15px 30px;
+    background: #00ff00;
+    border-radius: 20px;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}

@@ -1,79 +1,65 @@
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+# Importar tus clases
 from models.User import User
 from models.Field import Field
 from models.Point import Point
 
+app = FastAPI()
 
-class Main:
-    def __init__(self):
-        self.users = []
-        self.fields = []
-        self.current_user = None
+# Montar carpeta estática
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    def register_user(self):
-        username = input("Usuario: ")
-        password = input("Contraseña: ")
-        user = User(username, password)
-        self.users.append(user)
-        print("✅ Usuario registrado")
+# Plantillas HTML
+templates = Jinja2Templates(directory="templates")
 
-    def login(self):
-        username = input("Usuario: ")
-        password = input("Contraseña: ")
-
-        for user in self.users:
-            if user.login(username, password):
-                self.current_user = user
-                print(f"✅ Bienvenido {user.username}")
-                return
-
-        print("❌ Usuario o contraseña incorrectos")
-
-    def create_field(self):
-        if not self.current_user:
-            print("❌ Debes iniciar sesión primero")
-            return
-
-        name = input("Nombre del campo: ")
-        municipality = input("Municipio (deja vacío si no sabes): ")
-
-        field = Field(name, municipality=municipality if municipality else None)
-
-        while True:
-            add = input("¿Añadir punto? (s/n): ").lower()
-            if add != "s":
-                break
-
-            lat = float(input("Latitud: "))
-            lon = float(input("Longitud: "))
-            field.add_point(Point(lat, lon))
-
-        self.fields.append(field)
-        print("✅ Campo creado")
-        print(field)
-
-    def run(self):
-        while True:
-            print("\n--- MENÚ ---")
-            print("1. Registrar usuario")
-            print("2. Iniciar sesión")
-            print("3. Crear campo")
-            print("4. Salir")
-
-            option = input("Elige una opción: ")
-
-            if option == "1":
-                self.register_user()
-            elif option == "2":
-                self.login()
-            elif option == "3":
-                self.create_field()
-            elif option == "4":
-                print("👋 Hasta luego")
-                break
-            else:
-                print("❌ Opción no válida")
+# Base de datos temporal en memoria
+users = []
+fields = []
+current_user = None
 
 
-if __name__ == "__main__":
-    app = Main()
-    app.run()
+# --- RUTAS ---
+
+@app.get("/", response_class=HTMLResponse)
+def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+def login(request: Request, username: str = Form(...), password: str = Form(...)):
+    global current_user
+    for user in users:
+        if user.login(username, password):
+            current_user = user
+            return RedirectResponse(url="/main", status_code=303)
+    # Fallo de login
+    return templates.TemplateResponse("login.html", {"request": request, "error": "Usuario o contraseña incorrectos"})
+
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
+
+
+@app.post("/register")
+def register(request: Request, username: str = Form(...), password: str = Form(...)):
+    global users
+    # Comprobar si el usuario ya existe
+    for u in users:
+        if u.username == username:
+            return templates.TemplateResponse("register.html", {"request": request, "error": "Usuario ya existe"})
+    # Crear nuevo usuario
+    user = User(username, password)
+    users.append(user)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.get("/main", response_class=HTMLResponse)
+def main_page(request: Request):
+    if current_user is None:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse("main.html", {"request": request, "fields": fields, "user": current_user})
