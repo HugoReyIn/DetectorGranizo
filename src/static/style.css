@@ -1,0 +1,103 @@
+/* Estilos generales */
+body {
+  background-color: #E8F5E9;
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+
+/* Header de la pantalla principal */
+header {
+  background-color: #4CAF50;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  font-size: 24px;
+}
+
+/* Contenedores centrados (login y registro) */
+.container-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Card para login y registro */
+.card {
+  background-color: #ffffff;
+  padding: 40px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  width: 350px;
+  text-align: center;
+}
+
+/* Títulos */
+h2 {
+  color: #4CAF50;
+  margin-bottom: 30px;
+}
+
+/* Inputs de formulario */
+input[type="text"], input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+/* Botones */
+button {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+button:hover {
+  background-color: #388E3C;
+}
+
+/* Links debajo del formulario */
+.link {
+  margin-top: 15px;
+  display: block;
+  color: #4CAF50;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* Contenedor de la pantalla principal */
+.container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Cards de los campos */
+.field-card {
+  background-color: #ffffff;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+}
+
+.field-card h3 {
+  margin: 0;
+  color: #4CAF50;
+}
+
+.field-card p {
+  margin: 5px 0;
+  color: #333;
+}
