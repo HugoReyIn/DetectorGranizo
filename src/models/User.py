@@ -1,10 +1,11 @@
 class User:
-    def __init__(self, username: str, password: str):
-        self.username = username
+    def __init__(self, email: str, password: str, name: str = None):
+        self.email = email
         self.password = password
+        self.name = name
 
-    def login(self, username: str, password: str) -> bool:
-        return self.username == username and self.password == password
+    def login(self, email: str, password: str) -> bool:
+        return self.email == email and self.password == password
 
     def __repr__(self):
-        return f"User(username='{self.username}')"
+        return f"User(email='{self.email}', name='{self.name}')"
