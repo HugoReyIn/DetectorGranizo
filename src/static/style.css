@@ -39,7 +39,7 @@ h2 {
 }
 
 /* Inputs de formulario */
-input[type="text"], input[type="password"] {
+input[type="text"], input[type="password"], input[type="email"] {
   width: 100%;
   padding: 12px;
   margin: 10px 0;
