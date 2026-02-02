@@ -20,7 +20,7 @@ function addPoint(latlng) {
     const marker = L.circleMarker(latlng, {
         radius: 6,
         color: '#000',
-        fillColor: '#00ff00',
+        fillColor: '#fff',
         fillOpacity: 1
     }).addTo(map);
 
