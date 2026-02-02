@@ -3,6 +3,12 @@
     margin: 30px auto;
 }
 
+h2 {
+    text-align: center;
+    color: #4CAF50;
+    margin-bottom: 20px;
+}
+
 #map {
     height: 450px;
     margin: 20px 0;
@@ -14,13 +20,20 @@
     padding: 15px;
     border-radius: 10px;
     margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    color: black;
 }
 
 .info-box p {
-    margin: 5px 0;
+    margin: 5px 10px;
 }
 
 .hint {
     font-size: 13px;
     color: #777;
+    width: 100%;
+    text-align: center;
+    margin-top: 5px;
 }

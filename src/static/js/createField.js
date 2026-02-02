@@ -36,7 +36,7 @@ function drawPolygon() {
 
     if (points.length >= 2) {
         polygon = L.polygon(points, {
-            color: 'green',
+            color: 'white',
             fillOpacity: 0.3
         }).addTo(map);
     }
