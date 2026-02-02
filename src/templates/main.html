@@ -19,21 +19,37 @@
     <div class="field-row" data-state="{{ field.state }}">
         <div class="field-info">
             <h3>{{ field.name }}</h3>
-            <span>{{ field.location }}</span>
+            <span>{{ field.municipality }}</span>
         </div>
+
         <div class="field-status status-{{ field.state }}">
-            {% if field.state == "open" %}Abierto{% else %}Cerrado{% endif %}
+            {% if field.state == "open" %}
+                Abierto
+            {% else %}
+                Cerrado
+            {% endif %}
         </div>
+
         <div class="field-buttons">
-            <button class="action-btn" onclick="toggleRoof(this)">
-                {% if field.state == "open" %}Cierre manual{% else %}Apertura manual{% endif %}
+            <button class="action-btn">
+                {% if field.state == "open" %}
+                    Cierre manual
+                {% else %}
+                    Apertura manual
+                {% endif %}
             </button>
-            <button class="action-btn delete-btn" onclick="deleteField(this)">Eliminar campo</button>
+
+            <button class="action-btn delete-btn">
+                Eliminar campo
+            </button>
         </div>
     </div>
     {% endfor %}
 
-    <button class="add-field-btn" onclick="addField()">+ Añadir campo</button>
+    <button class="add-field-btn" onclick="window.location.href='/field/new'">
+        + Añadir campo
+    </button>
+
 </div>
 
 <script src="/static/dashboard.js"></script>
