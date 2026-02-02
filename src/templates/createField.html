@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Crear campo</title>
+
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/create_field.css">
+
+    <!-- Leaflet -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+
+</head>
+<body>
+
+<div class="container">
+    <h2>Nuevo campo</h2>
+
+    <form id="field-form">
+        <input type="text" id="field-name" placeholder="Nombre del campo" required>
+        <input type="text" id="field-location" placeholder="Dirección / Municipio" required>
+
+        <div id="map"></div>
+
+        <div class="info-box">
+            <p><strong>Puntos:</strong> <span id="points-count">0</span></p>
+            <p><strong>Área:</strong> <span id="area">0</span> m²</p>
+            <p class="hint">Mínimo 3 puntos para calcular el área</p>
+        </div>
+
+        <button type="submit">Guardar campo</button>
+        <a href="/main" class="link">Cancelar</a>
+    </form>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/create_field.js"></script>
+
+</body>
+</html>

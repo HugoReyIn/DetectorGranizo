@@ -1,0 +1,26 @@
+.container {
+    max-width: 900px;
+    margin: 30px auto;
+}
+
+#map {
+    height: 450px;
+    margin: 20px 0;
+    border-radius: 15px;
+}
+
+.info-box {
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.info-box p {
+    margin: 5px 0;
+}
+
+.hint {
+    font-size: 13px;
+    color: #777;
+}
