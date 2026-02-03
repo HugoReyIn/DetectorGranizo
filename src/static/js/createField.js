@@ -19,18 +19,10 @@ const whitePointIcon = L.divIcon({
 });
 
 // ---------------- CARGAR MUNICIPIOS (TOPOJSON) ----------------
-fetch("/static/json/spain-municipalities.json")
+fetch("/static/json/municipalities.json")  // <-- tu nuevo archivo
   .then(res => res.json())
   .then(topoData => {
-      // Convertimos a GeoJSON
       municipiosGeoJSON = topojson.feature(topoData, topoData.objects.municipalities);
-
-      // Cada feature toma su id como propiedad 'NOMBRE'
-      municipiosGeoJSON.features.forEach(f => {
-          f.properties = f.properties || {};
-          f.properties.NOMBRE = f.id; // Si tienes un mapeo a nombres reales, sustituir aquí
-      });
-
       console.log("Municipios cargados:", municipiosGeoJSON.features.length);
   })
   .catch(err => console.error("Error cargando municipios:", err));
@@ -204,7 +196,7 @@ function asignarMunicipio() {
             const area = turf.area(intersection);
             if (area > mayorArea) {
                 mayorArea = area;
-                municipioSeleccionado = mun.properties.NOMBRE;
+                municipioSeleccionado = mun.properties.name;
             }
         }
     });
