@@ -4,15 +4,15 @@
     <meta charset="UTF-8">
     <title>Crear campo</title>
 
+    <!-- Estilos generales -->
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/createField.css">
 
-    <!-- Leaflet -->
+    <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
-
 </head>
 <body>
 
@@ -28,6 +28,7 @@
         <div class="info-box">
             <p><strong>Puntos:</strong> <span id="points-count">0</span></p>
             <p><strong>Área:</strong> <span id="area">0</span> m²</p>
+            <p><strong>Municipio:</strong> <span id="municipio">–</span></p>
             <p class="hint">Mínimo 3 puntos para calcular el área</p>
         </div>
 
@@ -36,7 +37,12 @@
     </form>
 </div>
 
+<!-- Scripts necesarios -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="https://unpkg.com/topojson-client@3"></script>
+
+<!-- Tu JS personalizado -->
 <script src="/static/js/createField.js"></script>
 
 </body>
