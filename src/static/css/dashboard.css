@@ -22,19 +22,19 @@
     border-radius: 20px;
 }
 
-/* ===== Campos ===== */
+/* ===== Campos (Fila) ===== */
 .field-row {
     display: grid;
-    grid-template-columns: 2fr 0.5fr 1fr;
+    grid-template-columns: 2fr 20px 20px; 
     align-items: center;             
     background: #90ee90;
     border-radius: 15px;
     padding: 15px 20px;
     margin-bottom: 15px;
-    column-gap: 15px;
+    column-gap: 20px;
 }
 
-/* ===== Información del campo (columna 1) ===== */
+/* ===== Información del campo (Columna 1) ===== */
 .field-info h3 {
     margin: 0;
     font-size: 24px;
@@ -45,70 +45,49 @@
     font-size: 16px;
 }
 
-/* ===== Estado (columna 2) ===== */
-.field-status {
-    text-align: center;
-    padding: 12px;
-    border-radius: 25px;
-    font-weight: bold;
-}
-
-/* Estados */
-.status-open {
-    background: #00c800;
-    color: white;
-}
-
-.status-closed {
-    background: red;
-    color: white;
-}
-
-.status-opening {
-    background: #75cf75;
-    color: black;
-}
-
-.status-closing {
-    background: #c36262;
-    color: black;
-}
-
-/* ===== Botones (columna 3) ===== */
-.field-buttons {
+/* Estilo Base compartido para Estado y Botón para asegurar igualdad total */
+.field-status, .action-btn {
+    height: 45px;           /* Altura fija para ambos */
     display: flex;
     align-items: center;
-    align-self: center;
     justify-content: center;
-    gap: 10px;
+    border-radius: 25px;    /* Redondeo idéntico */
+    font-weight: bold;
+    font-size: 14px;        /* Bajamos un poco el tamaño para que quepa "Cierre manual" */
+    text-align: center;
+    padding: 0 10px;        /* Padding lateral mínimo */
+    box-sizing: border-box;
 }
 
-/* Botones individuales */
-.action-btn {
-    padding: 10px;
-    border-radius: 15px;
-    border: none;
-    background: #d9d9d9;
-    font-weight: bold;
-    cursor: pointer;
+/* ===== Estado (Columna 2) ===== */
+.status-open { background: #00c800; color: white; }
+.status-closed { background: #ff0000; color: white; }
+.status-opening { background: #75cf75; color: black; }
+.status-closing { background: #c36262; color: black; }
+
+/* ===== Botones (Columna 3) ===== */
+.field-buttons {
+    width: 100%;
 }
+
+.action-btn {
+    width: 100%;            /* Ocupa los 150px asignados en el grid */
+    border: none;
+    background: #e0e0e0;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.action-btn:hover { background: #d0d0d0; }
 
 .action-btn.disabled {
     background: #bdbdbd;
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
-/* Botón eliminar */
-.delete-btn {
-    background-color: #ff4d4d;
-    color: white;
-}
-
-.delete-btn:hover {
-    background-color: #e60000;
-}
-
-/* ===== Botón añadir campo ===== */
+/* ===== Botón añadir campo (Inferior) ===== */
 .add-field-btn {
     margin: 30px auto 0;
     display: block;
@@ -119,8 +98,4 @@
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
-}
-
-.add-field-btn:hover {
-    background: #00cc00;
 }
