@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <title>Crear campo</title>
 
-    <!-- Estilos generales -->
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/createField.css">
 
-    <!-- Leaflet CSS -->
     <link
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -20,29 +18,47 @@
     <h2>Nuevo campo</h2>
 
     <form id="field-form">
-        <input type="text" id="field-name" placeholder="Nombre del campo" required>
-        <input type="text" id="field-location" placeholder="Dirección / Municipio" required>
+
+        <!-- FILA SUPERIOR -->
+        <div class="top-row">
+            <input
+                type="text"
+                id="field-name"
+                placeholder="Nombre del campo"
+                required
+            >
+
+            <div class="buttons">
+                <button type="submit" class="btn-save">Guardar campo</button>
+                <button type="button" class="btn-delete">Eliminar campo</button>
+            </div>
+        </div>
+
+        <!-- INFO -->
+        <div class="info-box">
+            <div class="info-col">
+                <span class="label">Área</span>
+                <span class="value"><span id="area">0</span> m²</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="info-col">
+                <span class="label">Municipio</span>
+                <span class="value" id="field-location">–</span>
+            </div>
+        </div>
 
         <div id="map"></div>
 
-        <div class="info-box">
-            <p><strong>Puntos:</strong> <span id="points-count">0</span></p>
-            <p><strong>Área:</strong> <span id="area">0</span> m²</p>
-            <p><strong>Municipio:</strong> <span id="municipio">–</span></p>
-            <p class="hint">Mínimo 3 puntos para calcular el área</p>
-        </div>
-
-        <button type="submit">Guardar campo</button>
-        <a href="/main" class="link">Cancelar</a>
     </form>
+
+    <a href="/main" class="link">Cancelar</a>
 </div>
 
-<!-- Scripts necesarios -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 <script src="https://unpkg.com/topojson@3"></script>
-
-<!-- Tu JS personalizado -->
 <script src="/static/js/createField.js"></script>
 
 </body>
