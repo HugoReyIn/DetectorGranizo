@@ -25,7 +25,7 @@
 
             <div class="buttons">
                 <button type="submit" class="btn-save">Guardar campo</button>
-                <button type="button" class="delete-btn">Eliminar campo</button>
+                <button type="button" class="delete-btn" onclick="window.location.href='/main'">Cancelar</button>
             </div>
         </div>
 
@@ -51,17 +51,23 @@
             </div>
         </div>
 
-        <div id="map"></div>
+        <div id="map" style="height: 400px;"></div>
 
     </form>
 
-    <a href="/main" class="link">Cancelar</a>
+    <a href="/main" class="link">Volver al Dashboard</a>
 </div>
 
+<!-- Leaflet y Turf -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
 <script src="https://unpkg.com/topojson@3"></script>
+
+<script>
+    const currentUserId = {{ user.id }};
+</script>
 <script src="/static/js/createField.js"></script>
+
 
 </body>
 </html>

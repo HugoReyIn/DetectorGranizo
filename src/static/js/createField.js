@@ -6,11 +6,16 @@ document.addEventListener("DOMContentLoaded", () => {
     let geocodeTimeout = null;
     let fieldMunicipio = "–";
 
+    // Variable para pasar user_id al backend
+    const currentUserId = window.currentUserId;
+
+    // ==========================
     // INICIAR MAPA
+    // ==========================
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             pos => initMap(pos.coords.latitude, pos.coords.longitude),
-            () => initMap(43.2630, -2.9350) 
+            () => initMap(43.2630, -2.9350)
         );
     } else {
         initMap(43.2630, -2.9350);
@@ -18,6 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function initMap(lat, lng) {
         map = L.map("map").setView([lat, lng], 16);
+
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
 
@@ -30,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const whiteIcon = L.divIcon({
         className: "",
-        html: `<div style="width:10px; height:10px; background:white; border:2px solid black; border-radius:50%;"></div>`,
+        html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;"></div>`,
         iconSize: [14, 14],
         iconAnchor: [7, 7]
     });
@@ -76,12 +82,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (points.length >= 3) {
             const area = calculateArea(points);
             areaEl.textContent = area.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        } else {
-            areaEl.textContent = "0,0";
-        }
+        } else areaEl.textContent = "0,0";
     }
 
-    // CÁLCULO DE ÁREA (Haversine/Spherical)
     function calculateArea(coords) {
         const R = 6378137;
         let area = 0;
@@ -111,28 +114,35 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
             fieldMunicipio = data.municipio || "Desconocido";
             document.getElementById("field-location").textContent = fieldMunicipio;
-        } catch (err) {
+        } catch {
             document.getElementById("field-location").textContent = "Error";
         }
     }
 
-    // SUBMIT CON ESTADO PREDETERMINADO
-    document.getElementById("field-form").addEventListener("submit", e => {
+    document.getElementById("field-form").addEventListener("submit", async e => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
 
-        const data = {
-            name: document.getElementById("field-name").value,
-            municipality: fieldMunicipio,
-            area: document.getElementById("area").textContent,
-            points: points,
-            state: "open" // Todos nacen abiertos
-        };
-        console.log("Datos a guardar:", data);
-        // Aquí harías tu fetch POST
+        const areaText = document.getElementById("area").textContent;
+        const areaFloat = parseFloat(areaText.replace(/\./g, '').replace(',', '.'));
+
+        const formData = new FormData();
+        formData.append("name", document.getElementById("field-name").value);
+        formData.append("municipality", fieldMunicipio);
+        formData.append("area", areaFloat);
+        formData.append("points", JSON.stringify(points.map(p => ({ lat: p[0], lng: p[1] }))));
+        formData.append("user_id", currentUserId);
+
+        try {
+            const response = await fetch("/field/new", { method: "POST", body: formData });
+            if (response.redirected) window.location.href = response.url;
+            else alert("Error al guardar el campo.");
+        } catch {
+            alert("Error de conexión con el servidor.");
+        }
     });
 
-    // Auxiliares para click en línea
+    // Auxiliares
     function getSegmentIndex(latlng) {
         if (points.length < 2) return null;
         const p = map.latLngToLayerPoint(latlng);
@@ -143,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return null;
     }
-
     function distanceToSegment(p, a, b) {
         const l2 = Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
         if (l2 === 0) return p.distanceTo(a);
@@ -151,4 +160,5 @@ document.addEventListener("DOMContentLoaded", () => {
         t = Math.max(0, Math.min(1, t));
         return p.distanceTo(L.point(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)));
     }
+
 });

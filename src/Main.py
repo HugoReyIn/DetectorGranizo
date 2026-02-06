@@ -2,12 +2,15 @@ from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import json
+import requests
 
 from daos.UserDAO import UserDAO
 from daos.FieldDAO import FieldDAO
+from daos.PointDAO import PointDAO
 from models.User import User
 from models.Field import Field
-import requests
+from models.Point import Point
 
 # ----- APP -----
 app = FastAPI()
@@ -17,11 +20,14 @@ templates = Jinja2Templates(directory="templates")
 # ----- DAOs -----
 userDAO = UserDAO()
 fieldDAO = FieldDAO()
+pointDAO = PointDAO()
 
 # ----- SESIÓN SIMPLE -----
 current_user = None
 
-# ---------- LOGIN ----------
+# ==============================
+# LOGIN / REGISTER
+# ==============================
 @app.get("/", response_class=HTMLResponse)
 def loginPage(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
@@ -38,7 +44,6 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
         {"request": request, "error": "Correo o contraseña incorrectos"}
     )
 
-# ---------- REGISTER ----------
 @app.get("/register", response_class=HTMLResponse)
 def registerPage(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
@@ -54,7 +59,9 @@ def register(request: Request, name: str = Form(...), email: str = Form(...), pa
     userDAO.insertUser(new_user)
     return RedirectResponse(url="/", status_code=303)
 
-# ---------- MAIN ----------
+# ==============================
+# DASHBOARD
+# ==============================
 @app.get("/main", response_class=HTMLResponse)
 def mainPage(request: Request):
     if not current_user:
@@ -65,22 +72,56 @@ def mainPage(request: Request):
         {"request": request, "fields": fields, "user": current_user}
     )
 
-# ---------- CREATE FIELD ----------
+# ==============================
+# CREAR CAMPO
+# ==============================
 @app.get("/field/new", response_class=HTMLResponse)
-def newField(request: Request):
+def newFieldPage(request: Request):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse(
-        "createField.html",
-        {"request": request}
-    )
+    return templates.TemplateResponse("createField.html", {"request": request, "user": current_user})
 
-# ---------- GET MUNICIPIO (NOMINATIM) ----------
+@app.post("/field/new")
+def saveField(
+    request: Request,
+    name: str = Form(...),
+    municipality: str = Form(...),
+    area: str = Form(...),  # Recibimos como string para evitar 422
+    points: str = Form(...),
+    user_id: int = Form(...)
+):
+    # Validar usuario
+    user = userDAO.getUser(user_id)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    # Convertir area a float
+    try:
+        area_float = float(area.replace(",", "."))
+    except:
+        area_float = 0.0
+
+    # Guardar campo
+    new_field = Field(name=name, municipality=municipality, area_m2=area_float)
+    new_field.state = "open"
+    field_id = fieldDAO.insertField(new_field, user.id)
+
+    # Guardar puntos
+    try:
+        points_list = json.loads(points)
+        for p in points_list:
+            point = Point(latitude=p["lat"], longitude=p["lng"])
+            pointDAO.insertPoint(point, field_id)
+    except Exception as e:
+        print("Error guardando puntos:", e)
+
+    return RedirectResponse(url="/main", status_code=303)
+
+# ==============================
+# OBTENER MUNICIPIO (NOMINATIM)
+# ==============================
 @app.get("/get-municipio")
 def get_municipio(lat: float, lon: float):
-    """
-    Devuelve el municipio correspondiente a unas coordenadas.
-    """
     try:
         url = "https://nominatim.openstreetmap.org/reverse"
         headers = {"User-Agent": "MiApp/1.0 (tuemail@ejemplo.com)"}
@@ -101,6 +142,5 @@ def get_municipio(lat: float, lon: float):
         )
 
         return JSONResponse({"municipio": municipio})
-
-    except Exception as e:
+    except:
         return JSONResponse({"municipio": "Desconocido"})
