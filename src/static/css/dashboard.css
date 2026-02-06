@@ -25,7 +25,7 @@
 /* ===== Campos (Fila) ===== */
 .field-row {
     display: grid;
-    grid-template-columns: 2fr 20px 20px; 
+    grid-template-columns: 2fr 150px 150px; 
     align-items: center;             
     background: #90ee90;
     border-radius: 15px;

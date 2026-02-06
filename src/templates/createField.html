@@ -2,15 +2,11 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Crear campo</title>
-
+    <title>Crear campo - Detector Granizo</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/createField.css">
-
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    />
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
 
@@ -19,12 +15,11 @@
 
     <form id="field-form">
 
-        <!-- FILA SUPERIOR -->
         <div class="top-row">
-            <input
-                type="text"
-                id="field-name"
-                placeholder="Nombre del campo"
+            <input 
+                type="text" 
+                id="field-name" 
+                placeholder="Nombre del campo" 
                 required
             >
 
@@ -34,11 +29,18 @@
             </div>
         </div>
 
-        <!-- INFO -->
         <div class="info-box">
             <div class="info-col">
                 <span class="label">Área</span>
-                <span class="value"><span id="area">0</span> m²</span>
+                <span class="value"><span id="area">0,0</span> m²</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="info-col">
+                <div class="field-status status-open" id="roof-status" style="margin-top: 3px; min-width: 120px;">
+                    Abierto
+                </div>
             </div>
 
             <div class="divider"></div>
