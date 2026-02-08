@@ -86,7 +86,7 @@ def saveField(
     request: Request,
     name: str = Form(...),
     municipality: str = Form(...),
-    area: str = Form(...),  # Recibimos como string para evitar 422
+    area: str = Form(...),
     points: str = Form(...),
     user_id: int = Form(...)
 ):
@@ -95,7 +95,7 @@ def saveField(
     if not user:
         return RedirectResponse(url="/", status_code=303)
 
-    # Convertir area a float
+    # Convertir área a float
     try:
         area_float = float(area.replace(",", "."))
     except:

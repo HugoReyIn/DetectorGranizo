@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const currentUserId = parseInt(document.getElementById('field-user-id').value);
+
     let map;
     let points = [];
     let markers = [];
@@ -6,16 +8,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let geocodeTimeout = null;
     let fieldMunicipio = "–";
 
-    // Variable para pasar user_id al backend
-    const currentUserId = window.currentUserId;
-
     // ==========================
     // INICIAR MAPA
     // ==========================
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
             pos => initMap(pos.coords.latitude, pos.coords.longitude),
-            () => initMap(43.2630, -2.9350)
+            () => initMap(43.2630, -2.9350) // fallback
         );
     } else {
         initMap(43.2630, -2.9350);
@@ -61,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
             points.splice(i, 1);
             redraw();
         });
+
         redraw();
     }
 
@@ -119,19 +119,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ==========================
+    // SUBMIT FORM
+    // ==========================
     document.getElementById("field-form").addEventListener("submit", async e => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
 
-        const areaText = document.getElementById("area").textContent;
-        const areaFloat = parseFloat(areaText.replace(/\./g, '').replace(',', '.'));
+        // Llenar inputs ocultos
+        document.getElementById("field-area-hidden").value = parseFloat(document.getElementById("area").textContent.replace(/\./g, '').replace(',', '.'));
+        document.getElementById("field-municipality-hidden").value = fieldMunicipio;
+        document.getElementById("field-points-hidden").value = JSON.stringify(points.map(p => ({ lat: p[0], lng: p[1] })));
 
-        const formData = new FormData();
-        formData.append("name", document.getElementById("field-name").value);
-        formData.append("municipality", fieldMunicipio);
-        formData.append("area", areaFloat);
-        formData.append("points", JSON.stringify(points.map(p => ({ lat: p[0], lng: p[1] }))));
-        formData.append("user_id", currentUserId);
+        const formData = new FormData(e.target);
+        formData.append("user_id", currentUserId); // importante
 
         try {
             const response = await fetch("/field/new", { method: "POST", body: formData });
@@ -142,7 +143,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Auxiliares
+    // ==========================
+    // FUNCIONES AUXILIARES
+    // ==========================
     function getSegmentIndex(latlng) {
         if (points.length < 2) return null;
         const p = map.latLngToLayerPoint(latlng);
@@ -153,6 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return null;
     }
+
     function distanceToSegment(p, a, b) {
         const l2 = Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
         if (l2 === 0) return p.distanceTo(a);

@@ -14,14 +14,8 @@
     <h2>Nuevo campo</h2>
 
     <form id="field-form">
-
         <div class="top-row">
-            <input 
-                type="text" 
-                id="field-name" 
-                placeholder="Nombre del campo" 
-                required
-            >
+            <input type="text" id="field-name" name="name" placeholder="Nombre del campo" required>
 
             <div class="buttons">
                 <button type="submit" class="btn-save">Guardar campo</button>
@@ -53,6 +47,11 @@
 
         <div id="map" style="height: 400px;"></div>
 
+        <!-- Campos ocultos para enviar al backend -->
+        <input type="hidden" id="field-area-hidden" name="area">
+        <input type="hidden" id="field-municipality-hidden" name="municipality">
+        <input type="hidden" id="field-points-hidden" name="points">
+        <input type="hidden" id="field-user-id" name="user_id" value="{{ user.id }}">
     </form>
 
     <a href="/main" class="link">Volver al Dashboard</a>
@@ -61,13 +60,7 @@
 <!-- Leaflet y Turf -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="https://unpkg.com/topojson@3"></script>
-
-<script>
-    const currentUserId = {{ user.id }};
-</script>
 <script src="/static/js/createField.js"></script>
-
 
 </body>
 </html>
