@@ -12,123 +12,181 @@ from models.User import User
 from models.Field import Field
 from models.Point import Point
 
-# ----- APP -----
 app = FastAPI()
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# ----- DAOs -----
 userDAO = UserDAO()
 fieldDAO = FieldDAO()
 pointDAO = PointDAO()
 
-# ----- SESIÓN SIMPLE -----
 current_user = None
 
-# ==============================
-# LOGIN / REGISTER
-# ==============================
+# ================= LOGIN =================
+
 @app.get("/", response_class=HTMLResponse)
 def loginPage(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/login")
-def login(request: Request, email: str = Form(...), password: str = Form(...)):
+def login(email: str = Form(...), password: str = Form(...)):
     global current_user
+
     user = userDAO.getUserByEmail(email)
+
     if user and user.password == password:
         current_user = user
         return RedirectResponse(url="/main", status_code=303)
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "error": "Correo o contraseña incorrectos"}
-    )
+
+    return RedirectResponse(url="/", status_code=303)
+
+
+# ================= REGISTER =================
 
 @app.get("/register", response_class=HTMLResponse)
 def registerPage(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
+
 @app.post("/register")
-def register(request: Request, name: str = Form(...), email: str = Form(...), password: str = Form(...)):
-    if userDAO.getUserByEmail(email):
-        return templates.TemplateResponse(
-            "register.html",
-            {"request": request, "error": "El correo ya está registrado"}
-        )
-    new_user = User(email=email, password=password, name=name)
+def register(name: str = Form(...), email: str = Form(...), password: str = Form(...)):
+    existing_user = userDAO.getUserByEmail(email)
+
+    if existing_user:
+        return RedirectResponse(url="/register", status_code=303)
+
+    new_user = User(name=name, email=email, password=password)
     userDAO.insertUser(new_user)
+
     return RedirectResponse(url="/", status_code=303)
 
-# ==============================
-# DASHBOARD
-# ==============================
+
+# ================= MAIN =================
+
 @app.get("/main", response_class=HTMLResponse)
 def mainPage(request: Request):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
+
     fields = fieldDAO.getAllFieldsByUser(current_user.id)
+
     return templates.TemplateResponse(
         "main.html",
-        {"request": request, "fields": fields, "user": current_user}
+        {"request": request, "fields": fields}
     )
 
-# ==============================
-# CREAR CAMPO
-# ==============================
+
+# ================= NUEVO CAMPO =================
+
 @app.get("/field/new", response_class=HTMLResponse)
 def newFieldPage(request: Request):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
-    return templates.TemplateResponse("createField.html", {"request": request, "user": current_user})
+
+    return templates.TemplateResponse(
+        "field.html",
+        {"request": request, "field": None, "points_json": "[]"}
+    )
+
 
 @app.post("/field/new")
 def saveField(
-    request: Request,
     name: str = Form(...),
     municipality: str = Form(...),
     area: str = Form(...),
-    points: str = Form(...),
-    user_id: int = Form(...)
+    points: str = Form(...)
 ):
-    # Validar usuario
-    user = userDAO.getUser(user_id)
-    if not user:
+    if not current_user:
         return RedirectResponse(url="/", status_code=303)
 
-    # Convertir área a float
-    try:
-        area_float = float(area.replace(",", "."))
-    except:
-        area_float = 0.0
+    area_float = float(area.replace(",", "."))
 
-    # Guardar campo
     new_field = Field(name=name, municipality=municipality, area_m2=area_float)
     new_field.state = "open"
-    field_id = fieldDAO.insertField(new_field, user.id)
 
-    # Guardar puntos
-    try:
-        points_list = json.loads(points)
-        for p in points_list:
-            point = Point(latitude=p["lat"], longitude=p["lng"])
-            pointDAO.insertPoint(point, field_id)
-    except Exception as e:
-        print("Error guardando puntos:", e)
+    field_id = fieldDAO.insertField(new_field, current_user.id)
+
+    points_list = json.loads(points)
+    for p in points_list:
+        point = Point(latitude=p["lat"], longitude=p["lng"])
+        pointDAO.insertPoint(point, field_id)
 
     return RedirectResponse(url="/main", status_code=303)
 
-# ==============================
-# OBTENER MUNICIPIO (NOMINATIM)
-# ==============================
+
+# ================= EDITAR CAMPO =================
+
+@app.get("/field/edit/{field_id}", response_class=HTMLResponse)
+def editFieldPage(request: Request, field_id: int):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    field = fieldDAO.getField(field_id)
+
+    if not field or field.user_id != current_user.id:
+        return RedirectResponse(url="/main", status_code=303)
+
+    points = pointDAO.getPointsByField(field.id)
+
+    points_json = json.dumps(
+        [{"lat": p.latitude, "lng": p.longitude} for p in points]
+    )
+
+    return templates.TemplateResponse(
+        "field.html",
+        {
+            "request": request,
+            "field": field,
+            "points_json": points_json
+        }
+    )
+
+
+@app.post("/field/edit/{field_id}")
+def updateField(
+    field_id: int,
+    name: str = Form(...),
+    municipality: str = Form(...),
+    area: str = Form(...),
+    points: str = Form(...)
+):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    field = fieldDAO.getField(field_id)
+
+    if not field or field.user_id != current_user.id:
+        return RedirectResponse(url="/main", status_code=303)
+
+    field.name = name
+    field.municipality = municipality
+    field.area_m2 = float(area.replace(",", "."))
+
+    fieldDAO.updateField(field)
+
+    # BORRAR puntos antiguos
+    pointDAO.deletePointsByField(field.id)
+
+    # Insertar nuevos
+    points_list = json.loads(points)
+    for p in points_list:
+        point = Point(latitude=p["lat"], longitude=p["lng"])
+        pointDAO.insertPoint(point, field.id)
+
+    return RedirectResponse(url="/main", status_code=303)
+
+
+# ================= MUNICIPIO =================
+
 @app.get("/get-municipio")
 def get_municipio(lat: float, lon: float):
     try:
         url = "https://nominatim.openstreetmap.org/reverse"
-        headers = {"User-Agent": "MiApp/1.0 (tuemail@ejemplo.com)"}
+        headers = {"User-Agent": "MiApp/1.0"}
         params = {"lat": lat, "lon": lon, "format": "json"}
 
         r = requests.get(url, headers=headers, params=params, timeout=10)
-        r.raise_for_status()
         data = r.json()
 
         address = data.get("address", {})
@@ -137,7 +195,6 @@ def get_municipio(lat: float, lon: float):
             or address.get("city")
             or address.get("town")
             or address.get("village")
-            or address.get("county")
             or "Desconocido"
         )
 

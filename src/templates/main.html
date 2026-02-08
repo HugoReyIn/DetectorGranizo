@@ -8,44 +8,44 @@
 </head>
 <body>
 
-    <div class="time-container">
-        <div class="time" id="current-time">--:--</div>
-        <div class="date" id="current-date">---</div>
-    </div>
+<div class="time-container">
+    <div class="time" id="current-time">--:--</div>
+    <div class="date" id="current-date">---</div>
+</div>
 
-    <div class="dashboard">
-        {% for field in fields %}
-        <div class="field-row" data-state="{{ field.state }}">
-            <div class="field-info">
-                <h3>{{ field.name }}</h3>
-                <span>{{ field.municipality }}</span>
-            </div>
-
-            <div class="field-status status-{{ field.state }}">
-                {% if field.state == "open" %}
-                    Abierto
-                {% else %}
-                    Cerrado
-                {% endif %}
-            </div>
-
-            <div class="field-buttons">
-                <button class="action-btn" onclick="toggleRoof(this)">
-                    {% if field.state == "open" %}
-                        Cierre manual
-                    {% else %}
-                        Apertura manual
-                    {% endif %}
-                </button>
-            </div>
+<div class="dashboard">
+    {% for field in fields %}
+    <div class="field-row" data-state="{{ field.state }}" onclick="window.location.href='/field/edit/{{ field.id }}'">
+        <div class="field-info">
+            <h3>{{ field.name }}</h3>
+            <span>{{ field.municipality }}</span>
         </div>
-        {% endfor %}
 
-        <button class="add-field-btn" onclick="window.location.href='/field/new'">
-            + Añadir campo
-        </button>
+        <div class="field-status status-{{ field.state }}">
+            {% if field.state == "open" %}
+                Abierto
+            {% else %}
+                Cerrado
+            {% endif %}
+        </div>
+
+        <div class="field-buttons">
+            <button class="action-btn" onclick="toggleRoof(event, this)">
+                {% if field.state == "open" %}
+                    Cierre manual
+                {% else %}
+                    Apertura manual
+                {% endif %}
+            </button>
+        </div>
     </div>
+    {% endfor %}
 
-    <script src="/static/js/dashboard.js"></script>
+    <button class="add-field-btn" onclick="window.location.href='/field/new'">
+        + Añadir campo
+    </button>
+</div>
+
+<script src="/static/js/dashboard.js"></script>
 </body>
 </html>

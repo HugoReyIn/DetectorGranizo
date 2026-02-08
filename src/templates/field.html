@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if field %}Editar{% else %}Crear{% endif %} campo - Detector Granizo</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/createField.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+
+<div class="container">
+    <h2>{% if field %}Editar{% else %}Nuevo{% endif %} campo</h2>
+
+    <form id="field-form">
+        <div class="top-row">
+            <input type="text" id="field-name" name="name" placeholder="Nombre del campo" value="{{ field.name if field else '' }}" required>
+            <div class="buttons">
+                <button type="submit" class="btn-save">{% if field %}Guardar cambios{% else %}Guardar campo{% endif %}</button>
+                <button type="button" class="delete-btn" onclick="window.location.href='/main'">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-col">
+                <span class="label">Área</span>
+                <span class="value"><span id="area">{{ field.area_m2 if field else '0,0' }}</span> m²</span>
+            </div>
+            <div class="divider"></div>
+            <div class="info-col">
+                <div class="field-status status-{{ field.state if field else 'open' }}" id="roof-status" style="margin-top: 3px; min-width: 120px;">
+                    {% if field %}
+                        {% if field.state == "open" %}Abierto{% else %}Cerrado{% endif %}
+                    {% else %}
+                        Abierto
+                    {% endif %}
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div class="info-col">
+                <span class="label">Municipio</span>
+                <span class="value" id="field-location">{{ field.municipality if field else '–' }}</span>
+            </div>
+        </div>
+
+        <div id="map" style="height: 400px;"></div>
+
+        <!-- Inputs ocultos para enviar datos -->
+        <input type="hidden" id="field-id-hidden" name="field_id" value="{{ field.id if field else '' }}">
+        <input type="hidden" id="field-area-hidden" name="area" value="{{ field.area_m2 if field else '0' }}">
+        <input type="hidden" id="field-municipality-hidden" name="municipality" value="{{ field.municipality if field else '' }}">
+        <input type="hidden" id="field-points-hidden" name="points" value='{{ points_json if points_json else "[]" }}'>
+    </form>
+
+    <a href="/main" class="link">Volver al Dashboard</a>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+<script src="/static/js/createField.js"></script>
+</body>
+</html>

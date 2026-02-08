@@ -1,58 +1,56 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const currentUserId = parseInt(document.getElementById('field-user-id').value);
+    const fieldIdInput = document.getElementById("field-id-hidden");
+    const isEditing = fieldIdInput && fieldIdInput.value !== "";
+    const fieldId = isEditing ? fieldIdInput.value : null;
 
-    let map;
-    let points = [];
+    const pointsInput = document.getElementById("field-points-hidden");
+    let points = JSON.parse(pointsInput.value || "[]");
     let markers = [];
     let polygon = null;
-    let geocodeTimeout = null;
-    let fieldMunicipio = "–";
+    let map;
 
-    // ==========================
-    // INICIAR MAPA
-    // ==========================
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            pos => initMap(pos.coords.latitude, pos.coords.longitude),
-            () => initMap(43.2630, -2.9350) // fallback
-        );
-    } else {
-        initMap(43.2630, -2.9350);
-    }
+    const fieldMunicipioInput = document.getElementById("field-municipality-hidden");
+    let fieldMunicipio = fieldMunicipioInput.value || "–";
 
+    // ========================== MAPA ==========================
     function initMap(lat, lng) {
         map = L.map("map").setView([lat, lng], 16);
 
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
 
+        const whiteIcon = L.divIcon({
+            className: "",
+            html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+
+        // Cargar marcadores existentes
+        points.forEach(p => {
+            const marker = L.marker([p.lat, p.lng], { draggable: true, icon: whiteIcon }).addTo(map);
+            markers.push(marker);
+            addMarkerEvents(marker);
+        });
+
+        redraw();
+
+        // Añadir puntos con click
         map.on("click", e => {
-            const idx = getSegmentIndex(e.latlng);
-            if (idx !== null) addPointAt(e.latlng, idx + 1);
-            else addPoint(e.latlng);
+            points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+            const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
+            markers.push(marker);
+            addMarkerEvents(marker);
+            redraw();
         });
     }
 
-    const whiteIcon = L.divIcon({
-        className: "",
-        html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;"></div>`,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
-    });
-
-    function addPoint(latlng) { addPointAt(latlng, points.length); }
-
-    function addPointAt(latlng, index) {
-        points.splice(index, 0, [latlng.lat, latlng.lng]);
-        const marker = L.marker(latlng, { draggable: true, icon: whiteIcon }).addTo(map);
-        markers.splice(index, 0, marker);
-
+    function addMarkerEvents(marker) {
         marker.on("drag", () => {
             const i = markers.indexOf(marker);
-            points[i] = [marker.getLatLng().lat, marker.getLatLng().lng];
+            points[i] = { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng };
             redraw();
         });
-
         marker.on("contextmenu", () => {
             const i = markers.indexOf(marker);
             map.removeLayer(marker);
@@ -60,29 +58,28 @@ document.addEventListener("DOMContentLoaded", () => {
             points.splice(i, 1);
             redraw();
         });
-
-        redraw();
     }
 
     function redraw() {
         if (polygon) map.removeLayer(polygon);
         if (points.length >= 2) {
-            polygon = L.polygon(points, { color: "white", fillColor: "white", fillOpacity: 0.3, weight: 2 }).addTo(map);
+            polygon = L.polygon(points.map(p => [p.lat, p.lng]), { color: "white", fillColor: "white", fillOpacity: 0.3, weight: 2 }).addTo(map);
         }
         updateInfo();
-        if (points.length >= 3) debounceMunicipio();
-        else {
-            fieldMunicipio = "–";
-            document.getElementById("field-location").textContent = "–";
-        }
+        pointsInput.value = JSON.stringify(points);
     }
 
     function updateInfo() {
         const areaEl = document.getElementById("area");
         if (points.length >= 3) {
-            const area = calculateArea(points);
+            const area = calculateArea(points.map(p => [p.lat, p.lng]));
             areaEl.textContent = area.toLocaleString('es-ES', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-        } else areaEl.textContent = "0,0";
+            document.getElementById("field-area-hidden").value = area;
+        } else {
+            areaEl.textContent = "0,0";
+            document.getElementById("field-area-hidden").value = 0;
+        }
+        document.getElementById("field-municipality-hidden").value = fieldMunicipio;
     }
 
     function calculateArea(coords) {
@@ -96,73 +93,30 @@ document.addEventListener("DOMContentLoaded", () => {
         return Math.abs(area * R * R / 2);
     }
 
-    function getPolygonCentroid(pts) {
-        let lat = 0, lng = 0;
-        pts.forEach(p => { lat += p[0]; lng += p[1]; });
-        return [lat / pts.length, lng / pts.length];
+    // Inicializar mapa
+    if (points.length > 0) initMap(points[0].lat, points[0].lng);
+    else if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => initMap(pos.coords.latitude, pos.coords.longitude),
+            () => initMap(43.2630, -2.9350)
+        );
+    } else {
+        initMap(43.2630, -2.9350);
     }
 
-    function debounceMunicipio() {
-        clearTimeout(geocodeTimeout);
-        geocodeTimeout = setTimeout(obtenerMunicipio, 800);
-    }
-
-    async function obtenerMunicipio() {
-        const [lat, lng] = getPolygonCentroid(points);
-        try {
-            const res = await fetch(`/get-municipio?lat=${lat}&lon=${lng}`);
-            const data = await res.json();
-            fieldMunicipio = data.municipio || "Desconocido";
-            document.getElementById("field-location").textContent = fieldMunicipio;
-        } catch {
-            document.getElementById("field-location").textContent = "Error";
-        }
-    }
-
-    // ==========================
-    // SUBMIT FORM
-    // ==========================
-    document.getElementById("field-form").addEventListener("submit", async e => {
+    // ========================== ENVIAR FORMULARIO ==========================
+    document.getElementById("field-form").addEventListener("submit", e => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
 
-        // Llenar inputs ocultos
-        document.getElementById("field-area-hidden").value = parseFloat(document.getElementById("area").textContent.replace(/\./g, '').replace(',', '.'));
-        document.getElementById("field-municipality-hidden").value = fieldMunicipio;
-        document.getElementById("field-points-hidden").value = JSON.stringify(points.map(p => ({ lat: p[0], lng: p[1] })));
-
         const formData = new FormData(e.target);
-        formData.append("user_id", currentUserId); // importante
+        const endpoint = isEditing ? `/field/edit/${fieldId}` : "/field/new";
 
-        try {
-            const response = await fetch("/field/new", { method: "POST", body: formData });
-            if (response.redirected) window.location.href = response.url;
-            else alert("Error al guardar el campo.");
-        } catch {
-            alert("Error de conexión con el servidor.");
-        }
+        fetch(endpoint, { method: "POST", body: formData })
+            .then(res => {
+                if (res.redirected) window.location.href = res.url;
+                else alert("Error al guardar el campo");
+            })
+            .catch(() => alert("Error de conexión con el servidor."));
     });
-
-    // ==========================
-    // FUNCIONES AUXILIARES
-    // ==========================
-    function getSegmentIndex(latlng) {
-        if (points.length < 2) return null;
-        const p = map.latLngToLayerPoint(latlng);
-        for (let i = 0; i < points.length; i++) {
-            const a = map.latLngToLayerPoint(points[i]);
-            const b = map.latLngToLayerPoint(points[(i + 1) % points.length]);
-            if (distanceToSegment(p, a, b) < 8) return i;
-        }
-        return null;
-    }
-
-    function distanceToSegment(p, a, b) {
-        const l2 = Math.pow(a.x - b.x, 2) + Math.pow(a.y - b.y, 2);
-        if (l2 === 0) return p.distanceTo(a);
-        let t = ((p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y)) / l2;
-        t = Math.max(0, Math.min(1, t));
-        return p.distanceTo(L.point(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y)));
-    }
-
 });
