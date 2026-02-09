@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const fieldMunicipioInput = document.getElementById("field-municipality-hidden");
     let fieldMunicipio = fieldMunicipioInput.value || "–";
 
+    let municipioTimeout = null; // Para debounce
+
     // ========================== MAPA ==========================
     function initMap(lat, lng) {
         map = L.map("map").setView([lat, lng], 16);
@@ -51,6 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
             points[i] = { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng };
             redraw();
         });
+
         marker.on("contextmenu", () => {
             const i = markers.indexOf(marker);
             map.removeLayer(marker);
@@ -65,8 +68,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (points.length >= 2) {
             polygon = L.polygon(points.map(p => [p.lat, p.lng]), { color: "white", fillColor: "white", fillOpacity: 0.3, weight: 2 }).addTo(map);
         }
+
         updateInfo();
         pointsInput.value = JSON.stringify(points);
+
+        updateMunicipioDebounced(); // Actualizar municipio al mover o agregar puntos
     }
 
     function updateInfo() {
@@ -93,7 +99,43 @@ document.addEventListener("DOMContentLoaded", () => {
         return Math.abs(area * R * R / 2);
     }
 
-    // Inicializar mapa
+    function getPolygonCentroid(points) {
+        let lat = 0, lng = 0;
+        points.forEach(p => { lat += p.lat; lng += p.lng; });
+        return { lat: lat / points.length, lng: lng / points.length };
+    }
+
+    function updateMunicipioDebounced() {
+        clearTimeout(municipioTimeout);
+        if (points.length >= 3) {
+            municipioTimeout = setTimeout(updateMunicipio, 500);
+        } else {
+            fieldMunicipio = "–";
+            document.getElementById("field-municipality-hidden").value = fieldMunicipio;
+            const locEl = document.getElementById("field-location");
+            if (locEl) locEl.textContent = fieldMunicipio;
+        }
+    }
+
+    async function updateMunicipio() {
+        const centroid = getPolygonCentroid(points);
+        try {
+            const res = await fetch(`/get-municipio?lat=${centroid.lat}&lon=${centroid.lng}`);
+            const data = await res.json();
+            fieldMunicipio = data.municipio || "Desconocido";
+            document.getElementById("field-municipality-hidden").value = fieldMunicipio;
+            const locEl = document.getElementById("field-location");
+            if (locEl) locEl.textContent = fieldMunicipio;
+        } catch (err) {
+            console.error("Error al obtener municipio:", err);
+            fieldMunicipio = "Error";
+            document.getElementById("field-municipality-hidden").value = fieldMunicipio;
+            const locEl = document.getElementById("field-location");
+            if (locEl) locEl.textContent = fieldMunicipio;
+        }
+    }
+
+    // ========================== INICIALIZAR MAPA ==========================
     if (points.length > 0) initMap(points[0].lat, points[0].lng);
     else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -105,13 +147,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ========================== ENVIAR FORMULARIO ==========================
-    document.getElementById("field-form").addEventListener("submit", e => {
+    document.getElementById("field-form").addEventListener("submit", async e => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
 
-        const formData = new FormData(e.target);
-        const endpoint = isEditing ? `/field/edit/${fieldId}` : "/field/new";
+        await updateMunicipio(); // asegurar que el municipio esté actualizado
 
+        const formData = new FormData(e.target);
+        formData.set("municipality", fieldMunicipio);
+        formData.set("points", JSON.stringify(points));
+
+        const endpoint = isEditing ? `/field/edit/${fieldId}` : "/field/new";
         fetch(endpoint, { method: "POST", body: formData })
             .then(res => {
                 if (res.redirected) window.location.href = res.url;
