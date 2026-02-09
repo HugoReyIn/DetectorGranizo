@@ -37,13 +37,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         redraw();
 
-        // Añadir puntos con click
+        // Click en el mapa
         map.on("click", e => {
-            points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
-            const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
-            markers.push(marker);
-            addMarkerEvents(marker);
-            redraw();
+            if (polygon && polygon.getBounds().contains(e.latlng)) {
+                addPointOnLine(e); // insertamos dentro de un polígono
+            } else {
+                // añadir normalmente al final
+                points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+                const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
+                markers.push(marker);
+                addMarkerEvents(marker);
+                redraw();
+            }
         });
     }
 
@@ -118,21 +123,99 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function updateMunicipio() {
-        const centroid = getPolygonCentroid(points);
-        try {
-            const res = await fetch(`/get-municipio?lat=${centroid.lat}&lon=${centroid.lng}`);
-            const data = await res.json();
-            fieldMunicipio = data.municipio || "Desconocido";
-            document.getElementById("field-municipality-hidden").value = fieldMunicipio;
-            const locEl = document.getElementById("field-location");
-            if (locEl) locEl.textContent = fieldMunicipio;
-        } catch (err) {
-            console.error("Error al obtener municipio:", err);
-            fieldMunicipio = "Error";
-            document.getElementById("field-municipality-hidden").value = fieldMunicipio;
-            const locEl = document.getElementById("field-location");
-            if (locEl) locEl.textContent = fieldMunicipio;
+        if (points.length < 3) {
+            fieldMunicipio = "–";
+        } else {
+            const centroid = getPolygonCentroid(points);
+            try {
+                const res = await fetch(`/get-municipio?lat=${centroid.lat}&lon=${centroid.lng}`);
+                const data = await res.json();
+                fieldMunicipio = data.municipio || "Desconocido";
+            } catch {
+                fieldMunicipio = "Error";
+            }
         }
+        document.getElementById("field-municipality-hidden").value = fieldMunicipio;
+        const locEl = document.getElementById("field-location");
+        if (locEl) locEl.textContent = fieldMunicipio;
+    }
+
+    // ========================== DESHACER CTRL + Z ==========================
+    document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+            if (points.length === 0) return;
+
+            const lastMarker = markers.pop();
+            map.removeLayer(lastMarker);
+            points.pop();
+            redraw();
+        }
+    });
+
+    // ========================== INSERTAR PUNTO EN POLÍGONO ==========================
+    function addPointOnLine(e) {
+        if (!polygon) return;
+
+        const clickLatLng = e.latlng;
+        const lat = clickLatLng.lat;
+        const lng = clickLatLng.lng;
+
+        let minDist = Infinity;
+        let insertIndex = 0;
+
+        for (let i = 0; i < points.length; i++) {
+            const p1 = points[i];
+            const p2 = points[(i + 1) % points.length];
+
+            const dist = distancePointToSegment(lat, lng, p1.lat, p1.lng, p2.lat, p2.lng);
+            if (dist < minDist) {
+                minDist = dist;
+                insertIndex = i + 1;
+            }
+        }
+
+        points.splice(insertIndex, 0, { lat, lng });
+
+        const whiteIcon = L.divIcon({
+            className: "",
+            html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;"></div>`,
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
+        const marker = L.marker([lat, lng], { draggable: true, icon: whiteIcon }).addTo(map);
+        markers.splice(insertIndex, 0, marker);
+        addMarkerEvents(marker);
+
+        redraw();
+    }
+
+    function distancePointToSegment(px, py, x1, y1, x2, y2) {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const len_sq = C * C + D * D;
+        let param = -1;
+        if (len_sq !== 0) param = dot / len_sq;
+
+        let xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     // ========================== INICIALIZAR MAPA ==========================
@@ -151,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
 
-        await updateMunicipio(); // asegurar que el municipio esté actualizado
+        await updateMunicipio();
 
         const formData = new FormData(e.target);
         formData.set("municipality", fieldMunicipio);
@@ -165,4 +248,19 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .catch(() => alert("Error de conexión con el servidor."));
     });
+
+    // ========================== BOTÓN ELIMINAR ==========================
+    const deleteBtn = document.getElementById("delete-field-btn");
+    if (deleteBtn && isEditing) {
+        deleteBtn.addEventListener("click", () => {
+            if (!confirm("¿Seguro que quieres eliminar este campo?")) return;
+
+            fetch(`/field/delete/${fieldId}`, { method: "POST" })
+                .then(res => {
+                    if (res.redirected) window.location.href = res.url;
+                    else alert("Error al eliminar el campo");
+                })
+                .catch(() => alert("Error de conexión con el servidor"));
+        });
+    }
 });

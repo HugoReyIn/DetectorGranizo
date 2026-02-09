@@ -18,7 +18,7 @@
             <input type="text" id="field-name" name="name" placeholder="Nombre del campo" value="{{ field.name if field else '' }}" required>
             <div class="buttons">
                 <button type="submit" class="btn-save">{% if field %}Guardar cambios{% else %}Guardar campo{% endif %}</button>
-                <button type="button" class="delete-btn" onclick="window.location.href='/main'">Cancelar</button>
+                <button type="button" class="delete-btn" id="delete-field-btn" {% if not field %}disabled{% endif %}>Eliminar campo</button>
             </div>
         </div>
 

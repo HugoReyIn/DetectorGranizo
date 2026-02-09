@@ -176,6 +176,19 @@ def updateField(
 
     return RedirectResponse(url="/main", status_code=303)
 
+@app.post("/field/delete/{field_id}")
+def deleteField(field_id: int):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    field = fieldDAO.getField(field_id)
+
+    if not field or field.user_id != current_user.id:
+        return RedirectResponse(url="/main", status_code=303)
+
+    fieldDAO.eliminateField(field_id)
+
+    return RedirectResponse(url="/main", status_code=303)
 
 # ================= MUNICIPIO =================
 

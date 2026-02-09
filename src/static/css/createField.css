@@ -45,6 +45,18 @@ button {
 .delete-btn { background-color: #ff4d4d; color: white; }
 .delete-btn:hover { background-color: #e60000; }
 
+.delete-btn:disabled {
+    background-color: #ccc;      /* gris */
+    color: #ff4d4d;                 /* texto apagado */
+    cursor: not-allowed;         /* cursor prohibido */
+    opacity: 0.7;                /* un poco transparente */
+}
+
+.delete-btn:disabled:hover {
+    background-color: #ccc;      /* evitar cambio de color al pasar el ratón */
+    color: #ff4d4d;
+}
+
 /* INFO BOX CON 3 CAMPOS */
 .info-box {
     background: #ffffff;
