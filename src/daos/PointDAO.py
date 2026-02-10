@@ -14,7 +14,6 @@ class PointDAO:
         self.cursor = self.conn.cursor()
         self.createTable()
 
-    # Crear tabla
     def createTable(self):
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS points (
@@ -27,14 +26,12 @@ class PointDAO:
         """)
         self.conn.commit()
 
-    # Insertar punto
     def insertPoint(self, point: Point, field_id: int):
         sql = "INSERT INTO points (field_id, latitude, longitude) VALUES (%s, %s, %s)"
         self.cursor.execute(sql, (field_id, point.latitude, point.longitude))
         self.conn.commit()
         return self.cursor.lastrowid
 
-    # Obtener puntos de un campo
     def getPointsByField(self, field_id: int):
         self.cursor.execute(
             "SELECT id, latitude, longitude FROM points WHERE field_id=%s",
@@ -49,7 +46,6 @@ class PointDAO:
             points.append(p)
         return points
 
-    # Eliminar TODOS los puntos de un campo
     def deletePointsByField(self, field_id: int):
         sql = "DELETE FROM points WHERE field_id=%s"
         self.cursor.execute(sql, (field_id,))

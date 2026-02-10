@@ -46,18 +46,17 @@ button {
 .delete-btn:hover { background-color: #e60000; }
 
 .delete-btn:disabled {
-    background-color: #ccc;      /* gris */
-    color: #ff4d4d;                 /* texto apagado */
-    cursor: not-allowed;         /* cursor prohibido */
-    opacity: 0.7;                /* un poco transparente */
+    background-color: #ccc;
+    color: #ff4d4d;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .delete-btn:disabled:hover {
-    background-color: #ccc;      /* evitar cambio de color al pasar el ratón */
+    background-color: #ccc;
     color: #ff4d4d;
 }
 
-/* INFO BOX CON 3 CAMPOS */
 .info-box {
     background: #ffffff;
     padding: 20px 0;
@@ -82,7 +81,6 @@ button {
 .label { font-size: 14px; color: #4CAF50; font-weight: bold; margin-bottom: 2px; }
 .value { font-size: 20px; font-weight: bold; color: #333; }
 
-/* COLORES ESTADO DEL TECHO */
 .status-text-open { color: #00c800; }
 .status-text-closed { color: #ff0000; }
 

@@ -12,9 +12,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const fieldMunicipioInput = document.getElementById("field-municipality-hidden");
     let fieldMunicipio = fieldMunicipioInput.value || "–";
 
-    let municipioTimeout = null; // Para debounce
+    let municipioTimeout = null;
 
-    // ========================== MAPA ==========================
     function initMap(lat, lng) {
         map = L.map("map").setView([lat, lng], 16);
 
@@ -28,7 +27,6 @@ document.addEventListener("DOMContentLoaded", () => {
             iconAnchor: [7, 7]
         });
 
-        // Cargar marcadores existentes
         points.forEach(p => {
             const marker = L.marker([p.lat, p.lng], { draggable: true, icon: whiteIcon }).addTo(map);
             markers.push(marker);
@@ -37,12 +35,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         redraw();
 
-        // Click en el mapa
         map.on("click", e => {
             if (polygon && polygon.getBounds().contains(e.latlng)) {
-                addPointOnLine(e); // insertamos dentro de un polígono
+                addPointOnLine(e);
             } else {
-                // añadir normalmente al final
                 points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
                 const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
                 markers.push(marker);
@@ -77,7 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateInfo();
         pointsInput.value = JSON.stringify(points);
 
-        updateMunicipioDebounced(); // Actualizar municipio al mover o agregar puntos
+        updateMunicipioDebounced();
     }
 
     function updateInfo() {
@@ -140,7 +136,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (locEl) locEl.textContent = fieldMunicipio;
     }
 
-    // ========================== DESHACER CTRL + Z ==========================
     document.addEventListener("keydown", (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === "z") {
             if (points.length === 0) return;
@@ -152,7 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ========================== INSERTAR PUNTO EN POLÍGONO ==========================
     function addPointOnLine(e) {
         if (!polygon) return;
 
@@ -218,7 +212,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // ========================== INICIALIZAR MAPA ==========================
     if (points.length > 0) initMap(points[0].lat, points[0].lng);
     else if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -229,7 +222,6 @@ document.addEventListener("DOMContentLoaded", () => {
         initMap(43.2630, -2.9350);
     }
 
-    // ========================== ENVIAR FORMULARIO ==========================
     document.getElementById("field-form").addEventListener("submit", async e => {
         e.preventDefault();
         if (points.length < 3) return alert("Debes marcar al menos 3 puntos");
@@ -249,7 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => alert("Error de conexión con el servidor."));
     });
 
-    // ========================== BOTÓN ELIMINAR ==========================
     const deleteBtn = document.getElementById("delete-field-btn");
     if (deleteBtn && isEditing) {
         deleteBtn.addEventListener("click", () => {

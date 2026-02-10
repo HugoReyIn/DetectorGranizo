@@ -1,13 +1,7 @@
-/**
- * Lógica del Dashboard - Detector de Granizo
- */
-
 document.addEventListener("DOMContentLoaded", () => {
-    // Inicializar el reloj al cargar la página
     updateDateTime();
     setInterval(updateDateTime, 1000);
 
-    // Delegación de eventos para toggles y eliminaciones dinámicas
     document.querySelector(".dashboard").addEventListener("click", e => {
         if (e.target.classList.contains("action-btn")) {
             toggleRoof(e.target);
@@ -16,14 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Botón añadir campo
     const addBtn = document.querySelector(".add-field-btn");
     if (addBtn) {
         addBtn.addEventListener("click", addField);
     }
 });
 
-// --- 1. Fecha y hora en tiempo real ---
 function updateDateTime() {
     const timeEl = document.getElementById('current-time');
     const dateEl = document.getElementById('current-date');
@@ -49,7 +41,6 @@ function updateDateTime() {
     dateEl.textContent = date.charAt(0).toUpperCase() + date.slice(1);
 }
 
-// --- 2. Toggle de techos ---
 function toggleRoof(button) {
     const row = button.closest(".field-row");
     const status = row.querySelector(".field-status");
@@ -57,7 +48,6 @@ function toggleRoof(button) {
 
     if (!row || !status) return;
 
-    // Bloquear si está en movimiento
     if (currentState === "opening" || currentState === "closing") return;
 
     button.disabled = true;
@@ -83,7 +73,6 @@ function toggleRoof(button) {
     status.textContent = textDuring;
     row.dataset.state = action;
 
-    // Simulación de 3 segundos de movimiento
     setTimeout(() => {
         status.className = `field-status status-${finalState}`;
         status.textContent = textFinal;
@@ -93,12 +82,10 @@ function toggleRoof(button) {
         button.disabled = false;
         button.classList.remove("disabled");
 
-        // Aquí podrías hacer fetch para actualizar BD
         console.log(`Campo actualizado: ${finalState}`);
     }, 3000);
 }
 
-// --- 3. Añadir campo rápido ---
 function addField() {
     const dashboard = document.querySelector(".dashboard");
     const addButton = document.querySelector(".add-field-btn");
@@ -125,7 +112,6 @@ function addField() {
     dashboard.insertBefore(row, addButton);
 }
 
-// --- 4. Eliminar campo ---
 function deleteField(button) {
     const row = button.closest(".field-row");
     if (!row) return;

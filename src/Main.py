@@ -23,7 +23,6 @@ pointDAO = PointDAO()
 
 current_user = None
 
-# ================= LOGIN =================
 
 @app.get("/", response_class=HTMLResponse)
 def loginPage(request: Request):
@@ -42,7 +41,6 @@ def login(email: str = Form(...), password: str = Form(...)):
     return RedirectResponse(url="/", status_code=303)
 
 
-# ================= REGISTER =================
 
 @app.get("/register", response_class=HTMLResponse)
 def registerPage(request: Request):
@@ -62,7 +60,6 @@ def register(name: str = Form(...), email: str = Form(...), password: str = Form
     return RedirectResponse(url="/", status_code=303)
 
 
-# ================= MAIN =================
 
 @app.get("/main", response_class=HTMLResponse)
 def mainPage(request: Request):
@@ -77,7 +74,6 @@ def mainPage(request: Request):
     )
 
 
-# ================= NUEVO CAMPO =================
 
 @app.get("/field/new", response_class=HTMLResponse)
 def newFieldPage(request: Request):
@@ -115,7 +111,6 @@ def saveField(
     return RedirectResponse(url="/main", status_code=303)
 
 
-# ================= EDITAR CAMPO =================
 
 @app.get("/field/edit/{field_id}", response_class=HTMLResponse)
 def editFieldPage(request: Request, field_id: int):
@@ -165,10 +160,8 @@ def updateField(
 
     fieldDAO.updateField(field)
 
-    # BORRAR puntos antiguos
     pointDAO.deletePointsByField(field.id)
 
-    # Insertar nuevos
     points_list = json.loads(points)
     for p in points_list:
         point = Point(latitude=p["lat"], longitude=p["lng"])
@@ -190,7 +183,6 @@ def deleteField(field_id: int):
 
     return RedirectResponse(url="/main", status_code=303)
 
-# ================= MUNICIPIO =================
 
 @app.get("/get-municipio")
 def get_municipio(lat: float, lon: float):

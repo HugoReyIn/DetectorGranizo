@@ -32,13 +32,11 @@ header {
   text-align: center;
 }
 
-/* Títulos */
 h2 {
   color: #4CAF50;
   margin-bottom: 30px;
 }
 
-/* Inputs de formulario */
 input[type="text"], input[type="password"], input[type="email"] {
   width: 100%;
   padding: 12px;
@@ -47,7 +45,6 @@ input[type="text"], input[type="password"], input[type="email"] {
   border-radius: 5px;
 }
 
-/* Botones */
 button {
   width: 100%;
   padding: 12px;
@@ -64,7 +61,6 @@ button:hover {
   background-color: #388E3C;
 }
 
-/* Links debajo del formulario */
 .link {
   margin-top: 15px;
   display: block;
@@ -76,14 +72,12 @@ button:hover {
   text-decoration: underline;
 }
 
-/* Contenedor de la pantalla principal */
 .container {
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
 }
 
-/* Cards de los campos */
 .field-card {
   background-color: #ffffff;
   border-radius: 10px;
