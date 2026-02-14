@@ -1,5 +1,5 @@
 .time-container {
-    margin: 30px;
+    margin: 30px 15px;
     text-align: center;
 }
 
@@ -20,15 +20,17 @@
     border-radius: 20px;
 }
 
+/* FILAS */
 .field-row {
     display: grid;
-    grid-template-columns: 2fr 150px 150px; 
-    align-items: center;             
+    grid-template-columns: 2fr 150px 150px;
+    align-items: center;
     background: #90ee90;
     border-radius: 15px;
     padding: 15px 20px;
     margin-bottom: 15px;
     column-gap: 20px;
+    cursor: pointer;
 }
 
 .field-info h3 {
@@ -41,7 +43,9 @@
     font-size: 16px;
 }
 
-.field-status, .action-btn {
+/* STATUS */
+.field-status,
+.action-btn {
     height: 45px;
     display: flex;
     align-items: center;
@@ -51,7 +55,6 @@
     font-size: 14px;
     text-align: center;
     padding: 0 10px;
-    box-sizing: border-box;
 }
 
 .status-open { background: #00c800; color: white; }
@@ -80,6 +83,7 @@
     opacity: 0.7;
 }
 
+/* BOTÓN AÑADIR */
 .add-field-btn {
     margin: 30px auto 0;
     display: block;
@@ -90,4 +94,39 @@
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+
+  .time {
+    font-size: 42px;
+  }
+
+  .date {
+    font-size: 16px;
+  }
+
+  .dashboard {
+    margin: 10px;
+    padding: 15px;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr;
+    row-gap: 10px;
+    text-align: center;
+  }
+
+  .field-info h3 {
+    font-size: 20px;
+  }
+
+  .field-buttons {
+    width: 100%;
+  }
+
+  .action-btn {
+    width: 100%;
+  }
 }

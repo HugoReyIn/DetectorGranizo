@@ -1,3 +1,4 @@
+/* CONTENEDOR PRINCIPAL */
 .container {
     max-width: 1000px;
     margin: 30px auto;
@@ -5,19 +6,26 @@
     font-family: 'Segoe UI', Arial, sans-serif;
 }
 
-h2 { text-align: center; color: #4CAF50; margin-bottom: 25px; }
+/* TITULO */
+h2 {
+    text-align: center;
+    color: #4CAF50;
+    margin-bottom: 25px;
+}
 
+/* TOP ROW */
 .top-row {
     display: flex;
-    align-items: center; 
+    align-items: center;
     justify-content: space-between;
     gap: 15px;
     margin-bottom: 25px;
 }
 
+/* INPUT DEL NOMBRE */
 #field-name {
     flex: 1;
-    height: 45px;
+    min-height: 45px;           /* Altura mínima desktop */
     padding: 0 15px;
     font-size: 16px;
     border-radius: 8px;
@@ -25,7 +33,11 @@ h2 { text-align: center; color: #4CAF50; margin-bottom: 25px; }
     box-sizing: border-box;
 }
 
-.buttons { display: flex; gap: 10px; }
+/* BOTONES */
+.buttons {
+    display: flex;
+    gap: 10px;
+}
 
 button {
     height: 45px;
@@ -35,13 +47,16 @@ button {
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
+    min-height: 44px;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     transition: background 0.3s;
 }
 
 .btn-save { background: #4CAF50; color: white; }
 .btn-save:hover { background: #388E3C; }
+
 .delete-btn { background-color: #ff4d4d; color: white; }
 .delete-btn:hover { background-color: #e60000; }
 
@@ -57,6 +72,7 @@ button {
     color: #ff4d4d;
 }
 
+/* INFO BOX */
 .info-box {
     background: #ffffff;
     padding: 20px 0;
@@ -73,16 +89,94 @@ button {
     display: flex;
     flex-direction: column;
     align-items: center;
-    text-align: center;
 }
 
-.divider { width: 1px; height: 40px; background-color: #ddd; }
+.divider {
+    width: 1px;
+    height: 40px;
+    background-color: #ddd;
+}
 
-.label { font-size: 14px; color: #4CAF50; font-weight: bold; margin-bottom: 2px; }
-.value { font-size: 20px; font-weight: bold; color: #333; }
+.label {
+    font-size: 14px;
+    color: #4CAF50;
+    font-weight: bold;
+}
 
+.value {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+}
+
+/* STATUS */
 .status-text-open { color: #00c800; }
 .status-text-closed { color: #ff0000; }
 
-#map { width: 100%; height: 480px; border-radius: 18px; border: 1px solid #ddd; margin-bottom: 20px; }
-.link { display: block; text-align: center; margin-top: 10px; color: #666; text-decoration: none; font-size: 14px; }
+/* MAPA */
+#map {
+    width: 100%;
+    height: 480px;
+    border-radius: 18px;
+    border: 1px solid #ddd;
+    margin-bottom: 20px;
+}
+
+/* LINK VOLVER */
+.link {
+    display: block;
+    text-align: center;
+    margin-top: 10px;
+    color: #666;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+/* RESPONSIVE MOBILE */
+@media (max-width: 768px) {
+
+  /* TOP ROW */
+  .top-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+
+  /* INPUT NOMBRE RESPONSIVO */
+  #field-name {
+    min-height: 60px;         /* ⬅ Altura mínima cómoda */
+    height: auto;             /* ⬅ Permite crecer si hay contenido */
+    font-size: 18px;
+    padding: 15px 18px;       /* ⬅ Más padding para que se vea grande */
+    line-height: 1.4;         /* ⬅ Texto centrado vertical */
+  }
+
+  /* BOTONES RESPONSIVOS */
+  .buttons {
+    width: 100%;
+    display: flex;
+    gap: 10px;
+  }
+
+  .buttons button {
+    flex: 1;
+    height: 50px;
+    font-size: 15px;
+  }
+
+  /* INFO BOX */
+  .info-box {
+    flex-direction: column;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  /* MAPA */
+  #map {
+    height: 300px;
+  }
+}
