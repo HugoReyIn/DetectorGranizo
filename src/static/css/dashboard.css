@@ -20,7 +20,9 @@
     border-radius: 20px;
 }
 
-/* FILAS */
+/* =========================
+   FILAS
+========================= */
 .field-row {
     display: grid;
     grid-template-columns: 2fr 150px 150px;
@@ -31,6 +33,13 @@
     margin-bottom: 15px;
     column-gap: 20px;
     cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+/* Hover solo visual */
+.field-row:hover {
+    background: #7be87b;
+    transform: scale(1.01);
 }
 
 .field-info h3 {
@@ -43,9 +52,10 @@
     font-size: 16px;
 }
 
-/* STATUS */
-.field-status,
-.action-btn {
+/* =========================
+   STATUS
+========================= */
+.field-status {
     height: 45px;
     display: flex;
     align-items: center;
@@ -55,6 +65,12 @@
     font-size: 14px;
     text-align: center;
     padding: 0 10px;
+    cursor: pointer; /* 👈 ahora se ve clicable */
+    transition: opacity 0.2s ease;
+}
+
+.field-status:hover {
+    opacity: 0.9;
 }
 
 .status-open { background: #00c800; color: white; }
@@ -62,20 +78,37 @@
 .status-opening { background: #75cf75; color: black; }
 .status-closing { background: #c36262; color: black; }
 
+/* =========================
+   BOTONES
+========================= */
 .field-buttons {
     width: 100%;
 }
 
 .action-btn {
+    height: 45px;
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 14px;
     border: none;
     background: #e0e0e0;
     color: #333;
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: background 0.2s ease, transform 0.1s ease;
 }
 
-.action-btn:hover { background: #d0d0d0; }
+.action-btn:hover {
+    background: #d0d0d0;
+    transform: scale(1.02);
+}
+
+.action-btn:active {
+    transform: scale(0.98);
+}
 
 .action-btn.disabled {
     background: #bdbdbd;
@@ -83,7 +116,9 @@
     opacity: 0.7;
 }
 
-/* BOTÓN AÑADIR */
+/* =========================
+   BOTÓN AÑADIR
+========================= */
 .add-field-btn {
     margin: 30px auto 0;
     display: block;
@@ -94,9 +129,21 @@
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
 }
 
-/* RESPONSIVE */
+.add-field-btn:hover {
+    background: #00e600;
+    transform: scale(1.03);
+}
+
+.add-field-btn:active {
+    transform: scale(0.97);
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
 @media (max-width: 768px) {
 
   .time {

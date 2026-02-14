@@ -16,7 +16,10 @@
 
 <div class="dashboard">
     {% for field in fields %}
-    <div class="field-row" data-state="{{ field.state }}" onclick="window.location.href='/field/edit/{{ field.id }}'">
+    <div class="field-row" 
+         data-id="{{ field.id }}" 
+         data-state="{{ field.state }}">
+
         <div class="field-info">
             <h3>{{ field.name }}</h3>
             <span>{{ field.municipality }}</span>
@@ -31,7 +34,7 @@
         </div>
 
         <div class="field-buttons">
-            <button class="action-btn" onclick="toggleRoof(event, this)">
+            <button class="action-btn">
                 {% if field.state == "open" %}
                     Cierre manual
                 {% else %}
@@ -42,7 +45,7 @@
     </div>
     {% endfor %}
 
-    <button class="add-field-btn" onclick="window.location.href='/field/new'">
+    <button class="add-field-btn">
         + Añadir campo
     </button>
 </div>

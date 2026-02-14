@@ -2,46 +2,84 @@ document.addEventListener("DOMContentLoaded", () => {
     updateDateTime();
     setInterval(updateDateTime, 1000);
 
-    document.querySelector(".dashboard").addEventListener("click", e => {
+    const dashboard = document.querySelector(".dashboard");
+
+    dashboard.addEventListener("click", (e) => {
+
+        const row = e.target.closest(".field-row");
+        if (!row) return;
+
+        const fieldId = row.dataset.id;
+
+        /* =========================
+           BOTÓN CIERRE / APERTURA
+        ========================== */
         if (e.target.classList.contains("action-btn")) {
+            e.stopPropagation();
             toggleRoof(e.target);
-        } else if (e.target.classList.contains("delete-btn")) {
-            deleteField(e.target);
+            return;
+        }
+
+        /* =========================
+           CLICK EN STATUS
+        ========================== */
+        if (e.target.classList.contains("field-status")) {
+            e.stopPropagation();
+            console.log("Click en estado");
+            return;
+        }
+
+        /* =========================
+           CLICK EN FILA → EDITAR
+        ========================== */
+        if (!e.target.closest(".field-buttons")) {
+            window.location.href = `/field/edit/${fieldId}`;
         }
     });
 
     const addBtn = document.querySelector(".add-field-btn");
     if (addBtn) {
-        addBtn.addEventListener("click", addField);
+        addBtn.addEventListener("click", () => {
+            window.location.href = "/field/new";
+        });
     }
 });
 
+
+/* =========================
+   RELOJ Y FECHA
+========================= */
 function updateDateTime() {
     const timeEl = document.getElementById('current-time');
     const dateEl = document.getElementById('current-date');
-    
+
     if (!timeEl || !dateEl) return;
 
     const now = new Date();
-    
-    const time = now.toLocaleTimeString('es-ES', { 
-        hour: '2-digit', 
+
+    const time = now.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: false 
+        hour12: false
     });
-    
-    const date = now.toLocaleDateString('es-ES', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
+
+    const date = now.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
     });
-    
+
     timeEl.textContent = time;
     dateEl.textContent = date.charAt(0).toUpperCase() + date.slice(1);
 }
 
+
+/* =========================
+   ABRIR / CERRAR TECHO
+========================= */
 function toggleRoof(button) {
+
     const row = button.closest(".field-row");
     const status = row.querySelector(".field-status");
     const currentState = row.dataset.state;
@@ -56,15 +94,15 @@ function toggleRoof(button) {
     let action, finalState, textDuring, textFinal, nextButtonText;
 
     if (currentState === "open") {
-        action = "closing"; 
-        finalState = "closed"; 
-        textDuring = "Cerrando..."; 
+        action = "closing";
+        finalState = "closed";
+        textDuring = "Cerrando...";
         textFinal = "Cerrado";
         nextButtonText = "Apertura manual";
     } else {
-        action = "opening"; 
-        finalState = "open"; 
-        textDuring = "Abriendo..."; 
+        action = "opening";
+        finalState = "open";
+        textDuring = "Abriendo...";
         textFinal = "Abierto";
         nextButtonText = "Cierre manual";
     }
@@ -74,55 +112,16 @@ function toggleRoof(button) {
     row.dataset.state = action;
 
     setTimeout(() => {
+
         status.className = `field-status status-${finalState}`;
         status.textContent = textFinal;
         row.dataset.state = finalState;
-        
+
         button.textContent = nextButtonText;
         button.disabled = false;
         button.classList.remove("disabled");
 
         console.log(`Campo actualizado: ${finalState}`);
+
     }, 3000);
-}
-
-function addField() {
-    const dashboard = document.querySelector(".dashboard");
-    const addButton = document.querySelector(".add-field-btn");
-    if (!dashboard || !addButton) return;
-
-    const count = dashboard.querySelectorAll(".field-row").length + 1;
-
-    const row = document.createElement("div");
-    row.className = "field-row";
-    row.dataset.state = "open";
-
-    row.innerHTML = `
-        <div class="field-info">
-            <h3>Campo ${count}</h3>
-            <span>Ubicación por definir</span>
-        </div>
-        <div class="field-status status-open">Abierto</div>
-        <div class="field-buttons" style="display: flex; gap: 10px;">
-            <button class="action-btn">Cierre manual</button>
-            <button class="action-btn delete-btn" style="background-color: #ff4d4d; color: white;">Eliminar</button>
-        </div>
-    `;
-
-    dashboard.insertBefore(row, addButton);
-}
-
-function deleteField(button) {
-    const row = button.closest(".field-row");
-    if (!row) return;
-
-    if (!confirm("¿Estás seguro de que deseas eliminar este campo?")) return;
-
-    row.style.opacity = "0";
-    row.style.transform = "translateX(20px)";
-    row.style.transition = "all 0.3s ease";
-
-    setTimeout(() => {
-        row.remove();
-    }, 300);
 }
