@@ -137,6 +137,27 @@
     transform: scale(0.97);
 }
 
+.weather-container {
+    background: #e0f7fa;
+    border-radius: 15px;
+    padding: 15px 20px;
+    margin-top: 20px;
+    font-size: 16px;
+}
+
+.weather-container h3 {
+    margin-top: 0;
+    color: #00796b;
+}
+
+.weather-container ul {
+    padding-left: 20px;
+}
+
+.weather-container li {
+    margin-bottom: 5px;
+}
+
 /* =========================
    RESPONSIVE
 ========================= */
