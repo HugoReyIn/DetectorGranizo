@@ -12,8 +12,6 @@ from models.User import User
 from models.Field import Field
 from models.Point import Point
 
-from config import AEMET_API_KEY, AEMET_BASE_URL
-
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -214,32 +212,59 @@ def get_municipio(lat: float, lon: float):
 # WEATHER / AEMET
 # --------------------
 @app.get("/get-weather")
-def get_weather():
+def get_weather(lat: float, lon: float):
+    import requests
+
     try:
-        # Solicitar datos del API
-        url = f"{AEMET_BASE_URL}/observacion/convencional/todas?api_key={AEMET_API_KEY}"
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        data = r.json()
+        url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}"
+            f"&longitude={lon}"
+            "&current_weather=true"
+            "&hourly=relativehumidity_2m,"
+            "dewpoint_2m,"
+            "apparent_temperature,"
+            "precipitation,"
+            "snowfall,"
+            "showers"
+            "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
+            "&timezone=auto"
+        )
 
-        # Extraer link de los datos reales
-        datos_url = data.get("datos")
-        if not datos_url:
-            return JSONResponse({"weather": "No disponible"})
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
 
-        r2 = requests.get(datos_url, timeout=10)
-        r2.raise_for_status()
-        datos = r2.json()
+        current = data.get("current_weather", {})
+        hourly = data.get("hourly", {})
+        daily = data.get("daily", {})
 
-        # Ejemplo: coger la primera estación
-        if len(datos) > 0:
-            obs = datos[0]
-            temperatura = obs.get("ta")
-            viento = obs.get("vv")
-            weather_text = f"{temperatura}°C, Viento {viento} km/h"
-        else:
-            weather_text = "No disponible"
+        weathercode = current.get("weathercode")
 
-        return JSONResponse({"weather": weather_text})
+        # Inferir granizo (tormenta fuerte)
+        hail = 0
+        if weathercode in [95, 96, 99]:  # tormenta / tormenta con granizo
+            hail = hourly.get("precipitation", [0])[0]
+
+        weather = {
+            "temperature": current.get("temperature"),
+            "temp_max": daily.get("temperature_2m_max", [None])[0],
+            "temp_min": daily.get("temperature_2m_min", [None])[0],
+            "feels_like": hourly.get("apparent_temperature", [None])[0],
+            "humidity": hourly.get("relativehumidity_2m", [None])[0],
+            "dew_point": hourly.get("dewpoint_2m", [None])[0],
+            "wind_speed": current.get("windspeed"),
+            "wind_deg": current.get("winddirection"),
+            "sunrise": daily.get("sunrise", [None])[0],
+            "sunset": daily.get("sunset", [None])[0],
+            "rain": hourly.get("precipitation", [0])[0],
+            "snow": hourly.get("snowfall", [0])[0],
+            "hail": hail,
+            "weather_desc": weathercode
+        }
+
+        return weather
+
     except Exception as e:
-        return JSONResponse({"weather": "Error"})
+        print("Error Open-Meteo:", e)
+        return {"error": "No se pudo obtener el clima"}

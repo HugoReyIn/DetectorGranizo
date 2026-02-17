@@ -99,7 +99,6 @@
 
 .action-btn:hover {
     background: #d0d0d0;
-    transform: scale(1.02);
 }
 
 .action-btn:active {

@@ -1,8 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
     updateDateTime();
     setInterval(updateDateTime, 1000);
+
     loadWeather();
-    setInterval(loadWeather, 5*60*1000); // Cada 5 minutos
+    setInterval(loadWeather, 5 * 60 * 1000); // Cada 5 minutos
 
     const dashboard = document.querySelector(".dashboard");
 
@@ -26,36 +27,108 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const addBtn = document.querySelector(".add-field-btn");
-    if (addBtn) addBtn.addEventListener("click", () => window.location.href = "/field/new");
+    if (addBtn) {
+        addBtn.addEventListener("click", () => {
+            window.location.href = "/field/new";
+        });
+    }
 });
 
+
+// ============================
 // RELOJ Y FECHA
+// ============================
 function updateDateTime() {
-    const timeEl = document.getElementById('current-time');
-    const dateEl = document.getElementById('current-date');
+    const timeEl = document.getElementById("current-time");
+    const dateEl = document.getElementById("current-date");
     if (!timeEl || !dateEl) return;
 
     const now = new Date();
-    timeEl.textContent = now.toLocaleTimeString('es-ES', {hour: '2-digit', minute: '2-digit', hour12:false});
-    const date = now.toLocaleDateString('es-ES', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    timeEl.textContent = now.toLocaleTimeString("es-ES", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false
+    });
+
+    const date = now.toLocaleDateString("es-ES", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+    });
+
     dateEl.textContent = date.charAt(0).toUpperCase() + date.slice(1);
 }
 
-// CARGAR TIEMPO AEMET
-async function loadWeather() {
+
+// ============================
+// CLIMA (Open-Meteo)
+// ============================
+function loadWeather() {
     const weatherEl = document.getElementById("weather-info");
     if (!weatherEl) return;
 
-    try {
-        const res = await fetch("/get-weather");
-        const data = await res.json();
-        weatherEl.textContent = data.weather || "No disponible";
-    } catch {
-        weatherEl.textContent = "Error al cargar";
+    if (!navigator.geolocation) {
+        weatherEl.textContent = "Geolocalización no soportada.";
+        return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+
+            try {
+                const res = await fetch(`/get-weather?lat=${lat}&lon=${lon}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    weatherEl.textContent = "Error al obtener datos.";
+                    return;
+                }
+
+                const sunrise = data.sunrise
+                    ? new Date(data.sunrise).toLocaleTimeString("es-ES", {hour: "2-digit", minute: "2-digit"})
+                    : "N/A";
+
+                const sunset = data.sunset
+                    ? new Date(data.sunset).toLocaleTimeString("es-ES", {hour: "2-digit", minute: "2-digit"})
+                    : "N/A";
+
+                weatherEl.innerHTML = `
+                    🌡️ <strong>Temp:</strong> ${data.temp_min ?? "N/A"}°C - ${data.temp_max ?? "N/A"}°C 
+                    (Sensación: ${data.feels_like ?? "N/A"}°C)<br>
+
+                    💧 <strong>Humedad:</strong> ${data.humidity ?? "N/A"}% 
+                    | Punto de rocío: ${data.dew_point ?? "N/A"}°C<br>
+
+                    🌬️ <strong>Viento:</strong> ${data.wind_speed ?? "N/A"} km/h 
+                    (${data.wind_deg ?? "N/A"}°)<br>
+
+                    ☀️ <strong>Amanecer:</strong> ${sunrise} 
+                    | <strong>Atardecer:</strong> ${sunset}<br>
+
+                    🌧️ <strong>Lluvia:</strong> ${data.rain ?? 0} mm<br>
+                    ❄️ <strong>Nieve:</strong> ${data.snow ?? 0} mm<br>
+                    🧊 <strong>Granizo:</strong> ${data.hail ?? 0} mm<br>
+                `;
+
+            } catch (error) {
+                console.error("Error clima:", error);
+                weatherEl.textContent = "Error al cargar el clima.";
+            }
+        },
+        () => {
+            weatherEl.textContent = "No se pudo obtener la ubicación.";
+        }
+    );
 }
 
+
+// ============================
 // TOGGLE TECHO
+// ============================
 function toggleRoof(row, button, fieldId) {
     const status = row.querySelector(".field-status");
     let currentState = row.dataset.state;
@@ -99,6 +172,7 @@ function toggleRoof(row, button, fieldId) {
             button.textContent = nextButtonText;
             button.disabled = false;
             button.classList.remove("disabled");
+
         } catch {
             alert("Error al actualizar estado en servidor.");
             button.disabled = false;
