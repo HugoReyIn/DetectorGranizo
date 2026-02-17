@@ -205,16 +205,14 @@ def get_municipio(lat: float, lon: float):
         )
 
         return JSONResponse({"municipio": municipio})
-    except:
-        return JSONResponse({"municipio": "Desconocido"})
+    except Exception as e:
+        return JSONResponse({"municipio": "Desconocido", "error": str(e)})
 
 # --------------------
-# WEATHER / AEMET
+# WEATHER / OPEN-METEO
 # --------------------
 @app.get("/get-weather")
 def get_weather(lat: float, lon: float):
-    import requests
-
     try:
         url = (
             "https://api.open-meteo.com/v1/forecast"
@@ -225,8 +223,7 @@ def get_weather(lat: float, lon: float):
             "dewpoint_2m,"
             "apparent_temperature,"
             "precipitation,"
-            "snowfall,"
-            "showers"
+            "snowfall"
             "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
             "&timezone=auto"
         )
@@ -239,32 +236,32 @@ def get_weather(lat: float, lon: float):
         hourly = data.get("hourly", {})
         daily = data.get("daily", {})
 
-        weathercode = current.get("weathercode")
+        current_index = 0  # Para simplificar
 
-        # Inferir granizo (tormenta fuerte)
+        weathercode = current.get("weathercode", 0)
+
         hail = 0
-        if weathercode in [95, 96, 99]:  # tormenta / tormenta con granizo
-            hail = hourly.get("precipitation", [0])[0]
+        if weathercode in [96, 99]:
+            hail = hourly.get("precipitation", [0])[current_index]
 
         weather = {
-            "temperature": current.get("temperature"),
             "temp_max": daily.get("temperature_2m_max", [None])[0],
             "temp_min": daily.get("temperature_2m_min", [None])[0],
-            "feels_like": hourly.get("apparent_temperature", [None])[0],
-            "humidity": hourly.get("relativehumidity_2m", [None])[0],
-            "dew_point": hourly.get("dewpoint_2m", [None])[0],
+            "feels_like": hourly.get("apparent_temperature", [None])[current_index],
+            "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
+            "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
             "wind_speed": current.get("windspeed"),
             "wind_deg": current.get("winddirection"),
             "sunrise": daily.get("sunrise", [None])[0],
             "sunset": daily.get("sunset", [None])[0],
-            "rain": hourly.get("precipitation", [0])[0],
-            "snow": hourly.get("snowfall", [0])[0],
+            "rain": hourly.get("precipitation", [0])[current_index],
+            "snow": hourly.get("snowfall", [0])[current_index],
             "hail": hail,
-            "weather_desc": weathercode
+            "weathercode": weathercode
         }
 
-        return weather
+        return JSONResponse(weather)
 
     except Exception as e:
         print("Error Open-Meteo:", e)
-        return {"error": "No se pudo obtener el clima"}
+        return JSONResponse({"error": str(e)}, status_code=500)
