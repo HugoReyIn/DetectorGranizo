@@ -41,8 +41,6 @@ async function loadWeather() {
     const weatherDefault = document.getElementById("weather-actual-info");
     if (!weatherDefault) return;
 
-    weatherDefault.textContent = "Obteniendo ubicación...";
-
     if (!navigator.geolocation) {
         weatherDefault.textContent = "Geolocalización no soportada.";
         return;
@@ -54,8 +52,6 @@ async function loadWeather() {
             const lon = position.coords.longitude;
 
             try {
-                weatherDefault.textContent = "Cargando clima...";
-
                 // Municipio
                 const muniRes = await fetch(`/get-municipio?lat=${lat}&lon=${lon}`);
                 const muniData = await muniRes.json();
@@ -84,6 +80,9 @@ async function loadWeather() {
                 const sunrise = data.sunrise ? new Date(data.sunrise + 'Z') : null;
                 const sunset = data.sunset ? new Date(data.sunset + 'Z') : null;
 
+                const sunriseDate = sunrise ? sunrise.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false }) : "--:--";
+                const sunsetDate = sunset ? sunset.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false }) : "--:--";
+
                 // Barra amanecer/atardecer
                 const now = new Date();
                 let sunPercent = 0;
@@ -104,26 +103,40 @@ async function loadWeather() {
                         <div class="weather-center">
                             <div class="temp-actual">${tempActual}°C</div>
                             <div class="temp-minmax">
-                                <span class="temp-max">${tempMax}°C</span>
-                                <span class="temp-min">${tempMin}°C</span>
+                                <div>
+                                    <img src="/static/img/maxTemp.png" class="img-sun">
+                                    <span class="temp-max">${tempMax}°C</span>
+                                </div>
+                                <div>
+                                    <img src="/static/img/minTemp.png">
+                                    <span class="temp-min">${tempMin}°C</span>
+                                </div>
                             </div>
                         </div>
 
                         <div class="weather-right">
                             <div>Lluvia: ${lluvia}mm</div>
                             <div>Granizo: ${granizo}%</div>
-                            <div>Nieve: ${nieve}mm</div>
+                            <div>Nieve: ${nieve}cm</div>
                             <div>Humedad: ${humedad}%</div>
                             <div>Viento: ${viento} km/h (${dirViento}°)</div>
                             <div>Punto Rocío: ${puntoRocio}°C</div>
                         </div>
 
                         <div class="weather-sun">
-                            <span>Amanecer</span>
+                            <div class="sun-item">
+                                <img src="/static/img/sunrise.png" class="img-sun">
+                                <span class="sun-time">${sunriseDate}</span>
+                            </div>
+
                             <div class="sun-bar">
                                 <div class="sun-progress" style="width:${sunPercent}%"></div>
                             </div>
-                            <span>Atardecer</span>
+
+                            <div class="sun-item">
+                                <img src="/static/img/sunset.png" class="img-sun">
+                                <span class="sun-time">${sunsetDate}</span>
+                            </div>
                         </div>
                     </div>
                 `;

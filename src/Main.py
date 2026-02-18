@@ -237,7 +237,7 @@ def get_weather(lat: float, lon: float):
         hourly = data.get("hourly", {})
         daily = data.get("daily", {})
 
-        current_index = 0  # Para simplificar
+        current_index = 0
 
         weathercode = current.get("weathercode", 0)
 
