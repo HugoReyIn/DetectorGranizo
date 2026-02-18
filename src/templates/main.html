@@ -15,6 +15,7 @@
 </div>
 
 <div class="dashboard">
+    <h2>Mis campos</h2>
     {% for field in fields %}
     <div class="field-row" 
          data-id="{{ field.id }}" 
@@ -50,9 +51,19 @@
     </button>
 </div>
 
-<div class="weather-container" id="weather-container">
-    <h3>Tiempo actual</h3>
-    <div id="weather-info">Cargando...</div>
+<div class="weather-container">
+    <h2>Tiempo actual</h2>
+    <!-- Div general por defecto -->
+    <div id="weather-actual-info">
+        <div id="weather-temp" class="weather-field"></div>
+        <div id="weather-summary" class="weather-field"></div>
+        <div id="weather-humidity" class="weather-field"></div>
+        <div id="weather-wind" class="weather-field"></div>
+        <div id="weather-rain" class="weather-field"></div>
+        <div id="weather-snow" class="weather-field"></div>
+        <div id="weather-hail" class="weather-field"></div>
+        <div id="weather-sunrise-sunset" class="weather-field"></div>
+    </div>    
 </div>
 
 <script src="/static/js/dashboard.js"></script>

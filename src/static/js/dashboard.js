@@ -38,82 +38,106 @@ function updateDateTime() {
 }
 
 async function loadWeather() {
-    const weatherEl = document.getElementById("weather-info");
-    if (!weatherEl) {
-        console.log("[Weather] Elemento #weather-info no encontrado");
-        return;
-    }
+    const weatherDefault = document.getElementById("weather-actual-info");
+    if (!weatherDefault) return;
 
-    weatherEl.textContent = "Obteniendo ubicación...";
-    console.log("[Weather] Iniciando geolocalización...");
+    weatherDefault.textContent = "Obteniendo ubicación...";
 
     if (!navigator.geolocation) {
-        console.error("[Weather] Geolocalización no soportada por el navegador");
-        weatherEl.textContent = "Geolocalización no soportada por el navegador.";
+        weatherDefault.textContent = "Geolocalización no soportada.";
         return;
     }
 
     navigator.geolocation.getCurrentPosition(
         async (position) => {
-            console.log("[Weather] Ubicación obtenida", position.coords);
-            const lat = parseFloat(position.coords.latitude.toFixed(6));
-            const lon = parseFloat(position.coords.longitude.toFixed(6));
-            console.log(`[Weather] Lat: ${lat}, Lon: ${lon}`);
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
 
             try {
-                weatherEl.textContent = "Cargando clima...";
-                console.log("[Weather] Consultando municipio...");
+                weatherDefault.textContent = "Cargando clima...";
+
+                // Municipio
                 const muniRes = await fetch(`/get-municipio?lat=${lat}&lon=${lon}`);
                 const muniData = await muniRes.json();
-                console.log("[Weather] Municipio recibido:", muniData);
                 const municipio = muniData.municipio ?? "Desconocido";
 
-                console.log("[Weather] Consultando clima...");
+                // Clima
                 const weatherRes = await fetch(`/get-weather?lat=${lat}&lon=${lon}`);
                 const data = await weatherRes.json();
-                console.log("[Weather] Datos clima recibidos:", data);
 
-                if (data.error) { 
-                    console.error("[Weather] Error del servidor:", data.error);
-                    weatherEl.textContent = "Error al obtener datos del clima."; 
-                    return; 
+                if (data.error) {
+                    weatherDefault.textContent = "Error al obtener datos del clima.";
+                    return;
                 }
 
-                const sunrise = data.sunrise ? new Date(data.sunrise + 'Z').toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "N/A";
-                const sunset = data.sunset ? new Date(data.sunset + 'Z').toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }) : "N/A";
+                // Datos esenciales
+                const tempActual = data.temp_actual ?? "N/A";
+                const tempMin = data.temp_min ?? "N/A";
+                const tempMax = data.temp_max ?? "N/A";
+                const lluvia = data.rain ?? 0;
+                const nieve = data.snow ?? 0;
+                const granizo = data.hail ?? 0;
+                const humedad = data.humidity ?? 0;
+                const viento = data.wind_speed ?? 0;
+                const dirViento = data.wind_deg ?? 0;
+                const puntoRocio = data.dew_point ?? 0;
+                const sunrise = data.sunrise ? new Date(data.sunrise + 'Z') : null;
+                const sunset = data.sunset ? new Date(data.sunset + 'Z') : null;
 
-                weatherEl.innerHTML = `
-                    📍 <strong>${municipio}</strong><br><br>
-                    🌡️ <strong>Temp:</strong> ${data.temp_min ?? "N/A"}°C - ${data.temp_max ?? "N/A"}°C
-                    (Sensación: ${data.feels_like ?? "N/A"}°C)<br>
-                    💧 <strong>Humedad:</strong> ${data.humidity ?? "N/A"}%<br>
-                    🌬️ <strong>Viento:</strong> ${data.wind_speed ?? "N/A"} km/h (${data.wind_deg ?? "N/A"}°)<br>
-                    🌧️ <strong>Lluvia:</strong> ${data.rain ?? 0} mm<br>
-                    ❄️ <strong>Nieve:</strong> ${data.snow ?? 0} mm<br>
-                    🧊 <strong>Granizo:</strong> ${data.hail ?? 0} mm<br>
-                    ☀️ <strong>Amanecer:</strong> ${sunrise} | 🌙 <strong>Atardecer:</strong> ${sunset}
+                // Barra amanecer/atardecer
+                const now = new Date();
+                let sunPercent = 0;
+                if (sunrise && sunset) {
+                    const total = sunset - sunrise;
+                    sunPercent = Math.min(Math.max((now - sunrise) / total * 100, 0), 100);
+                }
+
+                const weatherHTML = `
+                    <div class="weather-mockup">
+                        <div class="weather-left">
+                            <div class="weather-code">
+                                <img src="/static/icons/weather/${data.weathercode}.png" alt="Estado">
+                            </div>
+                            <div class="weather-municipio">${municipio}</div>
+                        </div>
+
+                        <div class="weather-center">
+                            <div class="temp-actual">${tempActual}°C</div>
+                            <div class="temp-minmax">
+                                <span class="temp-max">${tempMax}°C</span>
+                                <span class="temp-min">${tempMin}°C</span>
+                            </div>
+                        </div>
+
+                        <div class="weather-right">
+                            <div>Lluvia: ${lluvia}mm</div>
+                            <div>Granizo: ${granizo}%</div>
+                            <div>Nieve: ${nieve}mm</div>
+                            <div>Humedad: ${humedad}%</div>
+                            <div>Viento: ${viento} km/h (${dirViento}°)</div>
+                            <div>Punto Rocío: ${puntoRocio}°C</div>
+                        </div>
+
+                        <div class="weather-sun">
+                            <span>Amanecer</span>
+                            <div class="sun-bar">
+                                <div class="sun-progress" style="width:${sunPercent}%"></div>
+                            </div>
+                            <span>Atardecer</span>
+                        </div>
+                    </div>
                 `;
-                console.log("[Weather] Clima actualizado en DOM");
+
+                weatherDefault.innerHTML = weatherHTML;
+
             } catch (error) {
-                console.error("[Weather] Error cargando clima:", error);
-                weatherEl.textContent = "Error al cargar el clima.";
+                console.error("Error cargando clima:", error);
+                weatherDefault.textContent = "Error al cargar el clima.";
             }
+
         },
         (error) => {
-            console.error("[Weather] Error geolocalización:", error);
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    weatherEl.textContent = "Permite la geolocalización para ver el clima.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    weatherEl.textContent = "Ubicación no disponible.";
-                    break;
-                case error.TIMEOUT:
-                    weatherEl.textContent = "Tiempo de espera agotado al obtener ubicación.";
-                    break;
-                default:
-                    weatherEl.textContent = "Error desconocido al obtener ubicación.";
-            }
+            weatherDefault.textContent = "Error obteniendo ubicación";
         },
         { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );

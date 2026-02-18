@@ -20,6 +20,11 @@
     border-radius: 20px;
 }
 
+h2 {
+   margin-top: 0;
+   color: #00796b;
+}
+
 /* =========================
    FILAS
 ========================= */
@@ -65,7 +70,7 @@
     font-size: 14px;
     text-align: center;
     padding: 0 10px;
-    cursor: default; /* 👈 ahora se ve clicable */
+    cursor: default;
     transition: opacity 0.2s ease;
 }
 
@@ -118,7 +123,7 @@
     margin: 30px auto 0;
     display: block;
     padding: 15px 30px;
-    background: #00ff00;
+    background: #00d400;
     border-radius: 20px;
     border: none;
     font-size: 18px;
@@ -143,11 +148,6 @@
     font-size: 16px;
 }
 
-.weather-container h3 {
-    margin-top: 0;
-    color: #00796b;
-}
-
 .weather-container ul {
     padding-left: 20px;
 }
@@ -155,6 +155,115 @@
 .weather-container li {
     margin-bottom: 5px;
 }
+
+.weather-summary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.weather-summary img {
+    width: 64px;
+    height: 64px;
+    margin-bottom: 5px;
+}
+
+.weather-temp {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.temp-current {
+    font-size: 48px;
+    font-weight: bold;
+    display: block;
+}
+
+.temp-minmax {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.weather-mockup {
+    display: grid;
+    grid-template-columns: 100px 1fr 200px;
+    grid-template-rows: auto auto;
+    gap: 10px;
+    background: #e0f7fa;
+    padding: 15px;
+    border-radius: 15px;
+    font-family: Arial, sans-serif;
+}
+
+.weather-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.weather-code img {
+    width: 64px;
+    height: 64px;
+}
+
+.weather-municipio {
+    margin-top: 5px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.weather-center {
+    text-align: center;
+}
+
+.temp-actual {
+    font-size: 48px;
+    font-weight: bold;
+}
+
+.temp-minmax {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-top: 5px;
+}
+
+.weather-right {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.weather-sun {
+    grid-column: 1 / span 3;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.sun-bar {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #000;
+    height: 10px;
+    border-radius: 5px;
+    position: relative;
+}
+
+.sun-progress {
+    background: #4caf50;
+    height: 100%;
+    border-radius: 5px 0 0 5px;
+}
+
 
 /* =========================
    RESPONSIVE
@@ -192,3 +301,7 @@
     width: 100%;
   }
 }
+
+
+/*color: #6a6a6a;
+    font-size: 16px;*/
