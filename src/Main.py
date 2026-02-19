@@ -223,7 +223,8 @@ def get_weather(lat: float, lon: float):
             "dewpoint_2m,"
             "apparent_temperature,"
             "precipitation,"
-            "snowfall"
+            "snowfall,"
+            "precipitation_probability"
             "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
             "&timezone=auto"
         )
@@ -240,9 +241,15 @@ def get_weather(lat: float, lon: float):
 
         weathercode = current.get("weathercode", 0)
 
-        hail = 0
+        # Obtener valores con seguridad
+        precipitation = hourly.get("precipitation", [0])[current_index] or 0
+        snowfall = hourly.get("snowfall", [0])[current_index] or 0
+        precipitation_probability = hourly.get("precipitation_probability", [0])[current_index] or 0
+
+        # Granizo como probabilidad SOLO si hay código de tormenta con granizo
+        hail_probability = 0
         if weathercode in [96, 99]:
-            hail = hourly.get("precipitation", [0])[current_index]
+            hail_probability = precipitation_probability
 
         weather = {
             "temp_actual": current.get("temperature"),
@@ -254,9 +261,14 @@ def get_weather(lat: float, lon: float):
             "wind_deg": current.get("winddirection"),
             "sunrise": daily.get("sunrise", [None])[0],
             "sunset": daily.get("sunset", [None])[0],
-            "rain": hourly.get("precipitation", [0])[current_index],
-            "snow": hourly.get("snowfall", [0])[current_index],
-            "hail": hail,
+            
+            # 🔥 Siempre con 1 decimal
+            "rain": round(float(precipitation), 1),
+            "snow": round(float(snowfall), 1),
+
+            # Granizo como %
+            "hail": int(hail_probability),
+
             "weathercode": weathercode
         }
 
@@ -265,3 +277,4 @@ def get_weather(lat: float, lon: float):
     except Exception as e:
         print("Error Open-Meteo:", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+

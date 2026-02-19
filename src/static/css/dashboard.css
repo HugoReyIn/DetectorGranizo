@@ -230,33 +230,31 @@ h2 {
 }
 
 .weather-precip-grid {
-    border: 2px dashed red;
     display: flex;
-    flex-direction: column; /* filas verticales (lluvia, granizo, nieve) */
-    gap: 10px;              /* separación entre filas */
-    place-items: center;
+    flex-direction: column;
+    gap: 12px;
 }
 
+/* Cada fila */
 .rain, .hail, .snow {
-    border: 2px dashed blue;
-    display: flex;
-    align-items: right;      /* centra verticalmente icono y texto */
-    gap: 10px;                /* separación entre icono y texto */
-    border: 1px solid green; 
+    display: grid;
+    grid-template-columns: 40px 1fr; /* columna fija icono + columna texto */
+    align-items: center;
 }
 
+/* Iconos */
 .img-precip {
-    width: 35px;
-    height: 35px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
+    justify-self: center; /* centra el icono dentro de su columna */
 }
 
+/* Texto */
 .weather-precip-grid span {
-    font-size: 16px;
     text-align: left;
-     border: 1px solid orange; /* borde del texto */
+    font-size: 18px;
 }
-
 
 /* Iconos */
 .img-minmax {
@@ -267,22 +265,79 @@ h2 {
 .sun-times {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 15px;
 }
 
 .sun-bar {
     flex: 1;
+    position: relative;      /* IMPORTANTE */
     background: #eee;
     height: 12px;
     border-radius: 6px;
-    overflow: hidden;
+    overflow: visible;       /* para que se vean los marcadores */
+}
+
+/* Wrapper para que la barra ocupe bien el espacio */
+.sun-bar-wrapper {
+    flex: 1;
+    position: relative;
+}
+
+/* Marcadores */
+.sun-marker {
+    position: absolute;
+    top: 100%;
+    transform: translateX(-50%);
+    text-align: center;
+}
+
+/* Posiciones exactas */
+.marker-25 { left: 25%; }
+.marker-50 { left: 50%; }
+.marker-75 { left: 75%; }
+
+/* Línea vertical pequeña */
+.marker-line {
+    width: 2px;
+    height: 10px;
+    background: #666;
+    margin: 4px auto;
+}
+
+/* Hora debajo */
+.marker-time .marker-line {
+    font-size: 10px;
+    color: #9d9d9d;
+    margin-top: 4px;
+}
+
+.marker-50 {
+    height: 14px;
+    background: #646464;
 }
 
 .sun-progress {
     height: 100%;
     background: #4caf50;
     width: 0%;
+    transition: width 0.6s ease;
 }
+
+.sun-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    background: #ff9800;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 6px rgba(0,0,0,0.3);
+    transition: left 0.6s ease;
+    transition: width 0.6s ease;
+}
+
 .sun-times > div:first-child, .sun-times > div:last-child {
     display: flex;
     flex-direction: column;

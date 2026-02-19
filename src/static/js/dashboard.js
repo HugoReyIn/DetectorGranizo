@@ -131,6 +131,23 @@ async function loadWeather() {
                 if (sunrise && sunset) {
                     const now = new Date();
                     const total = sunset - sunrise;
+                    
+                    function formatTime(date) {
+                        return date.toLocaleTimeString("es-ES", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            hour12: false
+                        });
+                    }
+
+                    const t25 = new Date(sunrise.getTime() + total * 0.25);
+                    const t50 = new Date(sunrise.getTime() + total * 0.50);
+                    const t75 = new Date(sunrise.getTime() + total * 0.75);
+
+                    document.getElementById("sun-25").textContent = formatTime(t25);
+                    document.getElementById("sun-50").textContent = formatTime(t50);
+                    document.getElementById("sun-75").textContent = formatTime(t75);
+
                     sunPercent = Math.min(
                         Math.max(((now - sunrise) / total) * 100, 0),
                         100
@@ -143,13 +160,19 @@ async function loadWeather() {
 
                 document.getElementById("municipio").textContent = municipio;
 
-                document.getElementById("temp-actual").textContent = tempActual;
-                document.getElementById("temp-max").textContent = tempMax;
-                document.getElementById("temp-min").textContent = tempMin;
+                document.getElementById("temp-actual").textContent = `${tempActual} ºC`;
+                document.getElementById("temp-max").textContent = `${tempMax} ºC`;
+                document.getElementById("temp-min").textContent = `${tempMin} ºC`;
 
-                document.getElementById("rain").textContent = lluvia;
-                document.getElementById("hail").textContent = granizo;
-                document.getElementById("snow").textContent = nieve;
+                const rainValue = Number(lluvia ?? 0).toFixed(1);
+                const snowValue = Number(nieve ?? 0).toFixed(1);
+                const hailValue = Math.round(granizo ?? 0);
+
+                document.getElementById("rain").textContent = `${rainValue} mm`;
+                document.getElementById("snow").textContent = `${snowValue} cm`;
+                document.getElementById("hail").textContent = `${hailValue} %`;
+
+
 
                 document.getElementById("humidity").textContent = humedad;
                 document.getElementById("wind").textContent = `${viento} (${dirViento}°)`;
@@ -158,7 +181,15 @@ async function loadWeather() {
                 document.getElementById("sunrise").textContent = sunriseDateStr;
                 document.getElementById("sunset").textContent = sunsetDateStr;
 
-                document.getElementById("sun-progress").style.width = `${sunPercent}%`;
+                const sunProgressEl = document.getElementById("sun-progress");
+                const sunIndicatorEl = document.getElementById("sun-indicator");
+
+                sunProgressEl.style.width = `${sunPercent}%`;
+
+                // Mover el círculo al final de la barra de progreso
+                const barWidth = sunProgressEl.parentElement.offsetWidth;
+                sunIndicatorEl.style.left = `${(sunPercent / 100) * barWidth}px`;
+
 
             } catch (error) {
                 console.error("Error cargando clima:", error);

@@ -67,15 +67,15 @@
         <!-- 2️⃣ Temperatura -->
         <div class="weather-card weather-temp-block temperature-grid">
             <div class="temp-actual">
-                <span id="temp-actual">--</span>°C
+                <span id="temp-actual">-- ºC</span>
             </div>
             <div class="temp-max">
                 <img src="/static/img/maxTemp.png" alt="MaxTemperature" class="img-minmax">
-                <span id="temp-max">--</span>°C
+                <span id="temp-max">-- ºC</span>
             </div>
             <div class="temp-min">
                 <img src="/static/img/minTemp.png" alt="MinTemperature" class="img-minmax">
-                <span id="temp-min">--</span>°C
+                <span id="temp-min">-- ºC</span>
             </div>
         </div>
 
@@ -83,15 +83,15 @@
         <div class="weather-precip-grid">
             <div class="rain">
                 <img src="/static/img/rain.png" alt="Rain" class="img-precip">
-                <span id="rain">--</span> mm
+                <span id="rain">-- mm</span>
             </div>
             <div class="hail">
                 <img src="/static/img/hail.png" alt="Hail" class="img-precip">
-                <span id="hail">--</span> %
+                <span id="hail">--%</span>
             </div>
             <div class="snow">
                 <img src="/static/img/snow.png" alt="Snow" class="img-precip">
-                <span id="snow">--</span> cm
+                <span id="snow">-- cm</span>
             </div>
         </div>
 
@@ -111,22 +111,47 @@
         <!-- 6️⃣ Barra solar -->
         <div class="weather-card weather-sun-block">
             <div class="sun-times">
-                <div>
+
+                <!-- Sunrise -->
+                <div class="sun-side">
                     <img src="/static/img/sunrise.png" alt="Sunrise">
                     <span id="sunrise" class="sunrise-sunset">--:--</span>
                 </div>
-                <div class="sun-bar">
-                    <div id="sun-progress" class="sun-progress"></div>
+
+                <!-- Barra solar -->
+                <div class="sun-bar-wrapper">
+                    <div class="sun-bar">
+                        <div id="sun-progress" class="sun-progress"></div>
+                
+                        <!-- Marcadores -->
+                        <div class="sun-marker marker-25">
+                            <div class="marker-line"></div>
+                            <div class="marker-time" id="sun-25">--:--</div>
+                        </div>
+
+                        <div class="sun-marker marker-50">
+                            <div class="marker-line"></div>
+                            <div class="marker-time" id="sun-50">--:--</div>
+                        </div>
+
+                        <div class="sun-marker marker-75">
+                            <div class="marker-line"></div>
+                            <div class="marker-time" id="sun-75">--:--</div>
+                        </div>
+
+                        <div id="sun-indicator" class="sun-indicator"></div>
+                    </div>
                 </div>
-                <div>
+
+                <!-- Sunset -->
+                <div class="sun-side">
                     <img src="/static/img/sunset.png" alt="Sunset">
                     <span id="sunset" class="sunrise-sunset">--:--</span>
                 </div>
+
             </div>
         </div>
-
     </div>
- 
 </div>
 
 <script src="/static/js/dashboard.js"></script>
