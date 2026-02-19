@@ -279,6 +279,7 @@ h2 {
 }
 
 /* Wrapper para que la barra ocupe bien el espacio */
+/* Wrapper para que la barra ocupe bien el espacio */
 .sun-bar-wrapper {
     flex: 1;
     position: relative;
@@ -298,23 +299,33 @@ h2 {
 .marker-75 { left: 75%; }
 
 /* Línea vertical pequeña */
-.marker-line {
-    width: 2px;
-    height: 10px;
+.marker-line-0 {
+    width: 1px;
+    height: 5px;
     background: #666;
     margin: 4px auto;
 }
 
+.marker-line-5 {
+    width: 1px;
+    height: 3px;
+    background: #666;
+    opacity: 75%;
+    margin: 4px auto;
+}
+
 /* Hora debajo */
-.marker-time .marker-line {
+.marker-time-0 {
     font-size: 10px;
-    color: #9d9d9d;
+    color: #666;
     margin-top: 4px;
 }
 
-.marker-50 {
-    height: 14px;
-    background: #646464;
+.marker-time-5 {
+    font-size: 10px;
+    color: #666;
+    margin-top: 4px;
+    opacity: 75%;
 }
 
 .sun-progress {
@@ -365,6 +376,10 @@ h2 {
 #municipio {
     font-size: 25px;
     font-weight: bold;
+}
+
+#rain {
+    font-weight: 500;
 }
 
 /* =========================

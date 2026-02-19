@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
 import requests
+from datetime import datetime
 
 from daos.UserDAO import UserDAO
 from daos.FieldDAO import FieldDAO
@@ -218,14 +219,14 @@ def get_weather(lat: float, lon: float):
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={lat}"
             f"&longitude={lon}"
-            "&current_weather=true"
+            "&current=temperature_2m,weathercode,windspeed_10m,winddirection_10m"
             "&hourly=relativehumidity_2m,"
             "dewpoint_2m,"
-            "apparent_temperature,"
             "precipitation,"
             "snowfall,"
             "precipitation_probability"
             "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
+            "&models=icon_eu"
             "&timezone=auto"
         )
 
@@ -233,42 +234,50 @@ def get_weather(lat: float, lon: float):
         response.raise_for_status()
         data = response.json()
 
-        current = data.get("current_weather", {})
+        current = data.get("current", {})
         hourly = data.get("hourly", {})
         daily = data.get("daily", {})
 
-        current_index = 0
-
         weathercode = current.get("weathercode", 0)
 
-        # Obtener valores con seguridad
+        # ==============================
+        # BUSCAR ÍNDICE HORA ACTUAL
+        # ==============================
+
+        now = datetime.now().replace(minute=0, second=0, microsecond=0)
+        times = hourly.get("time", [])
+
+        current_index = 0
+
+        for i, t in enumerate(times):
+            dt = datetime.fromisoformat(t)
+            if dt == now:
+                current_index = i
+                break
+
+        # ==============================
+
         precipitation = hourly.get("precipitation", [0])[current_index] or 0
         snowfall = hourly.get("snowfall", [0])[current_index] or 0
         precipitation_probability = hourly.get("precipitation_probability", [0])[current_index] or 0
 
-        # Granizo como probabilidad SOLO si hay código de tormenta con granizo
         hail_probability = 0
         if weathercode in [96, 99]:
             hail_probability = precipitation_probability
 
         weather = {
-            "temp_actual": current.get("temperature"),
+            "temp_actual": current.get("temperature_2m"),
             "temp_max": daily.get("temperature_2m_max", [None])[0],
             "temp_min": daily.get("temperature_2m_min", [None])[0],
             "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
             "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
-            "wind_speed": current.get("windspeed"),
-            "wind_deg": current.get("winddirection"),
+            "wind_speed": current.get("windspeed_10m"),
+            "wind_deg": current.get("winddirection_10m"),
             "sunrise": daily.get("sunrise", [None])[0],
             "sunset": daily.get("sunset", [None])[0],
-            
-            # 🔥 Siempre con 1 decimal
             "rain": round(float(precipitation), 1),
             "snow": round(float(snowfall), 1),
-
-            # Granizo como %
             "hail": int(hail_probability),
-
             "weathercode": weathercode
         }
 

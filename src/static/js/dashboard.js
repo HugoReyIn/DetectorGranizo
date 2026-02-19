@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(updateDateTime, 1000);
 
     loadWeather();
-    setInterval(loadWeather, 5 * 60 * 1000);
+    setInterval(loadWeather, 60 * 60 * 1000);
 
     const dashboard = document.querySelector(".dashboard");
 
