@@ -62,13 +62,33 @@ function updateDateTime() {
 
 
 // ===============================
+// FUNCIONES AUXILIARES FECHAS
+// ===============================
+
+// Extrae solo HH:mm del ISO sin convertir zona horaria
+function extractHour(isoString) {
+    if (!isoString) return "--:--";
+    return isoString.split("T")[1].slice(0, 5);
+}
+
+// Convierte ISO a Date en hora LOCAL real
+function parseLocalDateTime(dateTimeStr) {
+    if (!dateTimeStr) return null;
+
+    const [date, time] = dateTimeStr.split("T");
+    const [year, month, day] = date.split("-");
+    const [hour, minute] = time.split(":");
+
+    return new Date(year, month - 1, day, hour, minute);
+}
+
+
+// ===============================
 // WEATHER
 // ===============================
 async function loadWeather() {
 
-    if (!navigator.geolocation) {
-        return;
-    }
+    if (!navigator.geolocation) return;
 
     navigator.geolocation.getCurrentPosition(
         async (position) => {
@@ -77,19 +97,17 @@ async function loadWeather() {
             const lon = position.coords.longitude;
 
             try {
-
                 // Municipio
                 const muniRes = await fetch(`/get-municipio?lat=${lat}&lon=${lon}`);
                 const muniData = await muniRes.json();
                 const municipio = muniData.municipio ?? "Desconocido";
 
-                // Clima
+                // Clima (Open-Meteo)
                 const weatherRes = await fetch(`/get-weather?lat=${lat}&lon=${lon}`);
                 const data = await weatherRes.json();
 
                 if (data.error) return;
 
-                // Datos
                 const tempActual = data.temp_actual ?? "--";
                 const tempMin = data.temp_min ?? "--";
                 const tempMax = data.temp_max ?? "--";
@@ -101,28 +119,25 @@ async function loadWeather() {
                 const dirViento = data.wind_deg ?? 0;
                 const puntoRocio = data.dew_point ?? 0;
 
-                const sunrise = data.sunrise ? new Date(data.sunrise + "Z") : null;
-                const sunset = data.sunset ? new Date(data.sunset + "Z") : null;
+                // ⬇️ CORRECCIÓN DEFINITIVA
+                const sunriseDateStr = extractHour(data.sunrise);
+                const sunsetDateStr = extractHour(data.sunset);
 
-                const sunriseDate = sunrise
-                    ? sunrise.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false })
-                    : "--:--";
-
-                const sunsetDate = sunset
-                    ? sunset.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false })
-                    : "--:--";
+                const sunrise = parseLocalDateTime(data.sunrise);
+                const sunset = parseLocalDateTime(data.sunset);
 
                 // Progreso solar
                 let sunPercent = 0;
                 if (sunrise && sunset) {
                     const now = new Date();
                     const total = sunset - sunrise;
-                    sunPercent = Math.min(Math.max((now - sunrise) / total * 100, 0), 100);
+                    sunPercent = Math.min(
+                        Math.max(((now - sunrise) / total) * 100, 0),
+                        100
+                    );
                 }
 
-                // ==========
-                // ACTUALIZAR DOM
-                // ==========
+                // ========== ACTUALIZAR DOM ==========
                 document.getElementById("weather-icon").src =
                     `/static/icons/weather/${data.weathercode}.png`;
 
@@ -140,8 +155,9 @@ async function loadWeather() {
                 document.getElementById("wind").textContent = `${viento} (${dirViento}°)`;
                 document.getElementById("dew").textContent = puntoRocio;
 
-                document.getElementById("sunrise").textContent = sunriseDate;
-                document.getElementById("sunset").textContent = sunsetDate;
+                document.getElementById("sunrise").textContent = sunriseDateStr;
+                document.getElementById("sunset").textContent = sunsetDateStr;
+
                 document.getElementById("sun-progress").style.width = `${sunPercent}%`;
 
             } catch (error) {

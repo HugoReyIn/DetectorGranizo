@@ -221,6 +221,43 @@ h2 {
     gap: 6px;
 }
 
+.temp-actual {
+    grid-column: 1 / span 2;
+    text-align: center;
+    font-size: 70px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.weather-precip-grid {
+    border: 2px dashed red;
+    display: flex;
+    flex-direction: column; /* filas verticales (lluvia, granizo, nieve) */
+    gap: 10px;              /* separación entre filas */
+    place-items: center;
+}
+
+.rain, .hail, .snow {
+    border: 2px dashed blue;
+    display: flex;
+    align-items: right;      /* centra verticalmente icono y texto */
+    gap: 10px;                /* separación entre icono y texto */
+    border: 1px solid green; 
+}
+
+.img-precip {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+
+.weather-precip-grid span {
+    font-size: 16px;
+    text-align: left;
+     border: 1px solid orange; /* borde del texto */
+}
+
+
 /* Iconos */
 .img-minmax {
     width: 20px;

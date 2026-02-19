@@ -231,7 +231,6 @@ def get_weather(lat: float, lon: float):
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        print("DEBUG Open-Meteo:", data)
 
         current = data.get("current_weather", {})
         hourly = data.get("hourly", {})

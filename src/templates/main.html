@@ -66,17 +66,35 @@
 
         <!-- 2️⃣ Temperatura -->
         <div class="weather-card weather-temp-block temperature-grid">
-            <div class="temp-actual"><span id="temp-actual">--</span>°C</div>
-            <div class="temp-max"><img src="/static/img/maxTemp.png" alt="MaxTemperature" class="img-minmax"> <span id="temp-max">--</span>°C</div>
-            <div class="temp-min"><img src="/static/img/minTemp.png" alt="MinTemperature" class="img-minmax"> <span id="temp-min">--</span>°C</div>
+            <div class="temp-actual">
+                <span id="temp-actual">--</span>°C
+            </div>
+            <div class="temp-max">
+                <img src="/static/img/maxTemp.png" alt="MaxTemperature" class="img-minmax">
+                <span id="temp-max">--</span>°C
+            </div>
+            <div class="temp-min">
+                <img src="/static/img/minTemp.png" alt="MinTemperature" class="img-minmax">
+                <span id="temp-min">--</span>°C
+            </div>
         </div>
 
         <!-- 3️⃣ Lluvia / Granizo / Nieve -->
-        <div class="weather-card weather-precip">
-            <div>Lluvia: <span id="rain">--</span> mm</div>
-            <div>Granizo: <span id="hail">--</span>%</div>
-            <div>Nieve: <span id="snow">--</span> cm</div>
+        <div class="weather-precip-grid">
+            <div class="rain">
+                <img src="/static/img/rain.png" alt="Rain" class="img-precip">
+                <span id="rain">--</span> mm
+            </div>
+            <div class="hail">
+                <img src="/static/img/hail.png" alt="Hail" class="img-precip">
+                <span id="hail">--</span> %
+            </div>
+            <div class="snow">
+                <img src="/static/img/snow.png" alt="Snow" class="img-precip">
+                <span id="snow">--</span> cm
+            </div>
         </div>
+
 
         <!-- 4️⃣ Viento / Humedad / Punto Rocío -->
         <div class="weather-card weather-extra">
