@@ -224,7 +224,8 @@ def get_weather(lat: float, lon: float):
             "dewpoint_2m,"
             "precipitation,"
             "snowfall,"
-            "precipitation_probability"
+            "precipitation_probability,"
+            "soil_moisture_0_1cm"  # <-- NUEVO
             "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
             "&models=icon_eu"
             "&timezone=auto"
@@ -260,25 +261,27 @@ def get_weather(lat: float, lon: float):
         precipitation = hourly.get("precipitation", [0])[current_index] or 0
         snowfall = hourly.get("snowfall", [0])[current_index] or 0
         precipitation_probability = hourly.get("precipitation_probability", [0])[current_index] or 0
+        soil_moisture = hourly.get("soil_moisture_0_1cm", [None])[current_index]
 
         hail_probability = 0
         if weathercode in [96, 99]:
             hail_probability = precipitation_probability
 
         weather = {
-            "temp_actual": current.get("temperature_2m"),
-            "temp_max": daily.get("temperature_2m_max", [None])[0],
-            "temp_min": daily.get("temperature_2m_min", [None])[0],
-            "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
-            "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
-            "wind_speed": current.get("windspeed_10m"),
-            "wind_deg": current.get("winddirection_10m"),
-            "sunrise": daily.get("sunrise", [None])[0],
-            "sunset": daily.get("sunset", [None])[0],
-            "rain": round(float(precipitation), 1),
-            "snow": round(float(snowfall), 1),
-            "hail": int(hail_probability),
-            "weathercode": weathercode
+             "temp_actual": current.get("temperature_2m"),
+                "temp_max": daily.get("temperature_2m_max", [None])[0],
+                "temp_min": daily.get("temperature_2m_min", [None])[0],
+                "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
+                "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
+                "wind_speed": current.get("windspeed_10m"),
+                "wind_deg": current.get("winddirection_10m"),
+                "sunrise": daily.get("sunrise", [None])[0],
+                "sunset": daily.get("sunset", [None])[0],
+                "rain": round(float(precipitation), 1),
+                "snow": round(float(snowfall), 1),
+                "hail": int(hail_probability),
+                "soil_moisture": round(soil_moisture, 1) if soil_moisture is not None else None,  # <-- NUEVO
+                "weathercode": weathercode
         }
 
         return JSONResponse(weather)

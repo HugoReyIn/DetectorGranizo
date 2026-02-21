@@ -149,7 +149,7 @@ h2 {
 .weather-card {
     background: #ffffff;
     padding: 15px;
-    text-align: center;
+    text-align: left;
 }
 
 #weather-actual-info{
@@ -230,9 +230,11 @@ h2 {
 }
 
 .weather-precip-grid {
+    grid-column: 3;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    margin-left: 50px;
 }
 
 /* Cada fila */
@@ -418,7 +420,3 @@ h2 {
     width: 100%;
   }
 }
-
-
-/*color: #6a6a6a;
-    font-size: 16px;*/
