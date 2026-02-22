@@ -235,4 +235,51 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(() => alert("Error de conexión con el servidor"));
         });
     }
+
+    // ===== WEATHER POR MUNICIPIO DEL CAMPO =====
+
+    async function loadWeatherByMunicipio() {
+        const weatherBox = document.querySelector(".weather-box");
+        if (!weatherBox) return;
+
+        const municipio = weatherBox.dataset.municipality;
+        if (!municipio || municipio === "–") return;
+
+        try {
+            const res = await fetch(`/weather?location=${encodeURIComponent(municipio)}`);
+            const data = await res.json();
+
+            if (!data.daily) return;
+
+            for (let i = 1; i <= 4; i++) {
+                const day = data.daily[i];
+
+                document.getElementById(`day-${i}-name`).textContent =
+                    new Date(day.dt * 1000).toLocaleDateString("es-ES", { weekday: "long" });
+
+                document.getElementById(`day-${i}-max`).textContent =
+                    Math.round(day.temp.max) + "°C";
+
+                document.getElementById(`day-${i}-min`).textContent =
+                    Math.round(day.temp.min) + "°C";
+
+                document.getElementById(`day-${i}-sunrise`).textContent =
+                    new Date(day.sunrise * 1000).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+                document.getElementById(`day-${i}-sunset`).textContent =
+                    new Date(day.sunset * 1000).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+                document.getElementById(`day-${i}-icon`).src =
+                    `/static/img/${day.weather[0].icon}.png`;
+            }
+
+        } catch (error) {
+            console.error("Error cargando clima:", error);
+        }
+    }
+
+    // Cargar clima solo si estamos editando campo existente
+    if (isEditing) {
+        loadWeatherByMunicipio();
+    }
 });
