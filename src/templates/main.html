@@ -15,7 +15,7 @@
 </div>
 
 <div class="dashboard">
-    <h2>Mis campos</h2>
+    <h2>Mis terrenos</h2>
     {% for field in fields %}
     <div class="field-row" 
          data-id="{{ field.id }}" 
@@ -47,24 +47,21 @@
     {% endfor %}
 
     <button class="add-field-btn">
-        + Añadir campo
+        + Añadir terreno
     </button>
 </div>
 
 <div id="weather-container" class="dashboard">
-    <h2>Tiempo actual</h2>
-    <!-- Div general por defecto -->
+    <h2>Tiempo</h2>
+    <h4>Hoy</h4>
     <div id="weather-actual-info" class="weather-grid">
-
-        <!-- 1️⃣ Imagen + descripción -->
-        <div class="weather-card weather-summary">
+        <div class="weather-summary">
             <div class="weather-icon">
                 <img id="weather-icon" src="" alt="Estado">
             </div>
             <div id="weather-description" class="weather-description"></div>
         </div>
 
-        <!-- 2️⃣ Temperatura -->
         <div class="weather-card weather-temp-block temperature-grid">
             <div class="temp-actual">
                 <span id="temp-actual">-- ºC</span>
@@ -79,7 +76,6 @@
             </div>
         </div>
 
-        <!-- 3️⃣ Lluvia / Granizo / Nieve -->
         <div class="weather-card weather-precip-grid">
             <div class="rain">
                 <img src="/static/img/rain.png" alt="Rain" class="img-precip">
@@ -95,8 +91,6 @@
             </div>
         </div>
 
-
-        <!-- 4️⃣ Viento / Humedad / Punto Rocío -->
         <div class="weather-card weather-extra-grid">
             <div class="wind">
                 <img src="/static/img/wind.png" alt="Wind" class="img-precip" id="wind-icon">
@@ -113,27 +107,21 @@
             </div>
         </div>
 
-        <!-- 5️⃣ Municipio -->
-        <div class="weather-card weather-municipio-block">
+        <div class="weather-municipio-block">
             <span id="municipio">---</span>
         </div>
 
-        <!-- 6️⃣ Barra solar -->
         <div class="weather-card weather-sun-block">
             <div class="sun-times">
-
-                <!-- Sunrise -->
                 <div class="sun-side">
                     <img src="/static/img/sunrise.png" alt="Sunrise">
                     <span id="sunrise" class="sunrise-sunset">--:--</span>
                 </div>
 
-                <!-- Barra solar -->
                 <div class="sun-bar-wrapper">
                     <div class="sun-bar">
                         <div id="sun-progress" class="sun-progress"></div>
                 
-                        <!-- Marcadores -->
                         <div class="sun-marker marker-25">
                             <div class="marker-line-5"></div>
                             <div class="marker-time-5" id="sun-25">--:--</div>
@@ -153,15 +141,46 @@
                     </div>
                 </div>
 
-                <!-- Sunset -->
                 <div class="sun-side">
                     <img src="/static/img/sunset.png" alt="Sunset">
                     <span id="sunset" class="sunrise-sunset">--:--</span>
                 </div>
-
             </div>
         </div>
     </div>
+    <h4>Próximos 4 días</h4>
+    <div class="forecast-grid">
+        {% for i in range(1, 5) %}
+        <div class="forecast-card">
+
+            <div class="forecast-day" id="day-{{ i }}-name"></div>
+
+            <img id="day-{{ i }}-icon" class="forecast-main-icon">
+
+            <div class="forecast-row">
+                <img src="/static/img/maxTemp.png" class="forecast-small-icon">
+                <span id="day-{{ i }}-max"></span>
+            </div>
+
+            <div class="forecast-row">
+                <img src="/static/img/minTemp.png" class="forecast-small-icon">
+                <span id="day-{{ i }}-min"></span>
+            </div>
+
+            <div class="forecast-row">
+                <img src="/static/img/sunrise.png" class="forecast-small-icon">
+                <span id="day-{{ i }}-sunrise"></span>
+            </div>
+
+            <div class="forecast-row">
+                <img src="/static/img/sunset.png" class="forecast-small-icon">
+                <span id="day-{{ i }}-sunset"></span>
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
 
 <script src="/static/js/dashboard.js"></script>

@@ -25,6 +25,10 @@ h2 {
    color: #00796b;
 }
 
+h4 {
+    color: #00a05b;
+}
+
 /* =========================
    FILAS
 ========================= */
@@ -163,6 +167,13 @@ h2 {
 /* Distribución como tu imagen */
 .weather-summary {
     grid-column: 1;
+    text-align: center;
+    margin-top: 25px;
+}
+
+#weather-icon {
+    width: 50px;
+    height: auto;
 }
 
 .weather-temp-block {
@@ -180,6 +191,7 @@ h2 {
 .weather-municipio-block {
     grid-column: 1;
     justify-content: flex-end;
+    text-align: center;
 }
 
 .weather-sun-block {
@@ -237,6 +249,11 @@ h2 {
     margin-left: 50px;
 }
 
+#weather-description{
+    color: #888;
+    margin-top: 2px;
+}
+
 /* Cada fila */
 .rain, .hail, .snow {
     display: grid;
@@ -246,8 +263,8 @@ h2 {
 
 /* Iconos */
 .img-precip {
-    width: 28px;
-    height: 28px;
+    width: 35px;
+    height: 35px;
     object-fit: contain;
     justify-self: center; /* centra el icono dentro de su columna */
 }
@@ -382,6 +399,49 @@ h2 {
 
 #rain {
     font-weight: 500;
+}
+
+/* =========================
+   FORECAST 4 DÍAS
+========================= */
+
+.forecast-grid {
+    margin-top: 15px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+}
+
+.forecast-card {
+    background: white;
+    border: 2px solid black;  /* borde negro */
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+}
+
+.forecast-day {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.forecast-main-icon {
+    width: 60px;
+    margin-bottom: 10px;
+}
+
+.forecast-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+
+.forecast-small-icon {
+    width: 18px;
+    height: auto;
 }
 
 /* =========================

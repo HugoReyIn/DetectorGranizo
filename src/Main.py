@@ -225,8 +225,9 @@ def get_weather(lat: float, lon: float):
             "precipitation,"
             "snowfall,"
             "precipitation_probability,"
-            "soil_moisture_0_1cm"  # <-- NUEVO
-            "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min"
+            "soil_moisture_0_1cm"
+            "&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min,weathercode"
+            "&forecast_days=5"
             "&models=icon_eu"
             "&timezone=auto"
         )
@@ -268,20 +269,33 @@ def get_weather(lat: float, lon: float):
             hail_probability = precipitation_probability
 
         weather = {
-             "temp_actual": current.get("temperature_2m"),
-                "temp_max": daily.get("temperature_2m_max", [None])[0],
-                "temp_min": daily.get("temperature_2m_min", [None])[0],
-                "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
-                "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
-                "wind_speed": current.get("windspeed_10m"),
-                "wind_deg": current.get("winddirection_10m"),
-                "sunrise": daily.get("sunrise", [None])[0],
-                "sunset": daily.get("sunset", [None])[0],
-                "rain": round(float(precipitation), 1),
-                "snow": round(float(snowfall), 1),
-                "hail": int(hail_probability),
-                "soil_moisture": round(soil_moisture, 1) if soil_moisture is not None else None,  # <-- NUEVO
-                "weathercode": weathercode
+            # CURRENT
+            "temp_actual": current.get("temperature_2m"),
+            "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
+            "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
+            "wind_speed": current.get("windspeed_10m"),
+            "wind_deg": current.get("winddirection_10m"),
+            "rain": round(float(precipitation), 1),
+            "snow": round(float(snowfall), 1),
+            "hail": int(hail_probability),
+            "soil_moisture": round(soil_moisture, 1) if soil_moisture is not None else None,
+            "weathercode": weathercode,
+
+            # TODAY
+            "temp_max": daily.get("temperature_2m_max", [None])[0],
+            "temp_min": daily.get("temperature_2m_min", [None])[0],
+            "sunrise": daily.get("sunrise", [None])[0],
+            "sunset": daily.get("sunset", [None])[0],
+
+            # DAILY FORECAST (5 días)
+            "daily": {
+                "time": daily.get("time"),
+                "weathercode": daily.get("weathercode"),
+                "temperature_2m_max": daily.get("temperature_2m_max"),
+                "temperature_2m_min": daily.get("temperature_2m_min"),
+                "sunrise": daily.get("sunrise"),
+                "sunset": daily.get("sunset")
+            }
         }
 
         return JSONResponse(weather)
@@ -289,4 +303,3 @@ def get_weather(lat: float, lon: float):
     except Exception as e:
         print("Error Open-Meteo:", e)
         return JSONResponse({"error": str(e)}, status_code=500)
-

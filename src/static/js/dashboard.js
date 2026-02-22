@@ -137,6 +137,43 @@ function getHailProbabilityFromCode(code) {
     }
 }
 
+function renderForecast(daily) {
+
+    for (let i = 1; i <= 4; i++) {
+
+        const date = new Date(daily.time[i]);
+
+        const dayName = date.toLocaleDateString("es-ES", {
+            weekday: "long"
+        });
+
+        const formattedDay =
+            dayName.charAt(0).toUpperCase() + dayName.slice(1);
+
+        const weatherCode = daily.weathercode[i];
+
+        const max = daily.temperature_2m_max[i];
+        const min = daily.temperature_2m_min[i];
+
+        const sunrise = extractHour(daily.sunrise[i]);
+        const sunset = extractHour(daily.sunset[i]);
+
+        // Nombre día
+        document.getElementById(`day-${i}-name`).textContent = formattedDay;
+
+        // Icono principal según weathercode
+        document.getElementById(`day-${i}-icon`).src =
+            `/static/img/${weatherCode}.png`;
+
+        // Temperaturas
+        document.getElementById(`day-${i}-max`).textContent = `${max} ºC`;
+        document.getElementById(`day-${i}-min`).textContent = `${min} ºC`;
+
+        // Sol
+        document.getElementById(`day-${i}-sunrise`).textContent = sunrise;
+        document.getElementById(`day-${i}-sunset`).textContent = sunset;
+    }
+}
 
 // ===============================
 // WEATHER
@@ -160,6 +197,8 @@ async function loadWeather() {
                 // Clima (Open-Meteo)
                 const weatherRes = await fetch(`/get-weather?lat=${lat}&lon=${lon}`);
                 const data = await weatherRes.json();
+
+               
 
                 if (data.error) return;
 
@@ -208,7 +247,7 @@ async function loadWeather() {
                 }
 
                 // ========== ACTUALIZAR DOM ==========
-                document.getElementById("weather-icon").src = `/static/icons/weather/${data.weathercode}.png`;
+                document.getElementById("weather-icon").src = `/static/img/${data.weathercode}.png`;
                 document.getElementById("municipio").textContent = municipio;
 
                 document.getElementById("temp-actual").textContent = `${tempActual} ºC`;
@@ -247,6 +286,9 @@ async function loadWeather() {
                 const barWidth = sunProgressEl.parentElement.offsetWidth;
                 sunIndicatorEl.style.left = `${(sunPercent / 100) * barWidth}px`;
 
+                if (data.daily) {
+                    renderForecast(data.daily);
+                }
 
             } catch (error) {
                 console.error("Error cargando clima:", error);
