@@ -29,9 +29,6 @@ h4 {
     color: #00a05b;
 }
 
-/* =========================
-   FILAS
-========================= */
 .field-row {
     display: grid;
     grid-template-columns: 2fr 150px 150px;
@@ -45,7 +42,6 @@ h4 {
     transition: background 0.2s ease, transform 0.1s ease;
 }
 
-/* Hover solo visual */
 .field-row:hover {
     background: #7be87b;
     transform: scale(1.01);
@@ -61,9 +57,6 @@ h4 {
     font-size: 16px;
 }
 
-/* =========================
-   STATUS
-========================= */
 .field-status {
     height: 45px;
     display: flex;
@@ -83,9 +76,6 @@ h4 {
 .status-opening { background: #75cf75; color: black; }
 .status-closing { background: #c36262; color: black; }
 
-/* =========================
-   BOTONES
-========================= */
 .field-buttons {
     width: 100%;
 }
@@ -120,9 +110,6 @@ h4 {
     opacity: 0.7;
 }
 
-/* =========================
-   BOTÓN AÑADIR
-========================= */
 .add-field-btn {
     margin: 30px auto 0;
     display: block;
@@ -164,7 +151,6 @@ h4 {
     text-align: center;
 }
 
-/* Distribución como tu imagen */
 .weather-summary {
     grid-column: 1;
     text-align: center;
@@ -172,7 +158,7 @@ h4 {
 }
 
 #weather-icon {
-    width: 50px;
+    width: 80px;
     height: auto;
 }
 
@@ -206,7 +192,6 @@ h4 {
     align-items: center;
 }
 
-/* Temperatura actual ocupa 2 columnas */
 .temp-actual {
     grid-column: 1 / span 2;
     text-align: center;
@@ -215,7 +200,6 @@ h4 {
     line-height: 1;
 }
 
-/* Max */
 .temp-max {
     grid-column: 1;
     display: flex;
@@ -224,21 +208,12 @@ h4 {
     gap: 6px;
 }
 
-/* Min */
 .temp-min {
     grid-column: 2;
     display: flex;
     justify-content: flex-start;
     align-items: center;
     gap: 6px;
-}
-
-.temp-actual {
-    grid-column: 1 / span 2;
-    text-align: center;
-    font-size: 70px;
-    font-weight: bold;
-    line-height: 1;
 }
 
 .weather-precip-grid {
@@ -254,28 +229,24 @@ h4 {
     margin-top: 2px;
 }
 
-/* Cada fila */
 .rain, .hail, .snow {
     display: grid;
-    grid-template-columns: 40px 1fr; /* columna fija icono + columna texto */
+    grid-template-columns: 40px 1fr;
     align-items: center;
 }
 
-/* Iconos */
 .img-precip {
     width: 35px;
     height: 35px;
     object-fit: contain;
-    justify-self: center; /* centra el icono dentro de su columna */
+    justify-self: center;
 }
 
-/* Texto */
 .weather-precip-grid span {
     text-align: left;
     font-size: 18px;
 }
 
-/* Iconos */
 .img-minmax {
     width: 20px;
     height: auto;
@@ -290,21 +261,18 @@ h4 {
 
 .sun-bar {
     flex: 1;
-    position: relative;      /* IMPORTANTE */
+    position: relative;
     background: #eee;
     height: 12px;
     border-radius: 6px;
-    overflow: visible;       /* para que se vean los marcadores */
+    overflow: visible;
 }
 
-/* Wrapper para que la barra ocupe bien el espacio */
-/* Wrapper para que la barra ocupe bien el espacio */
 .sun-bar-wrapper {
     flex: 1;
     position: relative;
 }
 
-/* Marcadores */
 .sun-marker {
     position: absolute;
     top: 100%;
@@ -312,12 +280,10 @@ h4 {
     text-align: center;
 }
 
-/* Posiciones exactas */
 .marker-25 { left: 25%; }
 .marker-50 { left: 50%; }
 .marker-75 { left: 75%; }
 
-/* Línea vertical pequeña */
 .marker-line-0 {
     width: 1px;
     height: 5px;
@@ -333,7 +299,6 @@ h4 {
     margin: 4px auto;
 }
 
-/* Hora debajo */
 .marker-time-0 {
     font-size: 10px;
     color: #666;
@@ -351,7 +316,7 @@ h4 {
     height: 100%;
     background: #4caf50;
     width: 0%;
-    transition: width 0.6s ease;
+    transition: width 0.5s ease;
 }
 
 .sun-indicator {
@@ -364,8 +329,7 @@ h4 {
     border-radius: 50%;
     border: 2px solid #fff;
     box-shadow: 0 0 6px rgba(0,0,0,0.3);
-    transition: left 0.6s ease;
-    transition: width 0.6s ease;
+    transition: left 0.5s ease;
 }
 
 .sun-times > div:first-child, .sun-times > div:last-child {
@@ -401,10 +365,6 @@ h4 {
     font-weight: 500;
 }
 
-/* =========================
-   FORECAST 4 DÍAS
-========================= */
-
 .forecast-grid {
     margin-top: 15px;
     display: grid;
@@ -414,7 +374,7 @@ h4 {
 
 .forecast-card {
     background: white;
-    border: 2px solid black;  /* borde negro */
+    border: 2px solid black;
     border-radius: 12px;
     padding: 15px;
     text-align: center;
@@ -425,28 +385,88 @@ h4 {
     margin-bottom: 10px;
 }
 
-.forecast-main-icon {
-    width: 60px;
-    margin-bottom: 10px;
+.information-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: center;
 }
 
-.forecast-row {
+.temp-max-info,
+.sunrise-info {
     display: flex;
+    justify-content: flex-end;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    margin-bottom: 6px;
-    font-size: 14px;
+    gap: 10px;
+}
+
+.temp-min-info,
+.sunsine-info {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 10px;
 }
 
 .forecast-small-icon {
-    width: 18px;
+    width: 15px;
     height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
+.forecast-data-col {
+    display: inline-block;
+    min-width: 30px;
+    text-align: inherit;
+}
+
+.forecast-main-icon {
+    width: 60px;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.information-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.temp-max-info{
+    grid-column: 1;
+    display: flex;
+    align-items: right;
+    gap: 6px;
+    margin-top: 30px;
+}
+
+.temp-min-info{
+    grid-column: 2;
+    display: flex;
+    align-items: left;
+    gap: 6px;
+    margin-top: 30px;
+}
+
+.sunrise-info {
+    grid-column: 1;
+    display: flex;
+    align-items: right;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.sunsine-info{
+    grid-column: 2;
+    display: flex;
+    align-items: left;
+    gap: 6px;
+    margin-top: 10px;
+}
+
 @media (max-width: 768px) {
 
   .time {

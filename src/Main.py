@@ -12,6 +12,7 @@ from daos.PointDAO import PointDAO
 from models.User import User
 from models.Field import Field
 from models.Point import Point
+from config import AEMET_API_KEY
 
 app = FastAPI()
 
@@ -210,11 +211,97 @@ def get_municipio(lat: float, lon: float):
         return JSONResponse({"municipio": "Desconocido", "error": str(e)})
 
 # --------------------
-# WEATHER / OPEN-METEO
+# AEMET OBSERVACIÓN ACTUAL
+# --------------------
+def get_aemet_observation(lat: float, lon: float):
+    try:
+        # 1️⃣ Obtener todas las estaciones
+        stations_url = f"https://opendata.aemet.es/opendata/api/valores/climatologicos/inventarioestaciones/todasestaciones?api_key={AEMET_API_KEY}"
+        r = requests.get(stations_url, timeout=10)
+        data = r.json()
+
+        if "datos" not in data:
+            return None
+
+        stations_data = requests.get(data["datos"], timeout=10).json()
+
+        # 2️⃣ Buscar estación más cercana
+        from math import radians, cos, sin, sqrt, atan2
+
+        def distance(lat1, lon1, lat2, lon2):
+            R = 6371
+            dlat = radians(lat2 - lat1)
+            dlon = radians(lon2 - lon1)
+            a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1-a))
+            return R * c
+
+        nearest = None
+        min_dist = 999999
+
+        for s in stations_data:
+            if not s.get("latitud") or not s.get("longitud"):
+                continue
+
+            # Formato lat/lon AEMET viene tipo "432147N"
+            def parse_coord(coord):
+                deg = float(coord[:2])
+                min_ = float(coord[2:4])
+                sec = float(coord[4:6])
+                hemi = coord[-1]
+                value = deg + min_/60 + sec/3600
+                if hemi in ["S", "W"]:
+                    value *= -1
+                return value
+
+            s_lat = parse_coord(s["latitud"])
+            s_lon = parse_coord(s["longitud"])
+
+            d = distance(lat, lon, s_lat, s_lon)
+
+            if d < min_dist:
+                min_dist = d
+                nearest = s
+
+        if not nearest:
+            return None
+
+        # 3️⃣ Obtener observación actual de esa estación
+        station_id = nearest["indicativo"]
+        obs_url = f"https://opendata.aemet.es/opendata/api/observacion/convencional/datos/estacion/{station_id}?api_key={AEMET_API_KEY}"
+        r2 = requests.get(obs_url, timeout=10)
+        obs_data = r2.json()
+
+        if "datos" not in obs_data:
+            return None
+
+        observations = requests.get(obs_data["datos"], timeout=10).json()
+
+        if not observations:
+            return None
+
+        latest = observations[-1]
+
+        return {
+            "temperature": latest.get("ta"),
+            "humidity": latest.get("hr"),
+            "wind_speed": latest.get("vv"),
+            "precipitation": latest.get("prec")
+        }
+
+    except Exception as e:
+        print("Error AEMET:", e)
+        return None
+
+# --------------------
+# WEATHER (ICON-EU + AEMET)
 # --------------------
 @app.get("/get-weather")
 def get_weather(lat: float, lon: float):
     try:
+        # ==============================
+        # 1️⃣ OPEN-METEO ICON-EU
+        # ==============================
         url = (
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={lat}"
@@ -243,33 +330,52 @@ def get_weather(lat: float, lon: float):
         weathercode = current.get("weathercode", 0)
 
         # ==============================
-        # BUSCAR ÍNDICE HORA ACTUAL
+        # 2️⃣ ÍNDICE HORA ACTUAL
         # ==============================
-
         now = datetime.now().replace(minute=0, second=0, microsecond=0)
         times = hourly.get("time", [])
 
         current_index = 0
-
         for i, t in enumerate(times):
             dt = datetime.fromisoformat(t)
             if dt == now:
                 current_index = i
                 break
 
-        # ==============================
-
         precipitation = hourly.get("precipitation", [0])[current_index] or 0
         snowfall = hourly.get("snowfall", [0])[current_index] or 0
         precipitation_probability = hourly.get("precipitation_probability", [0])[current_index] or 0
         soil_moisture = hourly.get("soil_moisture_0_1cm", [None])[current_index]
 
+        # ==============================
+        # 3️⃣ AEMET OBSERVACIÓN REAL
+        # ==============================
+        aemet_data = get_aemet_observation(lat, lon)
+
+        if aemet_data:
+            if aemet_data["temperature"] is not None:
+                current["temperature_2m"] = float(aemet_data["temperature"])
+
+            if aemet_data["humidity"] is not None:
+                hourly["relativehumidity_2m"][current_index] = int(aemet_data["humidity"])
+
+            if aemet_data["wind_speed"] is not None:
+                current["windspeed_10m"] = float(aemet_data["wind_speed"])
+
+            if aemet_data["precipitation"] is not None:
+                precipitation = float(aemet_data["precipitation"])
+
+        # ==============================
+        # 4️⃣ PROBABILIDAD GRANIZO
+        # ==============================
         hail_probability = 0
         if weathercode in [96, 99]:
             hail_probability = precipitation_probability
 
+        # ==============================
+        # 5️⃣ RESPUESTA FINAL
+        # ==============================
         weather = {
-            # CURRENT
             "temp_actual": current.get("temperature_2m"),
             "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
             "dew_point": hourly.get("dewpoint_2m", [None])[current_index],
@@ -278,16 +384,14 @@ def get_weather(lat: float, lon: float):
             "rain": round(float(precipitation), 1),
             "snow": round(float(snowfall), 1),
             "hail": int(hail_probability),
-            "soil_moisture": round(soil_moisture, 1) if soil_moisture is not None else None,
+            "soil_moisture": round(soil_moisture, 3) if soil_moisture is not None else None,
             "weathercode": weathercode,
 
-            # TODAY
             "temp_max": daily.get("temperature_2m_max", [None])[0],
             "temp_min": daily.get("temperature_2m_min", [None])[0],
             "sunrise": daily.get("sunrise", [None])[0],
             "sunset": daily.get("sunset", [None])[0],
 
-            # DAILY FORECAST (5 días)
             "daily": {
                 "time": daily.get("time"),
                 "weathercode": daily.get("weathercode"),
@@ -301,5 +405,5 @@ def get_weather(lat: float, lon: float):
         return JSONResponse(weather)
 
     except Exception as e:
-        print("Error Open-Meteo:", e)
+        print("Error WEATHER:", e)
         return JSONResponse({"error": str(e)}, status_code=500)

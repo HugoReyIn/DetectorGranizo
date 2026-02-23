@@ -111,6 +111,7 @@
             <span id="municipio">---</span>
         </div>
 
+        <!-- Barra solar (actualiza con JS cada segundo) -->
         <div class="weather-card weather-sun-block">
             <div class="sun-times">
                 <div class="sun-side">
@@ -121,7 +122,7 @@
                 <div class="sun-bar-wrapper">
                     <div class="sun-bar">
                         <div id="sun-progress" class="sun-progress"></div>
-                
+                        
                         <div class="sun-marker marker-25">
                             <div class="marker-line-5"></div>
                             <div class="marker-time-5" id="sun-25">--:--</div>
@@ -157,26 +158,27 @@
 
             <img id="day-{{ i }}-icon" class="forecast-main-icon">
 
-            <div class="forecast-row">
-                <img src="/static/img/maxTemp.png" class="forecast-small-icon">
-                <span id="day-{{ i }}-max"></span>
-            </div>
+            <div class="information-grid">
+                <div class="temp-max-info">
+                    <img src="/static/img/maxTemp.png" class="forecast-small-icon">
+                    <span id="day-{{ i }}-max" class="forecast-data-col"></span>
+                </div>
 
-            <div class="forecast-row">
-                <img src="/static/img/minTemp.png" class="forecast-small-icon">
-                <span id="day-{{ i }}-min"></span>
-            </div>
+                <div class="temp-min-info">
+                    <img src="/static/img/minTemp.png" class="forecast-small-icon">
+                    <span id="day-{{ i }}-min" class="forecast-data-col"></span>
+                </div>
 
-            <div class="forecast-row">
-                <img src="/static/img/sunrise.png" class="forecast-small-icon">
-                <span id="day-{{ i }}-sunrise"></span>
-            </div>
+                <div class="sunrise-info">
+                    <img src="/static/img/sunrise.png" class="forecast-small-icon">
+                    <span id="day-{{ i }}-sunrise" class="forecast-data-col"></span>
+                </div>
 
-            <div class="forecast-row">
-                <img src="/static/img/sunset.png" class="forecast-small-icon">
-                <span id="day-{{ i }}-sunset"></span>
+                <div class="sunsine-info">
+                    <img src="/static/img/sunset.png" class="forecast-small-icon">
+                    <span id="day-{{ i }}-sunset" class="forecast-data-col"></span>
+                </div>
             </div>
-
         </div>
         {% endfor %}
     </div>
