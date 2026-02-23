@@ -190,7 +190,7 @@ async function loadWeather() {
             document.getElementById("humidity").textContent = `Humedad: ${humedad} %`;
             document.getElementById("wind").textContent = `${viento} km/h`;
             document.getElementById("dew").textContent = `Punto de rocio: ${puntoRocio} ºC`;
-            document.getElementById("moisture").textContent = `Humedad de la tierra: ${soilMoisturePercent} %`;
+            document.getElementById("moisture").textContent = `Humedad de la tierra: ${soilMoisturePercent.toFixed(1)} %`;
 
             // MOSTRAR DESCRIPCIÓN DEL DÍA DE HOY
             document.getElementById("weather-description").textContent = weatherDescription;

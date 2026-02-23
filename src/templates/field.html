@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% if field %}Editar{% else %}Crear{% endif %} campo - Detector Granizo</title>
+    <title>{% if field %}Editar{% else %}Crear{% endif %} terreno - Detector Granizo</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/field.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
@@ -14,14 +14,14 @@
 <body>
 
 <div class="container">
-    <h2>{% if field %}Editar{% else %}Nuevo{% endif %} campo</h2>
+    <h2>{% if field %}Editar{% else %}Nuevo{% endif %} terreno</h2>
 
     <form id="field-form">
         <div class="top-row">
             <input type="text" id="field-name" name="name" placeholder="Nombre del campo" value="{{ field.name if field else '' }}" required>
             <div class="buttons">
-                <button type="submit" class="btn-save">{% if field %}Guardar cambios{% else %}Guardar campo{% endif %}</button>
-                <button type="button" class="delete-btn" id="delete-field-btn" {% if not field %}disabled{% endif %}>Eliminar campo</button>
+                <button type="submit" class="btn-save">{% if field %}Guardar cambios{% else %}Guardar terreno{% endif %}</button>
+                <button type="button" class="delete-btn" id="delete-field-btn" {% if not field %}disabled{% endif %}>Eliminar terreno</button>
             </div>
         </div>
 
