@@ -247,6 +247,18 @@ h4 {
     font-size: 18px;
 }
 
+#rain, #hail, #snow {
+    font-weight: normal;
+}
+
+#weather-container {
+    cursor: pointer; /* muestra que es clicable */
+}
+
+#weather-container * {
+    pointer-events: auto;
+}
+
 .img-minmax {
     width: 20px;
     height: auto;

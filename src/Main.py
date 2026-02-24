@@ -299,9 +299,6 @@ def get_aemet_observation(lat: float, lon: float):
 @app.get("/get-weather")
 def get_weather(lat: float, lon: float):
     try:
-        # ==============================
-        # 1️⃣ OPEN-METEO ICON-EU
-        # ==============================
         url = (
             "https://api.open-meteo.com/v1/forecast"
             f"?latitude={lat}"
@@ -329,9 +326,6 @@ def get_weather(lat: float, lon: float):
 
         weathercode = current.get("weathercode", 0)
 
-        # ==============================
-        # 2️⃣ ÍNDICE HORA ACTUAL
-        # ==============================
         now = datetime.now().replace(minute=0, second=0, microsecond=0)
         times = hourly.get("time", [])
 
@@ -347,9 +341,6 @@ def get_weather(lat: float, lon: float):
         precipitation_probability = hourly.get("precipitation_probability", [0])[current_index] or 0
         soil_moisture = hourly.get("soil_moisture_0_1cm", [None])[current_index]
 
-        # ==============================
-        # 3️⃣ AEMET OBSERVACIÓN REAL
-        # ==============================
         aemet_data = get_aemet_observation(lat, lon)
 
         if aemet_data:
@@ -365,16 +356,10 @@ def get_weather(lat: float, lon: float):
             if aemet_data["precipitation"] is not None:
                 precipitation = float(aemet_data["precipitation"])
 
-        # ==============================
-        # 4️⃣ PROBABILIDAD GRANIZO
-        # ==============================
         hail_probability = 0
         if weathercode in [96, 99]:
             hail_probability = precipitation_probability
 
-        # ==============================
-        # 5️⃣ RESPUESTA FINAL
-        # ==============================
         weather = {
             "temp_actual": current.get("temperature_2m"),
             "humidity": hourly.get("relativehumidity_2m", [None])[current_index],
@@ -407,3 +392,20 @@ def get_weather(lat: float, lon: float):
     except Exception as e:
         print("Error WEATHER:", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.get("/weather/{field_id}", response_class=HTMLResponse)
+def hourlyWeatherPage(request: Request, field_id: int):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    field = fieldDAO.getField(field_id)
+    if not field or field.user_id != current_user.id:
+        return RedirectResponse(url="/main", status_code=303)
+
+    return templates.TemplateResponse(
+        "weather.html",
+        {
+            "request": request,
+            "field": field
+        }
+    )

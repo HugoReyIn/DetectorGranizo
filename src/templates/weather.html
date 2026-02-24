@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronóstico horario - Detector Granizo</title>
+    <link rel="stylesheet" href="/static/css/weather.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Pronóstico horario</h2>
+    {% if field %}
+        <h4>{{ field.name }} - {{ field.municipality }}</h4>
+    {% else %}
+        <h4>Ubicación desconocida</h4>
+    {% endif %}
+
+    <div class="hourly-grid" id="hourly-grid">
+        <!-- Aquí se cargarán las tarjetas por JavaScript -->
+    </div>
+
+    <a href="/main" class="back-link">Volver</a>
+</div>
+
+<script type="module">
+    import { getHourlyWeather } from '/static/js/weather.js';
+
+    // Evitar errores con Jinja2: usamos comillas para pasar los números como string y parsearlos en JS
+    const lat = parseFloat("{{ field.lat if field else 0 }}");
+    const lon = parseFloat("{{ field.lon if field else 0 }}");
+
+    async function loadHourlyWeather(lat, lon) {
+        const hourlyGrid = document.getElementById('hourly-grid');
+        hourlyGrid.innerHTML = "<p>Cargando...</p>";
+
+        try {
+            const data = await getHourlyWeather(lat, lon); // Debe devolver un array con datos por hora
+            hourlyGrid.innerHTML = "";
+
+            data.forEach(hour => {
+                const card = document.createElement('div');
+                card.className = 'hour-card';
+
+                card.innerHTML = `
+                    <div class="hour-time">${hour.time}</div>
+                    <img src="${hour.icon}" alt="Estado" class="hour-icon">
+                    <div class="hour-temp">${hour.temp} ºC</div>
+                    <div class="hour-rain">Lluvia: ${hour.rain} mm</div>
+                    <div class="hour-prob-rain">Prob. lluvia: ${hour.prob_rain}%</div>
+                    <div class="hour-hail">Granizo: ${hour.hail}%</div>
+                    <div class="hour-wind">Viento: ${hour.wind_speed} km/h (${hour.wind_dir})</div>
+                `;
+                hourlyGrid.appendChild(card);
+            });
+        } catch (e) {
+            hourlyGrid.innerHTML = `<p>Error cargando los datos: ${e}</p>`;
+            console.error(e);
+        }
+    }
+
+    loadHourlyWeather(lat, lon);
+</script>
+
+</body>
+</html>

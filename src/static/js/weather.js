@@ -99,11 +99,10 @@ export async function loadWeatherByCoords(lat, lon) {
         document.getElementById("rain").textContent = `${data.rain} mm`;
         document.getElementById("snow").textContent = `${data.snow} cm`;
         document.getElementById("hail").textContent = `${hailPercent} %`;
-        document.getElementById("humidity").textContent = `Humedad: ${data.humidity} %`;
+        document.getElementById("humidity").textContent = `Humedad: ${data.humidity}%`;
         document.getElementById("wind").textContent = `${data.wind_speed} km/h`;
         document.getElementById("dew").textContent = `Punto de rocio: ${data.dew_point} ºC`;
-        document.getElementById("moisture").textContent =
-            `Humedad de la tierra: ${soilMoisturePercent.toFixed(1)} %`;
+        document.getElementById("moisture").textContent =`Humedad de la tierra: ${soilMoisturePercent.toFixed(1)}%`;
         document.getElementById("weather-description").textContent = weatherDescription;
 
         sunriseTime = parseLocalDateTime(data.sunrise);

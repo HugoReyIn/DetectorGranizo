@@ -142,4 +142,21 @@ function toggleRoof(row, button, fieldId) {
             button.classList.remove("disabled");
         }
     }, 3000);
+
+    const weatherContainer = document.getElementById("weather-container");
+    if (!weatherContainer) return;
+
+    weatherContainer.addEventListener("click", (e) => {
+        // Evitamos que se clique en un enlace interno
+        if (e.target.tagName === "A") return;
+
+        // Tomamos el primer campo
+        const firstField = document.querySelector(".field-row");
+        if (!firstField) return;
+
+        const fieldId = firstField.dataset.id;
+        if (!fieldId) return;
+
+        window.location.href = `/weather/${fieldId}`;
+    });
 }
