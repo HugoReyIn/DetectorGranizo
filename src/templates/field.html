@@ -49,39 +49,137 @@
 
         <div id="map" style="height: 400px;"></div>
 
-        <div class="weather-box" data-municipality="{{ field.municipality if field else '' }}">
-            <h4>Previsión meteorológica</h4>
+        {% if field %}
+        <h2>Tiempo</h2>
+        <h4>Hoy</h4>
+        <div id="weather-actual-info" class="weather-grid">
+            <div class="weather-summary">
+                <div class="weather-icon">
+                    <img id="weather-icon" src="" alt="Estado">
+                </div>
+                <div id="weather-description" class="weather-description"></div>
+            </div>
 
-            <div class="forecast-grid">
-                {% for i in range(1, 5) %}
-                <div class="forecast-card">
-                    <div class="forecast-day" id="day-{{ i }}-name"></div>
+            <div class="weather-card weather-temp-block temperature-grid">
+                <div class="temp-actual">
+                    <span id="temp-actual">-- ºC</span>
+                </div>
+                <div class="temp-max">
+                    <img src="/static/img/maxTemp.png" alt="MaxTemperature" class="img-minmax">
+                    <span id="temp-max">-- ºC</span>
+                </div>
+                <div class="temp-min">
+                    <img src="/static/img/minTemp.png" alt="MinTemperature" class="img-minmax">
+                    <span id="temp-min">-- ºC</span>
+                </div>
+            </div>
 
-                    <img id="day-{{ i }}-icon" class="forecast-main-icon">
+            <div class="weather-card weather-precip-grid">
+                <div class="rain">
+                    <img src="/static/img/rain.png" alt="Rain" class="img-precip">
+                    <span id="rain">-- mm</span>
+                </div>
+                <div class="hail">
+                    <img src="/static/img/hail.png" alt="Hail" class="img-precip">
+                    <span id="hail">--%</span>
+                </div>
+                <div class="snow">
+                    <img src="/static/img/snow.png" alt="Snow" class="img-precip">
+                    <span id="snow">-- cm</span>
+                </div>
+            </div>
 
-                    <div class="forecast-row">
-                        <img src="/static/img/maxTemp.png" class="forecast-small-icon">
-                        <span id="day-{{ i }}-max"></span>
+            <div class="weather-card weather-extra-grid">
+                <div class="wind">
+                    <img src="/static/img/wind.png" alt="Wind" class="img-precip" id="wind-icon">
+                    <span id="wind">-- km/h</span>
+                </div>
+                <div class="dew">
+                    <span id="dew">Punto rocio: -- ºC</span>
+                </div>
+                <div class="humidity">
+                    <span id="humidity">Humedad: -- %</span>
+                </div>
+                <div class="moisture">
+                    <span id="moisture">Humedad de la tierra: -- %</span>
+                </div>
+            </div>
+
+            <div class="weather-municipio-block">
+                <span id="municipio">---</span>
+            </div>
+
+            <div class="weather-card weather-sun-block">
+                <div class="sun-times">
+                    <div class="sun-side">
+                        <img src="/static/img/sunrise.png" alt="Sunrise">
+                        <span id="sunrise" class="sunrise-sunset">--:--</span>
                     </div>
 
-                    <div class="forecast-row">
-                        <img src="/static/img/minTemp.png" class="forecast-small-icon">
-                        <span id="day-{{ i }}-min"></span>
+                    <div class="sun-bar-wrapper">
+                        <div class="sun-bar">
+                            <div id="sun-progress" class="sun-progress"></div>
+                            
+                            <div class="sun-marker marker-25">
+                                <div class="marker-line-5"></div>
+                                <div class="marker-time-5" id="sun-25">--:--</div>
+                            </div>
+
+                            <div class="sun-marker marker-50">
+                                <div class="marker-line-0"></div>
+                                <div class="marker-time-0" id="sun-50">--:--</div>
+                            </div>
+
+                            <div class="sun-marker marker-75">
+                                <div class="marker-line-5"></div>
+                                <div class="marker-time-5" id="sun-75">--:--</div>
+                            </div>
+
+                            <div id="sun-indicator" class="sun-indicator"></div>
+                        </div>
                     </div>
 
-                    <div class="forecast-row">
-                        <img src="/static/img/sunrise.png" class="forecast-small-icon">
-                        <span id="day-{{ i }}-sunrise"></span>
-                    </div>
-
-                    <div class="forecast-row">
-                        <img src="/static/img/sunset.png" class="forecast-small-icon">
-                        <span id="day-{{ i }}-sunset"></span>
+                    <div class="sun-side">
+                        <img src="/static/img/sunset.png" alt="Sunset">
+                        <span id="sunset" class="sunrise-sunset">--:--</span>
                     </div>
                 </div>
-                {% endfor %}
             </div>
         </div>
+        <h4>Próximos 4 días</h4>
+        <div class="forecast-grid">
+            {% for i in range(1, 5) %}
+            <div class="forecast-card">
+
+                <div class="forecast-day" id="day-{{ i }}-name"></div>
+
+                <img id="day-{{ i }}-icon" class="forecast-main-icon">
+
+                <div class="information-grid">
+                    <div class="temp-max-info">
+                        <img src="/static/img/maxTemp.png" class="forecast-small-icon">
+                        <span id="day-{{ i }}-max" class="forecast-data-col"></span>
+                    </div>
+
+                    <div class="temp-min-info">
+                        <img src="/static/img/minTemp.png" class="forecast-small-icon">
+                        <span id="day-{{ i }}-min" class="forecast-data-col"></span>
+                    </div>
+
+                    <div class="sunrise-info">
+                        <img src="/static/img/sunrise.png" class="forecast-small-icon">
+                        <span id="day-{{ i }}-sunrise" class="forecast-data-col"></span>
+                    </div>
+
+                    <div class="sunsine-info">
+                        <img src="/static/img/sunset.png" class="forecast-small-icon">
+                        <span id="day-{{ i }}-sunset" class="forecast-data-col"></span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <input type="hidden" id="field-id-hidden" name="field_id" value="{{ field.id if field else '' }}">
         <input type="hidden" id="field-area-hidden" name="area" value="{{ field.area_m2 if field else '0' }}">
@@ -94,6 +192,7 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
-<script src="/static/js/field.js"></script>
+<script type="module" src="/static/js/field.js"></script>
+<script src="/static/js/weather.js"></script>
 </body>
 </html>
