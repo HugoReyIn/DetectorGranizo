@@ -409,3 +409,64 @@ def hourlyWeatherPage(request: Request, field_id: int):
             "field": field
         }
     )
+
+@app.get("/weather", response_class=HTMLResponse)
+def weatherPage(request: Request):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    return templates.TemplateResponse(
+        "weather.html",
+        {"request": request}
+    )
+
+@app.get("/get-hourly-weather")
+def get_hourly_weather(lat: float, lon: float):
+    try:
+        url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}"
+            f"&longitude={lon}"
+            "&hourly=temperature_2m,"
+            "precipitation,"
+            "precipitation_probability,"
+            "windspeed_10m,"
+            "winddirection_10m,"
+            "weathercode"
+            "&forecast_days=5"
+            "&timezone=auto"
+        )
+
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly = data.get("hourly", {})
+
+        result = []
+
+        for i in range(len(hourly["time"])):
+            code = hourly["weathercode"][i]
+
+            hail = 0
+            if code == 77:
+                hail = 50
+            elif code == 96:
+                hail = 70
+            elif code == 99:
+                hail = 100
+
+            result.append({
+                "time": hourly["time"][i],
+                "temp": hourly["temperature_2m"][i],
+                "rain": hourly["precipitation"][i],
+                "prob_rain": hourly["precipitation_probability"][i],
+                "wind_speed": hourly["windspeed_10m"][i],
+                "wind_dir": hourly["winddirection_10m"][i],
+                "hail": hail
+            })
+
+        return JSONResponse(result)
+
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)

@@ -144,6 +144,50 @@ function updateSunProgress() {
     sunProgressEl.style.width = `${percent}%`;
     const barWidth = sunProgressEl.parentElement.offsetWidth;
     sunIndicatorEl.style.left = `${(percent / 100) * barWidth}px`;
+
+    // ── CALCULAR HORAS 25 / 50 / 75% ──
+    const percentTimes = [25, 50, 75].map(p => new Date(sunriseTime.getTime() + total * (p / 100)));
+    const formatHour = date => date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+    const sun25El = document.getElementById("sun-25");
+    const sun50El = document.getElementById("sun-50");
+    const sun75El = document.getElementById("sun-75");
+
+    if (sun25El) sun25El.textContent = formatHour(percentTimes[0]);
+    if (sun50El) sun50El.textContent = formatHour(percentTimes[1]);
+    if (sun75El) sun75El.textContent = formatHour(percentTimes[2]);
 }
 
 setInterval(updateSunProgress, 1000);
+
+// ===============================
+// HORAS DEL DÍA
+// ===============================
+export async function getHourlyWeather(lat, lon) {
+
+    const res = await fetch(`/get-hourly-weather?lat=${lat}&lon=${lon}`);
+    const data = await res.json();
+
+    if (data.error) throw new Error(data.error);
+
+    // Agrupar por día
+    const grouped = {};
+
+    data.forEach(item => {
+        const date = item.time.split("T")[0];
+
+        if (!grouped[date]) grouped[date] = [];
+
+        grouped[date].push({
+            time: extractHour(item.time),
+            temp: Math.round(item.temp),
+            rain: item.rain,
+            prob_rain: item.prob_rain,
+            wind_speed: item.wind_speed,
+            wind_dir: item.wind_dir,
+            hail: item.hail
+        });
+    });
+
+    return grouped;
+}
