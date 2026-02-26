@@ -67,6 +67,29 @@
     background: #00e600;
 }
 
+.hourly-scroll {
+  display: flex;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+  gap: 0.5rem;
+}
+
+.hour-card {
+  flex: 0 0 auto;
+  width: 100px;
+  background-color: rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.hour-card img {
+  width: 40px;
+  height: 40px;
+  margin: 0.2rem 0;
+}
+
 /* Responsivo para móviles */
 @media (max-width: 768px) {
     .hourly-grid {

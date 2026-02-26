@@ -191,3 +191,38 @@ export async function getHourlyWeather(lat, lon) {
 
     return grouped;
 }
+
+export function renderHourlyForecastByDay(hourlyData) {
+  const days = Object.keys(hourlyData);
+
+  days.forEach((day, index) => {
+    const container = document.getElementById(`hourly-scroll-${index}`);
+    if (!container) return;
+
+    container.innerHTML = ""; // Limpiar previo
+
+    // Para hoy, empezar desde hora actual
+    let startIndex = 0;
+    if (index === 0) {
+      const nowHour = new Date().getHours();
+      startIndex = hourlyData[day].findIndex(h => parseInt(h.time.split(":")[0]) >= nowHour);
+      if (startIndex < 0) startIndex = 0;
+    }
+
+    for (let i = startIndex; i < hourlyData[day].length; i++) {
+      const hour = hourlyData[day][i];
+      const card = document.createElement("div");
+      card.classList.add("hour-card");
+      card.innerHTML = `
+        <span class="hour-time">${hour.time}</span>
+        <img src="/static/img/${hour.weathercode || 0}.png" class="hour-icon">
+        <span class="hour-temp">${hour.temp} ºC</span>
+        <span class="hour-rain-prob">${hour.prob_rain}%</span>
+        <span class="hour-rain-vol">${hour.rain} mm</span>
+        <span class="hour-wind">${hour.wind_speed} km/h (${hour.wind_dir})</span>
+        <span class="hour-hail">${hour.hail}%</span>
+      `;
+      container.appendChild(card);
+    }
+  });
+}

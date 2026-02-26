@@ -2,161 +2,55 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Pronóstico Horario</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .day-block {
-            background: white;
-            margin-bottom: 25px;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-        }
-
-        .day-block h2 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            text-transform: capitalize;
-        }
-
-        .hour-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
-        }
-
-        .hour-card {
-            background: #f0f4f8;
-            padding: 10px;
-            border-radius: 8px;
-            font-size: 13px;
-        }
-
-        .hour-card strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .loading {
-            text-align: center;
-            font-size: 18px;
-        }
-
-        .error {
-            text-align: center;
-            color: red;
-            font-weight: bold;
-        }
-    </style>
+    <title>Pronóstico horario</title>
+    <link rel="stylesheet" href="/static/css/weather.css">
 </head>
 <body>
 
-<h1>Pronóstico Horario (5 días)</h1>
+<a href="/main" class="back-link">← Volver al Dashboard</a>
 
-<div id="weather-container" class="loading">
-    Obteniendo ubicación...
+<h2>Pronóstico horario</h2>
+
+<div id="hourly-forecast">
+
+    <!-- Secciones por día -->
+    {% for i in range(5) %}
+    <div class="day-forecast">
+        <h3 id="day-{{ i }}-name">{% if i==0 %}Hoy{% endif %}</h3>
+        <div class="hourly-scroll" id="hourly-scroll-{{ i }}">
+            <!-- Cada hora se llenará con JS -->
+        </div>
+    </div>
+    {% endfor %}
+
 </div>
 
+<script type="module" src="/static/js/weather.js"></script>
 <script type="module">
-    import { getHourlyWeather } from '/static/js/weather.js';
+import { loadWeatherByCoords, getHourlyWeather, renderHourlyForecastByDay } from '/static/js/weather.js';
 
-    const container = document.getElementById("weather-container");
+document.addEventListener("DOMContentLoaded", async () => {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
 
-    function windDirection(deg) {
-        const directions = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
-        return directions[Math.round(deg / 45) % 8];
+                // Cargar clima actual y diario
+                await loadWeatherByCoords(lat, lon);
+
+                // Cargar y renderizar pronóstico horario
+                const hourlyData = await getHourlyWeather(lat, lon);
+                renderHourlyForecastByDay(hourlyData);
+            },
+            (err) => console.error("No se pudo obtener la ubicación", err),
+            { enableHighAccuracy: true }
+        );
+    } else {
+        alert("Geolocalización no soportada");
     }
-
-    function formatDateTitle(dateString, index) {
-        const date = new Date(dateString);
-
-        if (index === 0) return "Hoy - " + date.toLocaleDateString("es-ES");
-        if (index === 1) return "Mañana - " + date.toLocaleDateString("es-ES");
-
-        return date.toLocaleDateString("es-ES", {
-            weekday: "long",
-            day: "numeric",
-            month: "long"
-        });
-    }
-
-    async function loadWeather() {
-
-        if (!navigator.geolocation) {
-            container.innerHTML = "<div class='error'>La geolocalización no está soportada.</div>";
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(async (position) => {
-
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            container.innerHTML = "Cargando datos meteorológicos...";
-
-            try {
-
-                const grouped = await getHourlyWeather(lat, lon);
-                container.innerHTML = "";
-
-                const dates = Object.keys(grouped).slice(0, 5);
-
-                dates.forEach((date, index) => {
-
-                    const dayBlock = document.createElement("div");
-                    dayBlock.className = "day-block";
-
-                    const title = document.createElement("h2");
-                    title.textContent = formatDateTitle(date, index);
-                    dayBlock.appendChild(title);
-
-                    const hourGrid = document.createElement("div");
-                    hourGrid.className = "hour-grid";
-
-                    grouped[date].forEach(hour => {
-
-                        const hourCard = document.createElement("div");
-                        hourCard.className = "hour-card";
-
-                        hourCard.innerHTML = `
-                            <strong>${hour.time}</strong>
-                            🌡️ ${hour.temp} ºC<br>
-                            🌧️ ${hour.rain} mm<br>
-                            ☔ ${hour.prob_rain}% lluvia<br>
-                            🧊 ${hour.hail}% granizo<br>
-                            💨 ${hour.wind_speed} km/h (${windDirection(hour.wind_dir)})
-                        `;
-
-                        hourGrid.appendChild(hourCard);
-                    });
-
-                    dayBlock.appendChild(hourGrid);
-                    container.appendChild(dayBlock);
-                });
-
-            } catch (error) {
-                container.innerHTML = "<div class='error'>Error cargando datos meteorológicos</div>";
-            }
-
-        }, () => {
-            container.innerHTML = "<div class='error'>No se pudo obtener la ubicación.</div>";
-        });
-    }
-
-    loadWeather();
+});
 </script>
 
 </body>
