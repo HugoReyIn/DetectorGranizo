@@ -1,8 +1,4 @@
-// =====================================================
 // weather.js
-// Sistema único de clima (Open-Meteo)
-// Usado por dashboard.js y field.js
-// =====================================================
 
 let sunriseTime = null;
 let sunsetTime = null;
@@ -36,7 +32,7 @@ function getHailProbabilityFromCode(code) {
     }
 }
 
-function extractHour(dateTimeStr) {
+export function extractHour(dateTimeStr) {
     return new Date(dateTimeStr).toLocaleTimeString("es-ES", {
         hour: "2-digit",
         minute: "2-digit",
@@ -92,7 +88,9 @@ export async function loadWeatherByCoords(lat, lon) {
 
         // DOM
         document.getElementById("municipio").textContent = municipio;
-        document.getElementById("weather-icon").src = `/static/img/${data.weathercode}.png`;
+        const weatherIconEl = document.getElementById("weather-icon");
+        if (weatherIconEl) weatherIconEl.src = `/static/img/${data.weathercode}.png`;
+
         document.getElementById("temp-actual").textContent = `${data.temp_actual} ºC`;
         document.getElementById("temp-max").textContent = `${data.temp_max} ºC`;
         document.getElementById("temp-min").textContent = `${data.temp_min} ºC`;
@@ -120,6 +118,10 @@ export async function loadWeatherByCoords(lat, lon) {
             windIcon.style.transition = "transform 0.5s ease";
         }
 
+        // ── DATOS HORARIOS ──
+        const hourlyData = await getHourlyWeather(lat, lon);
+        renderHourlyForecastByDay(hourlyData);
+
     } catch (error) {
         console.error("Error cargando clima:", error);
     }
@@ -145,7 +147,6 @@ function updateSunProgress() {
     const barWidth = sunProgressEl.parentElement.offsetWidth;
     sunIndicatorEl.style.left = `${(percent / 100) * barWidth}px`;
 
-    // ── CALCULAR HORAS 25 / 50 / 75% ──
     const percentTimes = [25, 50, 75].map(p => new Date(sunriseTime.getTime() + total * (p / 100)));
     const formatHour = date => date.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", hour12: false });
 
@@ -164,65 +165,106 @@ setInterval(updateSunProgress, 1000);
 // HORAS DEL DÍA
 // ===============================
 export async function getHourlyWeather(lat, lon) {
-
     const res = await fetch(`/get-hourly-weather?lat=${lat}&lon=${lon}`);
     const data = await res.json();
-
     if (data.error) throw new Error(data.error);
 
-    // Agrupar por día
     const grouped = {};
-
     data.forEach(item => {
         const date = item.time.split("T")[0];
-
         if (!grouped[date]) grouped[date] = [];
 
         grouped[date].push({
             time: extractHour(item.time),
             temp: Math.round(item.temp),
-            rain: item.rain,
-            prob_rain: item.prob_rain,
-            wind_speed: item.wind_speed,
-            wind_dir: item.wind_dir,
-            hail: item.hail
+            rain: item.rain ?? 0,
+            prob_rain: item.prob_rain ?? 0,
+            wind_speed: item.wind_speed ?? 0,
+            wind_dir: item.wind_dir ?? "",
+            hail: item.hail ?? 0
         });
     });
 
     return grouped;
 }
 
+// ── RENDER TARJETAS HORARIAS ──
 export function renderHourlyForecastByDay(hourlyData) {
-  const days = Object.keys(hourlyData);
+    const days = Object.keys(hourlyData);
+    days.forEach((day, index) => {
+        const container = document.getElementById(`hourly-scroll-${index}`);
+        if (!container) return;
+        container.innerHTML = "";
 
-  days.forEach((day, index) => {
-    const container = document.getElementById(`hourly-scroll-${index}`);
-    if (!container) return;
+        hourlyData[day].forEach(hour => {
+            const card = document.createElement("div");
+            card.classList.add("hour-card");
+            card.innerHTML = `
+                <span class="hour-time">${hour.time}</span>
+                <span class="hour-temp">${hour.temp} ºC</span>
+                <span class="hour-rain-vol">${hour.rain} mm</span>
+                <span class="hour-wind">${hour.wind_speed} km/h (${hour.wind_dir})</span>
+                <span class="hour-hail">${hour.hail}%</span>
+            `;
+            container.appendChild(card);
+        });
+    });
+}
 
-    container.innerHTML = ""; // Limpiar previo
+export async function getTodayHourlyForChart(lat, lon) {
+    const grouped = await getHourlyWeather(lat, lon);
+    const today = Object.keys(grouped)[0];
+    if (!today) return [];
 
-    // Para hoy, empezar desde hora actual
-    let startIndex = 0;
-    if (index === 0) {
-      const nowHour = new Date().getHours();
-      startIndex = hourlyData[day].findIndex(h => parseInt(h.time.split(":")[0]) >= nowHour);
-      if (startIndex < 0) startIndex = 0;
+    return grouped[today].map(h => ({
+        time: h.time,
+        temp: h.temp,
+        rain: h.rain,
+        wind_speed: h.wind_speed,
+        wind_dir: h.wind_dir,
+        hail: h.hail
+    }));
+}
+
+// weather.js (al final)
+export function updateGeneralWeatherDOM(data) {
+    if (!data) return;
+
+    // Casos: main.html -> "municipio"
+    const singleMuni = document.getElementById("municipio");
+    if (singleMuni && data.municipio) singleMuni.textContent = data.municipio;
+
+    // Casos: weather.html -> "municipio-1, municipio-2..."
+    const multiMuniEls = document.querySelectorAll("[id^='municipio-']");
+    multiMuniEls.forEach(el => {
+        if (data.municipio) el.textContent = data.municipio;
+    });
+
+    // Descripción
+    const singleDesc = document.getElementById("desc");
+    if (singleDesc) singleDesc.textContent = data.description ?? "-";
+
+    const multiDescEls = document.querySelectorAll("[id^='desc-']");
+    multiDescEls.forEach(el => el.textContent = data.description ?? "-");
+
+    // Iconos
+    const singleIcon = document.getElementById("weather-icon");
+    if (singleIcon && data.weathercode !== undefined) {
+        singleIcon.src = `/static/img/${data.weathercode}.png`;
     }
 
-    for (let i = startIndex; i < hourlyData[day].length; i++) {
-      const hour = hourlyData[day][i];
-      const card = document.createElement("div");
-      card.classList.add("hour-card");
-      card.innerHTML = `
-        <span class="hour-time">${hour.time}</span>
-        <img src="/static/img/${hour.weathercode || 0}.png" class="hour-icon">
-        <span class="hour-temp">${hour.temp} ºC</span>
-        <span class="hour-rain-prob">${hour.prob_rain}%</span>
-        <span class="hour-rain-vol">${hour.rain} mm</span>
-        <span class="hour-wind">${hour.wind_speed} km/h (${hour.wind_dir})</span>
-        <span class="hour-hail">${hour.hail}%</span>
-      `;
-      container.appendChild(card);
-    }
-  });
+    const multiIcons = document.querySelectorAll("[id^='weather-icon-']");
+    multiIcons.forEach(el => {
+        if (data.weathercode !== undefined) el.src = `/static/img/${data.weathercode}.png`;
+    });
+
+    // Humedad / punto de rocío / humedad de la tierra
+    const dewEls = document.querySelectorAll("[id^='dew']");
+    dewEls.forEach(el => el.textContent = `Punto de rocío: ${data.dew_point ?? "--"} ºC`);
+
+    const humidityEls = document.querySelectorAll("[id^='humidity']");
+    humidityEls.forEach(el => el.textContent = `Humedad: ${data.humidity ?? "--"} %`);
+
+    const moistureEls = document.querySelectorAll("[id^='moisture']");
+    moistureEls.forEach(el => el.textContent = `Humedad de la tierra: ${(data.soil_moisture ?? 0) * 100}%`);
 }

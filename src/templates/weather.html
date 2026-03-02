@@ -2,56 +2,97 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pronóstico horario</title>
+    <title>Clima</title>
     <link rel="stylesheet" href="/static/css/weather.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr 1fr;
+        }
+
+        .weather-summary {
+            grid-column: 1;
+        }
+
+        .weather-card {
+            grid-column: 2;
+        }
+
+        .field-information {
+            grid-column: 3;
+        }
+
+        .charts {
+            grid-column: 1 / span 3;
+        }
+
+        .weather-extra-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        .weather-extra-grid span {
+            display: block;
+        }
+
+        .weather-container {
+            width: 900px;
+            margin: 30px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        #temperatureChart {
+            margin-top: 30px;
+            background: #f9f9f9;
+            border-radius: 12px;
+        }
+    </style>
 </head>
 <body>
-
-<a href="/main" class="back-link">← Volver al Dashboard</a>
-
-<h2>Pronóstico horario</h2>
-
-<div id="hourly-forecast">
-
-    <!-- Secciones por día -->
-    {% for i in range(5) %}
-    <div class="day-forecast">
-        <h3 id="day-{{ i }}-name">{% if i==0 %}Hoy{% endif %}</h3>
-        <div class="hourly-scroll" id="hourly-scroll-{{ i }}">
-            <!-- Cada hora se llenará con JS -->
+{% for i in range(1, 6) %}
+<div class="weather-container weather-grid">
+    <div class="weather-summary">
+        <div class="weather-icon">
+            <img id="weather-icon-{{ i }}" src="" alt="Estado">
         </div>
     </div>
-    {% endfor %}
 
+    <div class="weather-card weather-extra-grid">
+        <div class="dew">
+            <span id="dew-{{ i }}">Punto rocio: -- ºC</span>
+        </div>
+        <div class="humidity">
+            <span id="humidity-{{ i }}">Humedad: -- %</span>
+        </div>
+        <div class="moisture">
+            <span id="moisture-{{ i }}">Humedad de la tierra: -- %</span>
+        </div>
+    </div>
+
+    <div class="field-information">
+        <h2 id="municipio-{{ i }}">Cargando...</h2>
+        <div class="weather-date" id="date-{{ i }}"></div>
+        <div class="weather-day-desc" id="desc-{{ i }}"></div>
+    </div>
+
+    <canvas id="chart-{{ i }}" class="charts" width="900" height="250"></canvas>
 </div>
+{% endfor %}
 
 <script type="module" src="/static/js/weather.js"></script>
-<script type="module">
-import { loadWeatherByCoords, getHourlyWeather, renderHourlyForecastByDay } from '/static/js/weather.js';
-
-document.addEventListener("DOMContentLoaded", async () => {
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const lat = pos.coords.latitude;
-                const lon = pos.coords.longitude;
-
-                // Cargar clima actual y diario
-                await loadWeatherByCoords(lat, lon);
-
-                // Cargar y renderizar pronóstico horario
-                const hourlyData = await getHourlyWeather(lat, lon);
-                renderHourlyForecastByDay(hourlyData);
-            },
-            (err) => console.error("No se pudo obtener la ubicación", err),
-            { enableHighAccuracy: true }
-        );
-    } else {
-        alert("Geolocalización no soportada");
-    }
-});
-</script>
+<script type="module" src="/static/js/weatherChart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </body>
 </html>
