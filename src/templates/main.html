@@ -17,8 +17,8 @@
 <div class="dashboard">
     <h2>Mis terrenos</h2>
     {% for field in fields %}
-    <div class="field-row" 
-         data-id="{{ field.id }}" 
+    <div class="field-row"
+         data-id="{{ field.id }}"
          data-state="{{ field.state }}">
 
         <div class="field-info">
@@ -111,37 +111,30 @@
             <span id="municipio">---</span>
         </div>
 
-        <!-- Barra solar (actualiza con JS cada segundo) -->
         <div class="weather-card weather-sun-block">
             <div class="sun-times">
                 <div class="sun-side">
                     <img src="/static/img/sunrise.png" alt="Sunrise">
                     <span id="sunrise" class="sunrise-sunset">--:--</span>
                 </div>
-
                 <div class="sun-bar-wrapper">
                     <div class="sun-bar">
                         <div id="sun-progress" class="sun-progress"></div>
-                        
                         <div class="sun-marker marker-25">
                             <div class="marker-line-5"></div>
                             <div class="marker-time-5" id="sun-25">--:--</div>
                         </div>
-
                         <div class="sun-marker marker-50">
                             <div class="marker-line-0"></div>
                             <div class="marker-time-0" id="sun-50">--:--</div>
                         </div>
-
                         <div class="sun-marker marker-75">
                             <div class="marker-line-5"></div>
                             <div class="marker-time-5" id="sun-75">--:--</div>
                         </div>
-
                         <div id="sun-indicator" class="sun-indicator"></div>
                     </div>
                 </div>
-
                 <div class="sun-side">
                     <img src="/static/img/sunset.png" alt="Sunset">
                     <span id="sunset" class="sunrise-sunset">--:--</span>
@@ -149,31 +142,44 @@
             </div>
         </div>
     </div>
+
+    <!-- ── GRÁFICA HOY ── -->
+    <div class="chart-toggle-row" id="today-chart-toggle">
+        <span class="chart-toggle-label">Gráfica detallada de hoy</span>
+        <div class="chart-arrow">▼</div>
+    </div>
+    <div class="chart-panel" id="today-chart-panel">
+        <div class="chart-panel-inner">
+            <div class="chart-controls">
+                <button class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
+                <button class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
+            </div>
+            <div class="chart-canvas-wrapper">
+                <canvas id="today-chart-canvas"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PRÓXIMOS 4 DÍAS ── -->
     <h4>Próximos 4 días</h4>
     <div class="forecast-grid">
         {% for i in range(1, 5) %}
         <div class="forecast-card">
-
             <div class="forecast-day" id="day-{{ i }}-name"></div>
-
             <img id="day-{{ i }}-icon" class="forecast-main-icon">
-
             <div class="information-grid">
                 <div class="temp-max-info">
                     <img src="/static/img/maxTemp.png" class="forecast-small-icon">
                     <span id="day-{{ i }}-max" class="forecast-data-col"></span>
                 </div>
-
                 <div class="temp-min-info">
                     <img src="/static/img/minTemp.png" class="forecast-small-icon">
                     <span id="day-{{ i }}-min" class="forecast-data-col"></span>
                 </div>
-
                 <div class="sunrise-info">
                     <img src="/static/img/sunrise.png" class="forecast-small-icon">
                     <span id="day-{{ i }}-sunrise" class="forecast-data-col"></span>
                 </div>
-
                 <div class="sunsine-info">
                     <img src="/static/img/sunset.png" class="forecast-small-icon">
                     <span id="day-{{ i }}-sunset" class="forecast-data-col"></span>
@@ -183,9 +189,33 @@
         {% endfor %}
     </div>
 
+    <!-- ── GRÁFICAS 4 DÍAS ── -->
+    <div class="chart-toggle-row" id="forecast-charts-toggle">
+        <span class="chart-toggle-label">Gráficas detalladas de los próximos 4 días</span>
+        <div class="chart-arrow">▼</div>
+    </div>
+    <div class="chart-panel" id="forecast-charts-panel">
+        <div class="chart-panel-inner">
+            {% for i in range(0, 4) %}
+            <div class="forecast-chart-block">
+                <div class="forecast-chart-date" id="forecast-chart-date-{{ i }}">—</div>
+                <div class="chart-controls">
+                    <button class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
+                    <button class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
+                </div>
+                <div class="chart-canvas-wrapper">
+                    <canvas id="forecast-canvas-{{ i }}"></canvas>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script type="module" src="/static/js/dashboard.js"></script>
 <script type="module" src="/static/js/weather.js"></script>
+<script type="module" src="/static/js/weatherChart.js"></script>
 </body>
 </html>

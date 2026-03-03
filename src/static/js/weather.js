@@ -179,6 +179,7 @@ export async function getHourlyWeather(lat, lon) {
             temp: Math.round(item.temp),
             rain: item.rain ?? 0,
             prob_rain: item.prob_rain ?? 0,
+            humidity: item.humidity ?? 0,
             wind_speed: item.wind_speed ?? 0,
             wind_dir: item.wind_dir ?? "",
             hail: item.hail ?? 0

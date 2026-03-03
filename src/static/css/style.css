@@ -87,3 +87,39 @@ button:hover {
   max-width: 1000px;
   margin: 0 auto;
 }
+
+/* ══════════════════════════════════════════
+   RESPONSIVE MÓVIL
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  body {
+    font-size: 15px;
+  }
+
+  .container {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 24px 18px;
+    width: 95%;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="email"] {
+    padding: 14px 12px;
+    font-size: 16px; /* evita zoom en iOS */
+  }
+
+  button {
+    font-size: 15px;
+    padding: 14px;
+  }
+}

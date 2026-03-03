@@ -430,6 +430,7 @@ def get_hourly_weather(lat: float, lon: float):
             "&hourly=temperature_2m,"
             "precipitation,"
             "precipitation_probability,"
+            "relativehumidity_2m,"
             "windspeed_10m,"
             "winddirection_10m,"
             "weathercode"
@@ -461,6 +462,7 @@ def get_hourly_weather(lat: float, lon: float):
                 "temp": hourly["temperature_2m"][i],
                 "rain": hourly["precipitation"][i],
                 "prob_rain": hourly["precipitation_probability"][i],
+                "humidity": hourly["relativehumidity_2m"][i],
                 "wind_speed": hourly["windspeed_10m"][i],
                 "wind_dir": hourly["winddirection_10m"][i],
                 "hail": hail

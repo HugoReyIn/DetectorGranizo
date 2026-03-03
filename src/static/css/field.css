@@ -25,7 +25,7 @@ h2 {
 /* INPUT DEL NOMBRE */
 #field-name {
     flex: 1;
-    min-height: 45px;           /* Altura mínima desktop */
+    min-height: 45px;
     padding: 0 15px;
     font-size: 16px;
     border-radius: 8px;
@@ -132,51 +132,155 @@ button {
     font-size: 14px;
 }
 
-/* RESPONSIVE MOBILE */
+/* ══════════════════════════════════════════
+   RESPONSIVE MÓVIL
+══════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  /* TOP ROW */
-  .top-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-  }
+    .container {
+        padding: 0 10px;
+        margin: 16px auto;
+    }
 
-  /* INPUT NOMBRE RESPONSIVO */
-  #field-name {
-    min-height: 60px;         /* ⬅ Altura mínima cómoda */
-    height: auto;             /* ⬅ Permite crecer si hay contenido */
-    font-size: 18px;
-    padding: 15px 18px;       /* ⬅ Más padding para que se vea grande */
-    line-height: 1.4;         /* ⬅ Texto centrado vertical */
-  }
+    /* TOP ROW: apilado vertical */
+    .top-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
 
-  /* BOTONES RESPONSIVOS */
-  .buttons {
-    width: 100%;
-    display: flex;
-    gap: 10px;
-  }
+    #field-name {
+        min-height: 52px;
+        font-size: 16px;
+        padding: 14px 14px;
+    }
 
-  .buttons button {
-    flex: 1;
-    height: 50px;
-    font-size: 15px;
-  }
+    .buttons {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+    }
 
-  /* INFO BOX */
-  .info-box {
-    flex-direction: column;
-    gap: 15px;
-    padding: 20px;
-  }
+    .buttons button {
+        flex: 1;
+        height: 50px;
+        font-size: 14px;
+    }
 
-  .divider {
-    display: none;
-  }
+    /* INFO BOX: apilado vertical */
+    .info-box {
+        flex-direction: column;
+        gap: 14px;
+        padding: 16px;
+        text-align: center;
+    }
 
-  /* MAPA */
-  #map {
-    height: 300px;
-  }
+    .divider {
+        display: none;
+    }
+
+    .value {
+        font-size: 17px;
+    }
+
+    /* MAPA */
+    #map {
+        height: 280px;
+        border-radius: 12px;
+    }
+
+    /* GRID CLIMA en field: 1 columna */
+    .weather-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    .weather-summary,
+    .weather-temp-block,
+    .weather-precip-grid,
+    .weather-extra-grid,
+    .weather-municipio-block,
+    .weather-sun-block {
+        grid-column: 1 !important;
+    }
+
+    .weather-precip-grid {
+        margin-left: 0;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .temp-actual,
+    .weather-temp-block .temp-actual {
+        font-size: 48px;
+    }
+
+    /* Forecast: 2 columnas */
+    .forecast-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .forecast-card {
+        padding: 10px;
+    }
+
+    .forecast-main-icon {
+        width: 40px;
+    }
+
+    .forecast-day {
+        font-size: 13px;
+    }
+
+    .forecast-small-icon {
+        width: 12px;
+    }
+
+    .forecast-data-col {
+        font-size: 12px;
+    }
+
+    /* Gráficas */
+    .chart-toggle-row {
+        padding: 10px 12px;
+    }
+
+    .chart-toggle-label {
+        font-size: 13px;
+    }
+
+    .chart-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    .chart-canvas-wrapper {
+        height: 170px;
+    }
+
+    /* Barra solar */
+    .sun-times {
+        gap: 6px;
+    }
+
+    .sun-times img {
+        width: 26px;
+    }
+
+    .sunrise-sunset {
+        font-size: 12px;
+    }
+
+    .marker-time-0,
+    .marker-time-5 {
+        font-size: 9px;
+    }
+
+    /* Link volver */
+    .link {
+        font-size: 16px;
+        padding: 12px 0;
+        display: block;
+    }
 }

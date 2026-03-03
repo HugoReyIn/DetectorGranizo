@@ -16,6 +16,8 @@
     padding: 15px;
     text-align: center;
     transition: transform 0.2s ease;
+    flex: 0 0 auto;
+    width: 100px;
 }
 
 .hour-card:hover {
@@ -67,43 +69,66 @@
     background: #00e600;
 }
 
+/* Scroll horizontal horas */
 .hourly-scroll {
-  display: flex;
-  overflow-x: auto;
-  padding: 0.5rem 0;
-  gap: 0.5rem;
-}
-
-.hour-card {
-  flex: 0 0 auto;
-  width: 100px;
-  background-color: rgba(255,255,255,0.1);
-  border-radius: 8px;
-  padding: 0.5rem;
-  text-align: center;
-  font-size: 0.8rem;
+    display: flex;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    gap: 0.5rem;
+    -webkit-overflow-scrolling: touch;
 }
 
 .hour-card img {
-  width: 40px;
-  height: 40px;
-  margin: 0.2rem 0;
+    width: 40px;
+    height: 40px;
+    margin: 0.2rem 0;
 }
 
-/* Responsivo para móviles */
+/* ══════════════════════════════════════════
+   RESPONSIVE MÓVIL
+══════════════════════════════════════════ */
 @media (max-width: 768px) {
+
     .hourly-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 10px;
     }
+
+    .hour-card {
+        width: 85px;
+        padding: 10px 6px;
+    }
+
+    .hour-time {
+        font-size: 13px;
+        margin-bottom: 5px;
+    }
+
     .hour-temp {
-        font-size: 18px;
+        font-size: 17px;
     }
+
     .hour-icon {
-        width: 30px;
-        height: 30px;
+        width: 28px;
+        height: 28px;
     }
-    .hour-rain, .hour-hail, .hour-prob-rain, .hour-wind {
-        font-size: 12px;
+
+    .hour-card img {
+        width: 28px;
+        height: 28px;
+    }
+
+    .hour-rain,
+    .hour-hail,
+    .hour-prob-rain,
+    .hour-wind {
+        font-size: 11px;
+    }
+
+    .back-link {
+        display: block;
+        text-align: center;
+        margin: 16px auto;
+        width: fit-content;
     }
 }

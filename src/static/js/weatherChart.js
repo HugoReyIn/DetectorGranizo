@@ -1,7 +1,6 @@
 // weatherChart.js
 import { loadWeatherByCoords, getHourlyWeather, updateGeneralWeatherDOM } from "./weather.js";
 
-
 function getWindDirectionLabel(degrees) {
     if (degrees === undefined || degrees === null) return "";
     const adjusted = (degrees + 180) % 360;
@@ -9,146 +8,242 @@ function getWindDirectionLabel(degrees) {
     return directions[Math.round(adjusted / 45) % 8];
 }
 
+function formatDateLabel(dateStr) {
+    const date = new Date(dateStr + "T00:00:00");
+    const name = date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+    return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     let lat, lon;
 
     if (window.fieldCoords) {
+        // Coordenadas del campo (field.html): ya inyectadas, no pedir geoloc
         lat = window.fieldCoords.lat;
         lon = window.fieldCoords.lon;
     } else if (navigator.geolocation) {
+        // main.html: usar geolocalización
         await new Promise(resolve => {
             navigator.geolocation.getCurrentPosition(pos => {
                 lat = pos.coords.latitude;
                 lon = pos.coords.longitude;
                 resolve();
-            });
+            }, () => resolve());
         });
     }
 
-    // Obtener datos
-    const data = await loadWeatherByCoords(lat, lon);
+    if (!lat || !lon) return;
 
-    // Actualizar campos generales en el DOM
-    updateGeneralWeatherDOM(data);
+    // Si window.chartsOnly está activo (field.html), el clima ya lo carga field.js
+    // Solo pedimos datos horarios para las gráficas
+    if (!window.chartsOnly) {
+        const data = await loadWeatherByCoords(lat, lon);
+        updateGeneralWeatherDOM(data);
+    }
 
-    // Obtener datos horarios y dibujar gráficas
     const hourlyData = await getHourlyWeather(lat, lon);
-    renderAllCharts(hourlyData);
+    setupCharts(hourlyData);
 });
 
-function renderAllCharts(grouped) {
-    const days = Object.keys(grouped);
-    days.forEach((day, index) => {
-        const dayIndex = index + 1;
-        const canvas = document.getElementById(`chart-${dayIndex}`);
-        if (canvas) drawChart(canvas, grouped[day]);
+// ─────────────────────────────────────────────
+// SETUP CHARTS
+// ─────────────────────────────────────────────
+function setupCharts(grouped) {
+    const days = Object.keys(grouped).sort();
+    if (days.length === 0) return;
+
+    const today = days[0];
+    const nowHour = new Date().getHours();
+
+    const todayFiltered = grouped[today].filter(h => {
+        const hour = parseInt(h.time.split(":")[0]);
+        return hour >= nowHour;
     });
+
+    // ── HOY ──
+    const todayToggleRow = document.getElementById("today-chart-toggle");
+    const todayPanel = document.getElementById("today-chart-panel");
+    const todayCanvas = document.getElementById("today-chart-canvas");
+
+    if (todayToggleRow && todayPanel && todayCanvas) {
+        let todayChartInstance = null;
+        let todayMode = "temp";
+
+        todayToggleRow.addEventListener("click", () => {
+            const isOpen = todayPanel.classList.toggle("open");
+            const arrow = todayToggleRow.querySelector(".chart-arrow");
+            if (arrow) arrow.classList.toggle("rotated", isOpen);
+            if (isOpen && !todayChartInstance) {
+                todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode);
+            }
+        });
+
+        document.getElementById("today-btn-temp")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            todayMode = "temp";
+            setActiveTab("today-btn-temp", "today-btn-humidity");
+            if (todayChartInstance) { todayChartInstance.destroy(); todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode); }
+        });
+
+        document.getElementById("today-btn-humidity")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            todayMode = "humidity";
+            setActiveTab("today-btn-humidity", "today-btn-temp");
+            if (todayChartInstance) { todayChartInstance.destroy(); todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode); }
+        });
+    }
+
+    // ── PRÓXIMOS 4 DÍAS ──
+    const forecastToggleRow = document.getElementById("forecast-charts-toggle");
+    const forecastPanel = document.getElementById("forecast-charts-panel");
+
+    if (forecastToggleRow && forecastPanel) {
+        let forecastRendered = false;
+
+        forecastToggleRow.addEventListener("click", () => {
+            const isOpen = forecastPanel.classList.toggle("open");
+            const arrow = forecastToggleRow.querySelector(".chart-arrow");
+            if (arrow) arrow.classList.toggle("rotated", isOpen);
+
+            if (isOpen && !forecastRendered) {
+                forecastRendered = true;
+                days.slice(1, 5).forEach((day, i) => {
+                    const canvas = document.getElementById(`forecast-canvas-${i}`);
+                    const dateLabel = document.getElementById(`forecast-chart-date-${i}`);
+                    const btnTemp = document.getElementById(`forecast-btn-temp-${i}`);
+                    const btnHum = document.getElementById(`forecast-btn-humidity-${i}`);
+                    if (!canvas) return;
+
+                    if (dateLabel) dateLabel.textContent = formatDateLabel(day);
+                    let mode = "temp";
+                    let chartInst = drawChart(canvas, grouped[day], mode);
+
+                    btnTemp?.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        mode = "temp";
+                        setActiveTab(`forecast-btn-temp-${i}`, `forecast-btn-humidity-${i}`);
+                        chartInst.destroy();
+                        chartInst = drawChart(canvas, grouped[day], mode);
+                    });
+                    btnHum?.addEventListener("click", (e) => {
+                        e.stopPropagation();
+                        mode = "humidity";
+                        setActiveTab(`forecast-btn-humidity-${i}`, `forecast-btn-temp-${i}`);
+                        chartInst.destroy();
+                        chartInst = drawChart(canvas, grouped[day], mode);
+                    });
+                });
+            }
+        });
+    }
 }
 
-function drawChart(canvas, hourlyData) {
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    const padding = 75;
-    const width = canvas.width - padding*2;
-    const height = canvas.height - padding*2;
+function setActiveTab(activeId, inactiveId) {
+    document.getElementById(activeId)?.classList.add("active");
+    document.getElementById(inactiveId)?.classList.remove("active");
+}
 
-    // Temperatura
-    const temps = hourlyData.map(h => h.temp);
-    const maxTemp = Math.max(...temps);
-    const minTemp = 0;
-    const tempRange = maxTemp - minTemp || 1;
-    const tempPoints = hourlyData.map((h,i) => {
-        const x = padding + (i/(hourlyData.length-1))*width;
-        const y = padding + height - ((h.temp - minTemp)/tempRange)*height;
-        return {x,y,value:h.temp,time:h.time};
+// ─────────────────────────────────────────────
+// PLUGIN: etiquetas encima de los puntos
+// ─────────────────────────────────────────────
+const dataLabelsPlugin = {
+    id: "dataLabels",
+    afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        const meta = chart.getDatasetMeta(0);
+        const isTemp = chart._isTemp;
+        data.labels.forEach((_, i) => {
+            const point = meta.data[i];
+            if (!point) return;
+            const value = data.datasets[0].data[i];
+            ctx.save();
+            ctx.font = "bold 11px 'Segoe UI', Arial, sans-serif";
+            ctx.fillStyle = isTemp ? "#b07d00" : "#1565c0";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+            ctx.fillText(isTemp ? `${value}°` : `${value}%`, point.x, point.y - 7);
+            ctx.restore();
+        });
+    }
+};
+
+// ─────────────────────────────────────────────
+// DIBUJAR GRÁFICA
+// ─────────────────────────────────────────────
+function drawChart(canvas, hourlyData, mode = "temp") {
+    const isTemp = mode === "temp";
+    const values = isTemp
+        ? hourlyData.map(h => h.temp)
+        : hourlyData.map(h => h.prob_rain ?? 0);
+
+    const color      = isTemp ? "#e0a800" : "#2196f3";
+    const colorLight = isTemp ? "rgba(224,168,0,0.13)" : "rgba(33,150,243,0.13)";
+    const minVal = Math.min(...values);
+    const yMin = minVal >= 0 ? 0 : undefined;
+
+    const chart = new Chart(canvas, {
+        type: "line",
+        data: {
+            labels: hourlyData.map(h => h.time),
+            datasets: [{
+                data: values,
+                borderColor: color,
+                backgroundColor: colorLight,
+                pointBackgroundColor: color,
+                pointBorderWidth: 1.5,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                fill: true,
+                tension: 0.4,
+                borderWidth: 2.5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 26 } },
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: "rgba(0,50,20,0.92)",
+                    titleColor: "#404040",
+                    bodyColor: "#757676",
+                    padding: 12,
+                    cornerRadius: 8,
+                    borderColor: "rgba(164, 255, 167, 0.3)",
+                    borderWidth: 1,
+                    callbacks: {
+                        title: (items) => `${items[0].label}`,
+                        label: (item) => {
+                            const h = hourlyData[item.dataIndex];
+                            const windDir = getWindDirectionLabel(h.wind_dir);
+                            return [
+                                `Viento: ${h.wind_speed} km/h (${windDir})`,
+                                `Lluvia estimada: ${h.rain} mm`,
+                                `Granizo: ${h.hail}%`
+                            ];
+                        },
+                        labelColor: () => ({ borderColor: "transparent", backgroundColor: "transparent" })
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    border: { display: true, color: "#ccc" },
+                    ticks: { color: "#a9a9a9", font: { size: 11, family: "'Segoe UI', Arial, sans-serif" }, maxRotation: 0 }
+                },
+                y: {
+                    display: false,
+                    min: yMin,
+                    grid: { display: false }
+                }
+            }
+        },
+        plugins: [dataLabelsPlugin]
     });
 
-    // Área temperatura
-    ctx.beginPath();
-    ctx.moveTo(tempPoints[0].x, canvas.height-padding);
-    tempPoints.forEach(p=>ctx.lineTo(p.x,p.y));
-    ctx.lineTo(tempPoints[tempPoints.length-1].x, canvas.height-padding);
-    ctx.closePath();
-    ctx.fillStyle="rgba(240,200,100,0.35)";
-    ctx.fill();
-
-    // Línea temperatura
-    ctx.beginPath();
-    ctx.moveTo(tempPoints[0].x,tempPoints[0].y);
-    for(let i=1;i<tempPoints.length;i++) ctx.lineTo(tempPoints[i].x,tempPoints[i].y);
-    ctx.strokeStyle="#e0a800";
-    ctx.lineWidth=3;
-    ctx.stroke();
-
-    // Puntos temperatura
-    tempPoints.forEach(p=>{
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,5,0,2*Math.PI);
-        ctx.fillStyle="#e0a800";
-        ctx.fill();
-    });
-
-    // Texto temperatura
-    ctx.fillStyle="#333";
-    ctx.font="bold 14px Arial";
-    ctx.textAlign="center";
-    tempPoints.forEach(p=>ctx.fillText(p.value+"°",p.x,p.y-15));
-
-    // Probabilidad de lluvia
-    const rainPoints = hourlyData.map((h,i)=>{
-        const x = padding + (i/(hourlyData.length-1))*width;
-        const y = padding + height - (h.prob_rain/100)*height;
-        return {x,y,value:h.prob_rain};
-    });
-
-    ctx.beginPath();
-    ctx.moveTo(rainPoints[0].x,rainPoints[0].y);
-    for(let i=1;i<rainPoints.length;i++) ctx.lineTo(rainPoints[i].x,rainPoints[i].y);
-    ctx.strokeStyle="#2196f3";
-    ctx.lineWidth=2;
-    ctx.stroke();
-
-    rainPoints.forEach(p=>{
-        ctx.beginPath();
-        ctx.arc(p.x,p.y,4,0,2*Math.PI);
-        ctx.fillStyle="#2196f3";
-        ctx.fill();
-    });
-
-    // Eje X
-    ctx.beginPath();
-    ctx.moveTo(padding,canvas.height-padding);
-    ctx.lineTo(canvas.width-padding,canvas.height-padding);
-    ctx.strokeStyle="#aaa";
-    ctx.lineWidth=1;
-    ctx.stroke();
-
-    // Datos debajo
-    const baseY = canvas.height - padding + 25;
-    const leftColumnX = padding - 45;
-
-    // Horas
-    ctx.fillStyle="#666";
-    ctx.font="12px Arial";
-    ctx.textAlign="center";
-    tempPoints.forEach(p=>ctx.fillText(p.time,p.x,baseY));
-
-    // Unidades izquierda
-    ctx.textAlign="right";
-    ctx.font="bold 12px Arial";
-    ctx.fillStyle="#2196f3";
-    ctx.fillText("mm", leftColumnX-5, baseY+22);
-    ctx.fillStyle="#444";
-    ctx.fillText("km/h", leftColumnX-5, baseY+40);
-
-    // Lluvia
-    ctx.fillStyle="#2196f3";
-    hourlyData.forEach((h,i)=>ctx.fillText(h.rain,tempPoints[i].x,baseY+22));
-
-    // Viento
-    ctx.fillStyle="#444";
-    hourlyData.forEach((h,i)=>{
-        const windLabel = getWindDirectionLabel(h.wind_dir);
-        ctx.fillText(h.wind_speed + " (" + windLabel + ")", tempPoints[i].x, baseY+40);
-    });
+    chart._isTemp = isTemp;
+    return chart;
 }

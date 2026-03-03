@@ -143,7 +143,7 @@ h4 {
     text-align: left;
 }
 
-#weather-actual-info{
+#weather-actual-info {
     background: #ffffff;
     border-radius: 12px;
     padding: 10px;
@@ -224,7 +224,7 @@ h4 {
     margin-left: 50px;
 }
 
-#weather-description{
+#weather-description {
     color: #888;
     margin-top: 2px;
 }
@@ -249,10 +249,6 @@ h4 {
 
 #rain, #hail, #snow {
     font-weight: normal;
-}
-
-#weather-container {
-    cursor: pointer; /* muestra que es clicable */
 }
 
 #weather-container * {
@@ -357,7 +353,7 @@ h4 {
     height: auto;
 }
 
-.sunrise-sunset{
+.sunrise-sunset {
     color: #888;
     font-size: 14px;
 }
@@ -442,12 +438,12 @@ h4 {
     object-fit: contain;
 }
 
-.information-grid{
+.information-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
 }
 
-.temp-max-info{
+.temp-max-info {
     grid-column: 1;
     display: flex;
     align-items: right;
@@ -455,7 +451,7 @@ h4 {
     margin-top: 30px;
 }
 
-.temp-min-info{
+.temp-min-info {
     grid-column: 2;
     display: flex;
     align-items: left;
@@ -471,7 +467,7 @@ h4 {
     margin-top: 10px;
 }
 
-.sunsine-info{
+.sunsine-info {
     grid-column: 2;
     display: flex;
     align-items: left;
@@ -479,36 +475,272 @@ h4 {
     margin-top: 10px;
 }
 
+/* ══════════════════════════════════════════
+   GRÁFICAS DESPLEGABLES
+══════════════════════════════════════════ */
+
+.chart-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 11px 16px;
+    margin-top: 14px;
+    background: #c8f5c0;
+    border-radius: 12px;
+    border: 1.5px solid #a0dba0;
+    user-select: none;
+    transition: background 0.2s;
+}
+
+.chart-toggle-row:hover {
+    background: #b2edb0;
+}
+
+.chart-toggle-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #00796b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chart-toggle-label::before {
+    content: "📊";
+    font-size: 15px;
+}
+
+.chart-arrow {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #a0dba0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #00796b;
+    transition: transform 0.3s ease, background 0.2s;
+    flex-shrink: 0;
+}
+
+.chart-arrow.rotated {
+    transform: rotate(180deg);
+    background: #7ecf7e;
+}
+
+/* Panel colapsable */
+.chart-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.chart-panel.open {
+    max-height: 5000px;
+}
+
+.chart-panel-inner {
+    padding: 16px 2px 10px;
+}
+
+/* Tabs */
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #c8e6c9;
+}
+
+.chart-btn {
+    padding: 7px 18px;
+    border: none;
+    background: transparent;
+    color: #7a9a7a;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    bottom: -2px;
+    border-bottom: 2px solid transparent;
+    transition: color 0.18s, border-color 0.18s;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.chart-btn:hover {
+    color: #00796b;
+}
+
+.chart-btn.active {
+    color: #b07d00;
+    border-bottom: 2px solid #e0a800;
+}
+
+/* Canvas */
+.chart-canvas-wrapper {
+    width: 100%;
+    height: 220px;
+    background: #f5fff5;
+    border-radius: 10px;
+    border: 1.5px solid #c8e6c9;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.chart-canvas-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Cabecera fecha en gráficas de días */
+.forecast-chart-block {
+    margin-bottom: 26px;
+}
+
+.forecast-chart-date {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00796b;
+    margin-bottom: 8px;
+    text-transform: capitalize;
+    border-left: 3px solid #4CAF50;
+    padding-left: 9px;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE MÓVIL
+══════════════════════════════════════════ */
 @media (max-width: 768px) {
 
-  .time {
-    font-size: 42px;
-  }
+    /* Reloj */
+    .time {
+        font-size: 42px;
+    }
 
-  .date {
-    font-size: 16px;
-  }
+    .date {
+        font-size: 16px;
+    }
 
-  .dashboard {
-    margin: 10px;
-    padding: 15px;
-  }
+    /* Dashboard */
+    .dashboard {
+        margin: 8px;
+        padding: 14px;
+    }
 
-  .field-row {
-    grid-template-columns: 1fr;
-    row-gap: 10px;
-    text-align: center;
-  }
+    /* Filas de campo */
+    .field-row {
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+        text-align: center;
+    }
 
-  .field-info h3 {
-    font-size: 20px;
-  }
+    .field-info h3 {
+        font-size: 20px;
+    }
 
-  .field-buttons {
-    width: 100%;
-  }
+    .field-buttons {
+        width: 100%;
+    }
 
-  .action-btn {
-    width: 100%;
-  }
+    .action-btn {
+        width: 100%;
+    }
+
+    /* Grid clima: 1 columna en móvil */
+    .weather-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .weather-summary {
+        grid-column: 1;
+    }
+
+    .weather-temp-block {
+        grid-column: 1;
+    }
+
+    .weather-precip-grid {
+        grid-column: 1;
+        margin-left: 0;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .weather-extra-grid {
+        grid-column: 1;
+    }
+
+    .weather-municipio-block {
+        grid-column: 1;
+    }
+
+    .weather-sun-block {
+        grid-column: 1;
+    }
+
+    /* Temperatura grande */
+    .temp-actual {
+        font-size: 52px;
+    }
+
+    .weather-temp-block .temp-actual {
+        font-size: 52px;
+    }
+
+    /* Barra solar */
+    .sun-times {
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
+    .sun-times img {
+        width: 28px;
+    }
+
+    /* Forecast grid: 2 columnas en móvil */
+    .forecast-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .forecast-main-icon {
+        width: 44px;
+    }
+
+    .forecast-day {
+        font-size: 13px;
+    }
+
+    .forecast-data-col {
+        font-size: 12px;
+    }
+
+    .forecast-small-icon {
+        width: 12px;
+    }
+
+    /* Gráficas */
+    .chart-toggle-row {
+        padding: 10px 12px;
+    }
+
+    .chart-toggle-label {
+        font-size: 13px;
+    }
+
+    .chart-btn {
+        padding: 7px 12px;
+        font-size: 12px;
+    }
+
+    .chart-canvas-wrapper {
+        height: 180px;
+    }
+
+    .forecast-chart-date {
+        font-size: 12px;
+    }
 }
