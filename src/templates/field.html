@@ -206,6 +206,11 @@
             </div>
         </div>
 
+        <h4>Predicción granizo (próximas 24h) — IA</h4>
+        <div class="chart-canvas-wrapper" style="height: 200px;">
+            <canvas id="hail-forecast-canvas"></canvas>
+        </div>
+
         {% endif %}
 
         <input type="hidden" id="field-id-hidden" name="field_id" value="{{ field.id if field else '' }}">

@@ -184,12 +184,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function loadWeatherFromField() {
-        if (points.length < 3) return;
+    async function loadWeatherFromField() {
+    if (points.length < 3) return;
 
-        const centroid = getPolygonCentroid(points);
-        loadWeatherByCoords(centroid.lat, centroid.lng);
+    const centroid = getPolygonCentroid(points);
+
+    // Clima actual (ya existente)
+    loadWeatherByCoords(centroid.lat, centroid.lng);
+
+    // Predicción de granizo por IA
+    try {
+        const prediction = await getHailPrediction(centroid.lat, centroid.lng);
+
+        // Probabilidad máxima próximas 6h para mostrar en el widget actual
+        const maxHail6h = getMaxHailNext6h(prediction);
+        const hailEl = document.getElementById("hail");
+        if (hailEl) hailEl.textContent = `${maxHail6h.toFixed(0)} %`;
+
+        // Guardar en window para que weatherChart.js pueda usarla
+        window.hailPrediction = prediction;
+
+        // Mostrar en la gráfica si existe
+        renderHailForecastChart(prediction);
+
+    } catch (e) {
+        console.warn("Predicción granizo no disponible:", e);
     }
+}
 
     // ===============================
     // CTRL + Z
@@ -264,5 +285,41 @@ document.addEventListener("DOMContentLoaded", () => {
                 .catch(() => alert("Error de conexión con el servidor"));
         });
     }
+
+
+    function renderHailForecastChart(prediction) {
+    const canvas = document.getElementById("hail-forecast-canvas");
+    if (!canvas) return;
+
+    const labels = prediction.map(p => p.time.split("T")[1].slice(0, 5));
+    const values = prediction.map(p => p.hail_probability);
+
+    if (window._hailChart) window._hailChart.destroy();
+
+    window._hailChart = new Chart(canvas, {
+        type: "bar",
+        data: {
+            labels,
+            datasets: [{
+                data: values,
+                backgroundColor: values.map(v =>
+                    v >= 70 ? "rgba(220,30,30,0.7)" :
+                    v >= 40 ? "rgba(255,140,0,0.7)" :
+                              "rgba(33,150,243,0.5)"
+                ),
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { min: 0, max: 100, ticks: { callback: v => v + "%" } },
+                x: { ticks: { maxRotation: 45 } }
+            }
+        }
+    });
+}
 
 });
