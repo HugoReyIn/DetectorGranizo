@@ -269,3 +269,22 @@ export function updateGeneralWeatherDOM(data) {
     const moistureEls = document.querySelectorAll("[id^='moisture']");
     moistureEls.forEach(el => el.textContent = `Humedad de la tierra: ${(data.soil_moisture ?? 0) * 100}%`);
 }
+
+export async function getHailPrediction(lat, lon) {
+    const res = await fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`);
+    if (!res.ok) throw new Error("Error predicción granizo");
+    return await res.json();
+}
+
+export function getMaxHailNext6h(prediction) {
+    const now = new Date();
+    const in6h = new Date(now.getTime() + 6 * 3600 * 1000);
+
+    const relevant = prediction.filter(p => {
+        const t = new Date(p.time);
+        return t >= now && t <= in6h;
+    });
+
+    if (relevant.length === 0) return 0;
+    return Math.max(...relevant.map(p => p.hail_probability));
+}
