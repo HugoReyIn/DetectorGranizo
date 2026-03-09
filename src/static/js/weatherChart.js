@@ -179,7 +179,8 @@ function drawChart(canvas, hourlyData, mode = "temp") {
     const color      = isTemp ? "#e0a800" : "#2196f3";
     const colorLight = isTemp ? "rgba(224,168,0,0.13)" : "rgba(33,150,243,0.13)";
     const minVal = Math.min(...values);
-    const yMin = minVal >= 0 ? 0 : undefined;
+    const yMin = isTemp ? (minVal >= 0 ? 0 : undefined) : 0;
+    const yMax = isTemp ? undefined : 100;
 
     const chart = new Chart(canvas, {
         type: "line",
@@ -190,6 +191,7 @@ function drawChart(canvas, hourlyData, mode = "temp") {
                 borderColor: color,
                 backgroundColor: colorLight,
                 pointBackgroundColor: color,
+                pointBorderColor: "#fff",
                 pointBorderWidth: 1.5,
                 pointRadius: 5,
                 pointHoverRadius: 7,
@@ -206,13 +208,16 @@ function drawChart(canvas, hourlyData, mode = "temp") {
             plugins: {
                 legend: { display: false },
                 tooltip: {
-                    backgroundColor: "rgba(0,50,20,0.92)",
-                    titleColor: "#404040",
-                    bodyColor: "#757676",
+                    backgroundColor: "rgba(240,240,240,0.97)",
+                    titleColor: "#111",
+                    bodyColor: "#333",
                     padding: 12,
                     cornerRadius: 8,
-                    borderColor: "rgba(164, 255, 167, 0.3)",
-                    borderWidth: 1,
+                    borderColor: "transparent",
+                    borderWidth: 0,
+                    titleFont: { weight: "bold", size: 13 },
+                    bodyFont: { weight: "normal", size: 12 },
+                    displayColors: false,
                     callbacks: {
                         title: (items) => `${items[0].label}`,
                         label: (item) => {
@@ -232,12 +237,21 @@ function drawChart(canvas, hourlyData, mode = "temp") {
                 x: {
                     grid: { display: false },
                     border: { display: true, color: "#ccc" },
-                    ticks: { color: "#a9a9a9", font: { size: 11, family: "'Segoe UI', Arial, sans-serif" }, maxRotation: 0 }
+                    ticks: { color: "#666", font: { size: 11, family: "'Segoe UI', Arial, sans-serif" }, maxRotation: 0 }
                 },
                 y: {
-                    display: false,
-                    min: yMin,
-                    grid: { display: false }
+                    display: !isTemp,
+                    min: isTemp ? (Math.min(...values) >= 0 ? 0 : undefined) : 0,
+                    max: isTemp ? undefined : 100,
+                    grid: { display: !isTemp, color: "rgba(0,0,0,0.06)" },
+                    border: { display: false },
+                    ticks: {
+                        display: !isTemp,
+                        color: "#1565c0",
+                        font: { size: 10 },
+                        callback: v => v + "%",
+                        stepSize: 25,
+                    }
                 }
             }
         },

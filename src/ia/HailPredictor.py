@@ -1,7 +1,7 @@
 import requests
 import numpy as np
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 import warnings
 warnings.filterwarnings("ignore")
@@ -9,102 +9,148 @@ warnings.filterwarnings("ignore")
 
 # ──────────────────────────────────────────
 # WEATHERCODE → HAIL SCORE (variable objetivo)
-# 0  = sin granizo
-# 0.5 = granizo leve (código 77)
+# 0   = sin granizo
+# 0.5 = granizo fino (código 77)
 # 0.7 = tormenta con granizo leve (96)
 # 1.0 = tormenta con granizo fuerte (99)
 # ──────────────────────────────────────────
 def weathercode_to_hail_score(code: int) -> float:
-    return {77: 0.5, 96: 0.7, 99: 1.0}.get(code, 0.0)
+    return {77: 0.5, 96: 0.7, 99: 1.0}.get(int(code), 0.0)
 
 
 # ──────────────────────────────────────────
-# OBTENER DATOS DE OPEN-METEO
-# Histórico (30 días) + forecast (2 días)
+# HISTÓRICO VERIFICADO (Open-Meteo Archive API)
+# Descarga hasta 60 días de datos reales
 # ──────────────────────────────────────────
-def fetch_meteo_data(lat: float, lon: float) -> dict:
-    """
-    Devuelve un dict con dos DataFrames:
-      - 'history': últimas ~720h con hail_score calculado
-      - 'future':  próximas 24h con las mismas variables exógenas
-    """
-    EXOG_VARS = [
-        "cape",
-        "lifted_index",
-        "freezing_level_height",
-        "temperature_2m",
-        "precipitation",
-        "showers",
-        "wind_speed_10m",          # proxy de surface wind
-        "cloud_cover",
-        "relative_humidity_2m",    # proxy de RH capas medias
+def fetch_historical_data(lat: float, lon: float) -> pd.DataFrame:
+    end_date = datetime.now().date() - timedelta(days=1)
+    start_date = end_date - timedelta(days=59)
+
+    VARS = [
+        "cape", "lifted_index", "freezing_level_height",
+        "temperature_2m", "precipitation", "showers",
+        "wind_speed_10m", "cloud_cover", "relative_humidity_2m",
+        "weather_code",
+    ]
+
+    url = (
+        "https://archive-api.open-meteo.com/v1/archive"
+        f"?latitude={lat}&longitude={lon}"
+        f"&start_date={start_date}&end_date={end_date}"
+        "&hourly=" + ",".join(VARS) +
+        "&timezone=auto"
+    )
+
+    try:
+        r = requests.get(url, timeout=20)
+        r.raise_for_status()
+        data = r.json().get("hourly", {})
+        if not data or "time" not in data:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data)
+        df["time"] = pd.to_datetime(df["time"])
+        df = df.set_index("time")
+        if "weather_code" in df.columns:
+            df.rename(columns={"weather_code": "weathercode"}, inplace=True)
+        df = df.ffill().fillna(0)
+        df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
+        return df
+
+    except Exception as e:
+        print(f"[HailPredictor] Error histórico archivo: {e}")
+        return pd.DataFrame()
+
+
+# ──────────────────────────────────────────
+# FORECAST + ÚLTIMOS 7 DÍAS (Open-Meteo)
+# ──────────────────────────────────────────
+def fetch_recent_and_forecast(lat: float, lon: float) -> tuple[pd.DataFrame, pd.DataFrame]:
+    VARS = [
+        "cape", "lifted_index", "freezing_level_height",
+        "temperature_2m", "precipitation", "showers",
+        "wind_speed_10m", "cloud_cover", "relative_humidity_2m",
         "weathercode",
     ]
 
-    # Open-Meteo soporta algunas presión-level variables solo en modelos específicos.
-    # Usamos los equivalentes en superficie disponibles en el modelo icon_eu.
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
-        "&hourly=" + ",".join(EXOG_VARS) +
-        "&past_days=30"
-        "&forecast_days=2"
-        "&timezone=auto"
-        "&models=icon_eu"
+        "&hourly=" + ",".join(VARS) +
+        "&past_days=7&forecast_days=2"
+        "&timezone=auto&models=icon_eu"
     )
 
     r = requests.get(url, timeout=15)
     r.raise_for_status()
-    data = r.json()["hourly"]
+    data = r.json().get("hourly", {})
 
     df = pd.DataFrame(data)
     df["time"] = pd.to_datetime(df["time"])
     df = df.set_index("time")
-    df = df.fillna(method="ffill").fillna(0)
-
-    # Variable objetivo solo en histórico (donde weathercode ya ocurrió)
+    df = df.ffill().fillna(0)
     df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
 
     now = pd.Timestamp.now().floor("h")
+    history_recent = df[df.index <= now].copy()
+    future = df[df.index > now].head(24).copy()
 
-    history = df[df.index <= now].copy()
-    future  = df[df.index >  now].head(24).copy()
-
-    # Las columnas exógenas (sin hail_score ni weathercode)
-    exog_cols = [c for c in EXOG_VARS if c != "weathercode"]
-
-    return {
-        "history": history,
-        "future":  future,
-        "exog_cols": exog_cols,
-    }
+    return history_recent, future
 
 
 # ──────────────────────────────────────────
-# ENTRENAR SARIMAX Y PREDECIR
+# COMBINAR DATOS Y PREDECIR
+# ──────────────────────────────────────────
+def fetch_meteo_data(lat: float, lon: float) -> dict:
+    exog_cols = [
+        "cape", "lifted_index", "freezing_level_height",
+        "temperature_2m", "precipitation", "showers",
+        "wind_speed_10m", "cloud_cover", "relative_humidity_2m",
+    ]
+
+    # Datos históricos verificados (60 días)
+    history_archive = fetch_historical_data(lat, lon)
+
+    # Datos recientes + forecast
+    history_recent, future = fetch_recent_and_forecast(lat, lon)
+
+    # Combinar: archivo (60d) + últimos 7 días, sin duplicados
+    if not history_archive.empty:
+        common_cols = [c for c in history_archive.columns if c in history_recent.columns]
+        combined = pd.concat([
+            history_archive[common_cols],
+            history_recent[[c for c in common_cols if c in history_recent.columns]]
+        ])
+        combined = combined[~combined.index.duplicated(keep="last")]
+        history = combined.sort_index()
+    else:
+        history = history_recent
+
+    print(f"[HailPredictor] Histórico total: {len(history)}h ({len(history)//24}d) | Forecast: {len(future)}h")
+
+    # Filtrar exog_cols disponibles
+    exog_cols = [c for c in exog_cols if c in history.columns and c in future.columns]
+
+    return {"history": history, "future": future, "exog_cols": exog_cols}
+
+
+# ──────────────────────────────────────────
+# PREDICT (SARIMAX)
 # ──────────────────────────────────────────
 def predict_hail(lat: float, lon: float) -> list[dict]:
-    """
-    Retorna una lista de dicts:
-      [{"time": "2024-06-01T14:00", "hail_probability": 72}, ...]
-    para las próximas 24 horas.
-    """
     meteo = fetch_meteo_data(lat, lon)
     history  = meteo["history"]
     future   = meteo["future"]
     exog_cols = meteo["exog_cols"]
 
-    # ── Necesitamos al menos 48h de histórico para SARIMAX ──
-    if len(history) < 48:
+    if len(history) < 48 or len(future) == 0:
+        print("[HailPredictor] Datos insuficientes, usando fallback.")
         return _fallback_from_weathercode(future)
 
-    endog = history["hail_score"].values.astype(float)
+    endog      = history["hail_score"].values.astype(float)
     exog_train = history[exog_cols].values.astype(float)
     exog_pred  = future[exog_cols].values.astype(float)
 
-    # ── Orden SARIMAX: (1,0,1) sin componente estacional
-    #    (datos horarios, estacionalidad diaria sería s=24 y costosa)
-    # ──────────────────────────────────────────────────────────────
     try:
         model = SARIMAX(
             endog,
@@ -114,16 +160,16 @@ def predict_hail(lat: float, lon: float) -> list[dict]:
             enforce_stationarity=False,
             enforce_invertibility=False,
         )
-        fit = model.fit(disp=False, maxiter=100)
-
+        fit = model.fit(disp=False, maxiter=200)
         forecast = fit.forecast(steps=len(future), exog=exog_pred)
 
-        # Convertir a probabilidad 0-100 con clip y escala
         probabilities = np.clip(forecast, 0, 1) * 100
         probabilities = probabilities.round(1)
 
+        print(f"[HailPredictor] OK — AIC={fit.aic:.1f}")
+
     except Exception as e:
-        print(f"[HailPredictor] SARIMAX falló ({e}), usando fallback.")
+        print(f"[HailPredictor] SARIMAX falló ({e}), fallback.")
         return _fallback_from_weathercode(future)
 
     results = []
@@ -131,8 +177,7 @@ def predict_hail(lat: float, lon: float) -> list[dict]:
         results.append({
             "time": ts.strftime("%Y-%m-%dT%H:%M"),
             "hail_probability": float(prob),
-            # Bonus: incluir datos raw útiles para el frontend
-            "cape": float(future["cape"].iloc[i]),
+            "cape": float(future["cape"].iloc[i]) if "cape" in future.columns else 0,
             "lifted_index": float(future["lifted_index"].iloc[i]) if "lifted_index" in future.columns else None,
         })
 
@@ -140,7 +185,7 @@ def predict_hail(lat: float, lon: float) -> list[dict]:
 
 
 # ──────────────────────────────────────────
-# FALLBACK: si SARIMAX falla, usar weathercode directamente
+# FALLBACK
 # ──────────────────────────────────────────
 def _fallback_from_weathercode(future: pd.DataFrame) -> list[dict]:
     results = []

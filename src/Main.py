@@ -62,6 +62,17 @@ def mainPage(request: Request):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
     fields = fieldDAO.getAllFieldsByUser(current_user.id)
+
+    # Añadir centroide lat/lon a cada campo para las alertas
+    for field in fields:
+        points = pointDAO.getPointsByField(field.id)
+        if points:
+            field.lat = sum(p.latitude for p in points) / len(points)
+            field.lon = sum(p.longitude for p in points) / len(points)
+        else:
+            field.lat = None
+            field.lon = None
+
     return templates.TemplateResponse(
         "main.html",
         {"request": request, "fields": fields}
@@ -375,6 +386,235 @@ def get_hourly_weather(lat: float, lon: float):
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
     
+
+# --------------------
+# AEMET ALERTAS
+# --------------------
+
+AEMET_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbHZhcm9ndWlqYXJyb21hcnRpbmV6QGdtYWlsLmNvbSIsImp0aSI6ImE5NGNmZTFkLWQwMWYtNGEwOS04ZmEwLTA4OTA2OGRkYTNhZSIsImlzcyI6IkFFTUVUIiwiaWF0IjoxNzQ1OTQwMjYxLCJ1c2VySWQiOiJhOTRjZmUxZC1kMDFmLTRhMDktOGZhMC0wODkwNjhkZGEzYWUiLCJyb2xlIjoiIn0.eVr2czlOHVEpBn3IFG4c8W0SoRxqwCzHCOKSbBFU0KA"
+
+# Mapa CAP event → tipo interno
+CAP_EVENT_MAP = {
+    # Calor / temperaturas altas
+    "calor": "calor", "heat": "calor",
+    "temperatura máxima": "calor", "temperatura minima": "calor",
+    "bochorno": "calor",
+    # Lluvia / tormenta
+    "lluvia": "lluvia", "rain": "lluvia",
+    "precipitaciones": "lluvia",
+    "tormenta": "lluvia", "storm": "lluvia",
+    "thunderstorm": "lluvia",
+    # Nieve
+    "nieve": "nieve", "snow": "nieve",
+    "nevada": "nieve",
+    # Granizo
+    "granizo": "granizo", "hail": "granizo",
+    "piedra": "granizo",
+}
+
+# CAP severity → nivel interno
+CAP_SEVERITY_MAP = {
+    "minor":    "amarillo",
+    "moderate": "naranja",
+    "severe":   "rojo",
+    "extreme":  "rojo",
+    # AEMET también usa estos en español
+    "amarillo": "amarillo",
+    "naranja":  "naranja",
+    "rojo":     "rojo",
+}
+
+LEVEL_ORDER = {"verde": 0, "amarillo": 1, "naranja": 2, "rojo": 3}
+
+_aemet_cache: dict = {}
+AEMET_TTL = 3600
+
+
+def _default_result():
+    return {
+        "calor":   {"nivel": "verde", "valor": None},
+        "lluvia":  {"nivel": "verde", "valor": None},
+        "nieve":   {"nivel": "verde", "valor": None},
+        "granizo": {"nivel": "verde", "valor": None},
+        "ticker":  ["No hay alertas activas"]
+    }
+
+
+@app.get("/get-aemet-alerts")
+def get_aemet_alerts(lat: float, lon: float):
+    """
+    Consulta AEMET OpenData (avisos CAP) y devuelve niveles de alerta
+    para calor, lluvia, nieve y granizo según las coordenadas dadas.
+    
+    Los avisos CAP de AEMET están en formato XML con campos:
+    <event> → tipo de fenómeno
+    <severity> → Minor/Moderate/Severe/Extreme
+    <areaDesc> → nombre de la zona
+    <parameter><valueName>awareness_type</valueName>...</parameter>
+    """
+    cache_key = f"aemet_{round(lat, 2)}_{round(lon, 2)}"
+    now = datetime.now()
+
+    if cache_key in _aemet_cache:
+        cached = _aemet_cache[cache_key]
+        if (now - cached["ts"]).total_seconds() < AEMET_TTL:
+            return JSONResponse(cached["data"])
+
+    result = _default_result()
+
+    try:
+        import xml.etree.ElementTree as ET
+
+        headers = {"api_key": AEMET_KEY, "Accept": "application/json"}
+
+        # 1) Obtener URL de datos
+        r1 = requests.get(
+            "https://opendata.aemet.es/opendata/api/avisos_cap/ultimoelaborado/todasAreas",
+            headers=headers, timeout=10
+        )
+        r1.raise_for_status()
+        meta = r1.json()
+        data_url = meta.get("datos")
+        if not data_url:
+            raise ValueError("Sin URL de datos AEMET")
+
+        # 2) Descargar datos CAP
+        r2 = requests.get(data_url, headers=headers, timeout=15)
+        r2.raise_for_status()
+        content_type = r2.headers.get("Content-Type", "")
+
+        # 3) Obtener provincia para filtrar zonas
+        prov_res = requests.get(
+            "https://nominatim.openstreetmap.org/reverse",
+            headers={"User-Agent": "GranizoApp/1.0"},
+            params={"lat": lat, "lon": lon, "format": "json"},
+            timeout=8
+        )
+        addr = prov_res.json().get("address", {})
+        province = (addr.get("province") or addr.get("state") or "").lower()
+        # Normalizar: "Álava/Araba" → "alava"
+        province_words = set(
+            w.strip("/()")
+            for w in province.replace("á","a").replace("é","e").replace("í","i")
+                             .replace("ó","o").replace("ú","u").lower().split()
+        )
+
+        # 4) Parsear XML CAP (AEMET usa formato CAP 1.2, un <alert> por aviso,
+        #    o bien un fichero multi-alert)
+        ns = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
+
+        def parse_cap_xml(xml_text):
+            """Extrae alertas relevantes del XML CAP."""
+            try:
+                root = ET.fromstring(xml_text)
+            except ET.ParseError:
+                return
+
+            # El fichero puede ser un <alert> o un wrapper con múltiples <alert>
+            alerts = root.findall(".//cap:alert", ns) or ([root] if root.tag.endswith("alert") else [])
+
+            for alert in alerts:
+                for info in alert.findall("cap:info", ns):
+                    # Solo español
+                    lang = info.findtext("cap:language", default="es", namespaces=ns)
+                    if lang and lang.lower() not in ("es", "es-es", ""):
+                        continue
+
+                    event = (info.findtext("cap:event", default="", namespaces=ns) or "").lower()
+                    severity_raw = (info.findtext("cap:severity", default="", namespaces=ns) or "").lower()
+                    area_desc = ""
+
+                    for area in info.findall("cap:area", ns):
+                        area_desc += (area.findtext("cap:areaDesc", default="", namespaces=ns) or "").lower() + " "
+
+                    # También mirar parámetros awareness_type / awareness_level
+                    awareness_type = ""
+                    awareness_level = ""
+                    for param in info.findall("cap:parameter", ns):
+                        pname = (param.findtext("cap:valueName", default="", namespaces=ns) or "").lower()
+                        pval  = (param.findtext("cap:value", default="", namespaces=ns) or "").lower()
+                        if "awareness_type" in pname:
+                            awareness_type = pval
+                        if "awareness_level" in pname:
+                            awareness_level = pval
+
+                    # Filtrar por zona geográfica
+                    zona_text = area_desc + " " + event
+                    if province_words and not any(w in zona_text for w in province_words):
+                        continue
+
+                    # Determinar tipo de fenómeno
+                    tipo = None
+                    search_text = event + " " + awareness_type
+                    for keyword, category in CAP_EVENT_MAP.items():
+                        if keyword in search_text:
+                            tipo = category
+                            break
+
+                    if not tipo:
+                        continue
+
+                    # Determinar nivel
+                    nivel = CAP_SEVERITY_MAP.get(severity_raw) or CAP_SEVERITY_MAP.get(awareness_level, "amarillo")
+
+                    # Umbral / valor
+                    valor = None
+                    for param in info.findall("cap:parameter", ns):
+                        pname = (param.findtext("cap:valueName", default="", namespaces=ns) or "").lower()
+                        pval  = (param.findtext("cap:value", default="", namespaces=ns) or "")
+                        if any(k in pname for k in ("umbral", "threshold", "valor", "value")):
+                            valor = pval
+                            break
+
+                    # Actualizar si este nivel es peor
+                    if LEVEL_ORDER[nivel] > LEVEL_ORDER[result[tipo]["nivel"]]:
+                        result[tipo]["nivel"] = nivel
+                        result[tipo]["valor"] = valor
+
+        # Intentar parsear como XML
+        if "xml" in content_type or r2.text.strip().startswith("<"):
+            parse_cap_xml(r2.text)
+        elif "json" in content_type:
+            # Algunos endpoints devuelven JSON con lista de avisos
+            try:
+                avisos = r2.json()
+                if isinstance(avisos, list):
+                    for aviso in avisos:
+                        event = (aviso.get("evento") or aviso.get("event") or "").lower()
+                        severity = (aviso.get("nivel") or aviso.get("severity") or "").lower()
+                        zona = (aviso.get("zona") or aviso.get("area") or "").lower()
+                        if province_words and not any(w in zona for w in province_words):
+                            continue
+                        tipo = next((cat for kw, cat in CAP_EVENT_MAP.items() if kw in event), None)
+                        if not tipo: continue
+                        nivel = CAP_SEVERITY_MAP.get(severity, "amarillo")
+                        if LEVEL_ORDER[nivel] > LEVEL_ORDER[result[tipo]["nivel"]]:
+                            result[tipo]["nivel"] = nivel
+                            result[tipo]["valor"] = aviso.get("umbral")
+            except Exception:
+                pass
+
+    except Exception as e:
+        print(f"[AEMET] Error: {e} — usando valores por defecto")
+        # Sin datos AEMET: dejar todo verde, no mostrar error al usuario
+
+    # Construir ticker
+    LABEL = {"calor": "calor", "lluvia": "lluvia/tormentas", "nieve": "nieve", "granizo": "granizo"}
+    UNIT  = {"calor": "ºC", "lluvia": " mm", "nieve": " cm", "granizo": ""}
+    mensajes = []
+    for tipo, info in result.items():
+        if tipo == "ticker": continue
+        if info["nivel"] != "verde":
+            nivel_txt = info["nivel"].capitalize()
+            valor_txt = f": temperatura > {info['valor']}{UNIT[tipo]}" if (tipo == "calor" and info["valor"]) \
+                        else (f": {info['valor']}{UNIT[tipo]}" if info["valor"] else "")
+            mensajes.append(f"Alerta {nivel_txt} por {LABEL[tipo]}{valor_txt}")
+
+    result["ticker"] = mensajes if mensajes else ["No hay alertas activas"]
+
+    _aemet_cache[cache_key] = {"ts": now, "data": result}
+    return JSONResponse(result)
+
 
 _hail_cache: dict = {}
 CACHE_TTL_SECONDS = 3600

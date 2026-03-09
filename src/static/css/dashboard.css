@@ -31,7 +31,7 @@ h4 {
 
 .field-row {
     display: grid;
-    grid-template-columns: 2fr 150px 150px;
+    grid-template-columns: 1fr 220px 120px 160px;
     align-items: center;
     background: #90ee90;
     border-radius: 15px;
@@ -484,21 +484,23 @@ h4 {
     align-items: center;
     justify-content: space-between;
     cursor: pointer;
-    padding: 11px 16px;
-    margin-top: 14px;
-    background: #c8f5c0;
-    border-radius: 12px;
-    border: 1.5px solid #a0dba0;
+    padding: 10px 4px;
+    margin-top: 18px;
+    background: transparent;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid #a0dba0;
     user-select: none;
-    transition: background 0.2s;
+    transition: border-color 0.2s;
 }
 
 .chart-toggle-row:hover {
-    background: #b2edb0;
+    background: transparent;
+    border-bottom-color: #4CAF50;
 }
 
 .chart-toggle-label {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: #00796b;
     display: flex;
@@ -507,27 +509,26 @@ h4 {
 }
 
 .chart-toggle-label::before {
-    content: "📊";
-    font-size: 15px;
+    content: "";
 }
 
 .chart-arrow {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    background: #a0dba0;
+    width: auto;
+    height: auto;
+    border-radius: 0;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 11px;
     color: #00796b;
-    transition: transform 0.3s ease, background 0.2s;
+    transition: transform 0.3s ease;
     flex-shrink: 0;
 }
 
 .chart-arrow.rotated {
     transform: rotate(180deg);
-    background: #7ecf7e;
+    background: transparent;
 }
 
 /* Panel colapsable */
@@ -547,7 +548,7 @@ h4 {
 
 /* Tabs */
 .chart-controls {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0;
     margin-bottom: 12px;
@@ -555,7 +556,7 @@ h4 {
 }
 
 .chart-btn {
-    padding: 7px 18px;
+    padding: 7px 16px;
     border: none;
     background: transparent;
     color: #7a9a7a;
@@ -565,17 +566,27 @@ h4 {
     position: relative;
     bottom: -2px;
     border-bottom: 2px solid transparent;
-    transition: color 0.18s, border-color 0.18s;
+    transition: border-color 0.18s, color 0.18s;
     font-family: 'Segoe UI', Arial, sans-serif;
 }
 
 .chart-btn:hover {
-    color: #00796b;
+    background: transparent;
+    color: #7a9a7a;
 }
 
-.chart-btn.active {
+/* Temperatura activa → amarillo */
+.chart-btn.active[id$="btn-temp"],
+.chart-btn.active[id*="btn-temp-"] {
     color: #b07d00;
     border-bottom: 2px solid #e0a800;
+}
+
+/* Prob. lluvia activa → azul */
+.chart-btn.active[id$="btn-humidity"],
+.chart-btn.active[id*="btn-humidity-"] {
+    color: #1565c0;
+    border-bottom: 2px solid #2196f3;
 }
 
 /* Canvas */
@@ -609,6 +620,135 @@ h4 {
     padding-left: 9px;
 }
 
+
+
+/* ══════════════════════════════════════════
+   PANEL DE ALERTAS POR CAMPO
+══════════════════════════════════════════ */
+
+.field-alerts {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1.5px solid #c8e6c9;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+}
+
+.alert-icons-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 10px 10px 8px;
+    gap: 6px;
+}
+
+.alert-icon-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    background: rgba(0, 200, 0, 0.10);
+    border: 1.5px solid rgba(0, 180, 0, 0.30);
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+}
+
+.alert-img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    display: block;
+}
+
+.nivel-verde {
+    background: rgba(0, 200, 0, 0.10);
+    border-color: rgba(0, 180, 0, 0.30);
+}
+
+.nivel-amarillo {
+    background: rgba(255, 210, 0, 0.25);
+    border-color: rgba(220, 170, 0, 0.60);
+    box-shadow: 0 0 0 2px rgba(255, 200, 0, 0.30);
+}
+
+.nivel-naranja {
+    background: rgba(255, 130, 0, 0.25);
+    border-color: rgba(200, 90, 0, 0.60);
+    box-shadow: 0 0 0 2px rgba(255, 120, 0, 0.30);
+}
+
+.nivel-rojo {
+    background: rgba(220, 30, 30, 0.20);
+    border-color: rgba(180, 0, 0, 0.60);
+    animation: pulse-alert 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-alert {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(220, 30, 30, 0.30); }
+    50%       { box-shadow: 0 0 0 5px rgba(220, 30, 30, 0.10); }
+}
+
+/* Barra de color */
+.alert-bar {
+    height: 5px;
+    width: 100%;
+    transition: background 0.4s ease;
+}
+
+.alert-bar-verde    { background: #2ecc40; }
+.alert-bar-amarillo { background: #ffd000; }
+.alert-bar-naranja  { background: #ff7b00; }
+.alert-bar-rojo     { background: #e00000; }
+
+/* Ticker con fade (texto completo → desaparece → aparece siguiente) */
+.alert-ticker-mini {
+    overflow: hidden;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.03);
+    border-top: 1px solid rgba(0,0,0,0.06);
+    position: relative;
+}
+
+.ticker-verde    .alert-ticker-mini-text { color: #00796b; }
+.ticker-amarillo { background: rgba(255, 210, 0, 0.15); }
+.ticker-amarillo .alert-ticker-mini-text { color: #7a5a00; }
+.ticker-naranja  { background: rgba(255, 120, 0, 0.12); }
+.ticker-naranja  .alert-ticker-mini-text { color: #7a3000; }
+.ticker-rojo     { background: rgba(220, 30, 30, 0.10); }
+.ticker-rojo     .alert-ticker-mini-text { color: #8a0000; }
+
+.alert-ticker-mini-text {
+    position: absolute;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #00796b;
+    opacity: 0;
+    animation: ticker-fade 6s ease-in-out infinite;
+    padding: 0 8px;
+    text-align: center;
+    width: 100%;
+}
+
+@keyframes ticker-fade {
+    0%   { opacity: 0; transform: translateY(6px); }
+    10%  { opacity: 1; transform: translateY(0); }
+    80%  { opacity: 1; transform: translateY(0); }
+    95%  { opacity: 0; transform: translateY(-6px); }
+    100% { opacity: 0; transform: translateY(-6px); }
+}
+
+/* ══════════════════════════════════════════
+   TICKER GLOBAL (dashboard inferior)
+══════════════════════════════════════════ */
+
 /* ══════════════════════════════════════════
    RESPONSIVE MÓVIL
 ══════════════════════════════════════════ */
@@ -631,9 +771,37 @@ h4 {
 
     /* Filas de campo */
     .field-row {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr;
         row-gap: 10px;
         text-align: center;
+    }
+
+    .field-info {
+        grid-column: 1 / span 2;
+    }
+
+    .field-alerts {
+        grid-column: 1 / span 2;
+        max-width: 100%;
+        min-width: 0;
+    }
+
+    .alert-icon-item {
+        width: 32px;
+        height: 32px;
+    }
+
+    .alert-img {
+        width: 18px;
+        height: 18px;
+    }
+
+    .alert-ticker-mini {
+        height: 22px;
+    }
+
+    .alert-ticker-mini-text {
+        font-size: 9.5px;
     }
 
     .field-info h3 {
@@ -742,5 +910,143 @@ h4 {
 
     .forecast-chart-date {
         font-size: 12px;
+    }
+}
+/* ══════════════════════════════════════════
+   MÓDULO LUNA
+══════════════════════════════════════════ */
+
+#moon-container h2 {
+    margin-bottom: 18px;
+}
+
+.moon-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+/* Tarjeta principal — canvas + nombre + % */
+.moon-main-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #1a1a2e;
+    border-radius: 18px;
+    padding: 20px 24px 16px;
+    min-width: 200px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+}
+
+.moon-visual-wrapper {
+    margin-bottom: 14px;
+}
+
+#moon-canvas {
+    display: block;
+    border-radius: 50%;
+    box-shadow: 0 0 30px rgba(240, 230, 140, 0.15);
+}
+
+.moon-phase-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f0e68c;
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+
+.moon-illumination {
+    font-size: 32px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+}
+
+.moon-illumination-label {
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 3px;
+}
+
+/* Tarjeta próximas fases */
+.moon-phases-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1.5px solid #c8e6c9;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.moon-phases-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #00796b;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.moon-phases-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.moon-phase-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    background: #f5fff5;
+    border-radius: 10px;
+    border: 1px solid #e0f0e0;
+}
+
+.moon-phase-icon {
+    font-size: 28px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.moon-phase-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.moon-phase-row-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.moon-phase-row-date {
+    font-size: 12px;
+    color: #888;
+    text-transform: capitalize;
+}
+
+/* ── RESPONSIVE MÓVIL ── */
+@media (max-width: 768px) {
+    .moon-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .moon-main-card {
+        min-width: 0;
+    }
+
+    #moon-canvas {
+        width: 130px !important;
+        height: 130px !important;
+    }
+
+    .moon-illumination {
+        font-size: 26px;
     }
 }
