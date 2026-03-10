@@ -13,6 +13,7 @@ class FieldDAO:
         )
         self.cursor = self.conn.cursor()
         self.createTable()
+        self._migrate()
 
     def createTable(self):
         self.cursor.execute("""
@@ -23,30 +24,40 @@ class FieldDAO:
                 municipality VARCHAR(50),
                 areaM2 FLOAT,
                 state VARCHAR(30),
+                crop_type VARCHAR(50) DEFAULT '',
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                 UNIQUE KEY unique_name_per_user (user_id, name)
             )
         """)
         self.conn.commit()
 
+    def _migrate(self):
+        """Añade crop_type si no existe (migración automática)."""
+        try:
+            self.cursor.execute("ALTER TABLE fields ADD COLUMN crop_type VARCHAR(50) DEFAULT ''")
+            self.conn.commit()
+        except Exception:
+            pass  # Ya existe
+
     def insertField(self, field: Field, user_id: int):
         sql = """
-            INSERT INTO fields (user_id, name, municipality, areaM2, state)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO fields (user_id, name, municipality, areaM2, state, crop_type)
+            VALUES (%s, %s, %s, %s, %s, %s)
         """
         self.cursor.execute(sql, (
             user_id,
             field.name,
             field.municipality,
             field.area_m2,
-            getattr(field, "state", "open")
+            getattr(field, "state", "open"),
+            getattr(field, "crop_type", "")
         ))
         self.conn.commit()
         return self.cursor.lastrowid
 
     def getField(self, field_id: int):
         self.cursor.execute(
-            "SELECT id, user_id, name, municipality, areaM2, state FROM fields WHERE id=%s",
+            "SELECT id, user_id, name, municipality, areaM2, state, crop_type FROM fields WHERE id=%s",
             (field_id,)
         )
         row = self.cursor.fetchone()
@@ -55,12 +66,13 @@ class FieldDAO:
             f.state = row[5]
             f.id = row[0]
             f.user_id = row[1]
+            f.crop_type = row[6] or ""
             return f
         return None
 
     def getAllFieldsByUser(self, user_id: int):
         self.cursor.execute(
-            "SELECT id, name, municipality, areaM2, state FROM fields WHERE user_id=%s",
+            "SELECT id, name, municipality, areaM2, state, crop_type FROM fields WHERE user_id=%s",
             (user_id,)
         )
         rows = self.cursor.fetchall()
@@ -70,13 +82,14 @@ class FieldDAO:
             f.state = row[4]
             f.id = row[0]
             f.user_id = user_id
+            f.crop_type = row[5] or ""
             fields.append(f)
         return fields
 
     def updateField(self, field: Field):
         sql = """
             UPDATE fields 
-            SET name=%s, municipality=%s, areaM2=%s, state=%s 
+            SET name=%s, municipality=%s, areaM2=%s, state=%s, crop_type=%s
             WHERE id=%s
         """
         self.cursor.execute(sql, (
@@ -84,6 +97,7 @@ class FieldDAO:
             field.municipality,
             field.area_m2,
             getattr(field, "state", "open"),
+            getattr(field, "crop_type", ""),
             field.id
         ))
         self.conn.commit()

@@ -6,6 +6,7 @@
     <title>Detector Granizo - Dashboard</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/agro.css">
 </head>
 <body>
 
@@ -17,63 +18,47 @@
 <div class="dashboard">
     <h2>Mis terrenos</h2>
     {% for field in fields %}
+
+    <!-- FILA DEL CAMPO -->
     <div class="field-row"
          data-id="{{ field.id }}"
          data-state="{{ field.state }}"
          data-lat="{{ field.lat if field.lat else '' }}"
-         data-lon="{{ field.lon if field.lon else '' }}">
+         data-lon="{{ field.lon if field.lon else '' }}"
+         data-crop="{{ field.crop_type if field.crop_type else '' }}">
 
         <div class="field-info">
             <h3>{{ field.name }}</h3>
             <span>{{ field.municipality }}</span>
-        </div>
-
-        <div class="field-alerts" id="alerts-{{ field.id }}"
-             data-lat="{{ field.lat if field.lat else '' }}"
-             data-lon="{{ field.lon if field.lon else '' }}">
-            <div class="alert-icons-row">
-                <div class="alert-icon-item nivel-verde" id="alert-calor-{{ field.id }}" title="Calor">
-                    <img src="/static/img/heat.png" alt="Calor" class="alert-img">
-                </div>
-                <div class="alert-icon-item nivel-verde" id="alert-lluvia-{{ field.id }}" title="Lluvia">
-                    <img src="/static/img/rain.png" alt="Lluvia" class="alert-img">
-                </div>
-                <div class="alert-icon-item nivel-verde" id="alert-nieve-{{ field.id }}" title="Nieve">
-                    <img src="/static/img/snow.png" alt="Nieve" class="alert-img">
-                </div>
-                <div class="alert-icon-item nivel-verde" id="alert-granizo-{{ field.id }}" title="Granizo">
-                    <img src="/static/img/hail.png" alt="Granizo" class="alert-img">
-                </div>
-            </div>
-            <div class="alert-bar alert-bar-verde" id="alert-bar-{{ field.id }}"></div>
-            <div class="alert-ticker-mini ticker-verde" id="alert-ticker-{{ field.id }}">
-                <span class="alert-ticker-mini-text">&nbsp;</span>
-            </div>
-        </div>
-
-        <div class="field-status status-{{ field.state }}">
-            {% if field.state == "open" %}
-                Abierto
-            {% else %}
-                Cerrado
+            {% if field.crop_type %}
+            <span class="field-crop-badge">🌱 {{ field.crop_type | capitalize }}</span>
             {% endif %}
         </div>
 
-        <div class="field-buttons">
+        <div class="field-status status-{{ field.state }}">
+            {% if field.state == "open" %}Abierto{% else %}Cerrado{% endif %}
+        </div>
+
+        <div class="field-buttons" style="display:flex;gap:8px;align-items:center;">
             <button class="action-btn">
-                {% if field.state == "open" %}
-                    Cierre manual
-                {% else %}
-                    Apertura manual
-                {% endif %}
+                {% if field.state == "open" %}Cierre manual{% else %}Apertura manual{% endif %}
+            </button>
+            <button class="field-detail-btn" data-field-id="{{ field.id }}" data-lat="{{ field.lat if field.lat else '' }}" data-lon="{{ field.lon if field.lon else '' }}">
+                📊 Detalles <span class="detail-arrow">▼</span>
             </button>
         </div>
     </div>
+
+    <!-- PANEL EXPANDIBLE DEL CAMPO -->
+    <div class="field-detail-panel" id="field-panel-{{ field.id }}">
+        <div class="field-detail-inner" id="field-panel-inner-{{ field.id }}">
+            <div class="fdp-loading">⏳ Cargando datos del campo...</div>
+        </div>
+    </div>
+
     {% endfor %}
 
-    <button class="add-field-btn">
-        + Añadir terreno
-    </button>
+    <button class="add-field-btn">+ Añadir terreno</button>
 </div>
 
 <div id="weather-container" class="dashboard">
@@ -168,7 +153,7 @@
         </div>
     </div>
 
-    <!-- ── GRÁFICA HOY ── -->
+    <!-- GRÁFICA HOY -->
     <div class="chart-toggle-row" id="today-chart-toggle">
         <span class="chart-toggle-label">Previsión por horas</span>
         <div class="chart-arrow">▼</div>
@@ -185,7 +170,7 @@
         </div>
     </div>
 
-    <!-- ── PRÓXIMOS 4 DÍAS ── -->
+    <!-- PRÓXIMOS 4 DÍAS -->
     <h4>Próximos 4 días</h4>
     <div class="forecast-grid">
         {% for i in range(1, 5) %}
@@ -214,7 +199,7 @@
         {% endfor %}
     </div>
 
-    <!-- ── GRÁFICAS 4 DÍAS ── -->
+    <!-- GRÁFICAS 4 DÍAS -->
     <div class="chart-toggle-row" id="forecast-charts-toggle">
         <span class="chart-toggle-label">Previsión por horas</span>
         <div class="chart-arrow">▼</div>
@@ -235,18 +220,12 @@
             {% endfor %}
         </div>
     </div>
-
 </div>
 
-<!-- ══════════════════════════════════════════
-     LUNA
-══════════════════════════════════════════ -->
+<!-- LUNA -->
 <div class="dashboard" id="moon-container">
     <h2>Luna</h2>
-
     <div class="moon-grid">
-
-        <!-- Fase actual con visualización -->
         <div class="moon-main-card">
             <div class="moon-visual-wrapper">
                 <canvas id="moon-canvas" width="160" height="160"></canvas>
@@ -255,15 +234,10 @@
             <div class="moon-illumination" id="moon-illumination">— %</div>
             <div class="moon-illumination-label">iluminación</div>
         </div>
-
-        <!-- Próximas fases -->
         <div class="moon-phases-card">
             <div class="moon-phases-title">Próximas fases</div>
-            <div class="moon-phases-list" id="moon-phases-list">
-                <!-- generado por JS -->
-            </div>
+            <div class="moon-phases-list" id="moon-phases-list"></div>
         </div>
-
     </div>
 </div>
 

@@ -1,5 +1,191 @@
 import { loadWeatherByCoords } from "./weather.js";
 
+const NIVEL_ORDER = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
+
+// ─────────────────────────────────────────────
+// WEATHER CODE → DESCRIPCIÓN CORTA
+// ─────────────────────────────────────────────
+function weatherShort(code) {
+    const map = {
+        0: "Soleado", 1: "Despejado", 2: "Parcialmente nublado", 3: "Nublado",
+        45: "Niebla", 48: "Niebla con escarcha",
+        51: "Llovizna ligera", 53: "Llovizna", 55: "Llovizna intensa",
+        61: "Lluvia ligera", 63: "Lluvia", 65: "Lluvia intensa",
+        71: "Nevada ligera", 73: "Nevada", 75: "Nevada intensa",
+        77: "Granizo fino",
+        80: "Chubascos", 81: "Chubascos mod.", 82: "Chubascos fuertes",
+        95: "Tormenta", 96: "Tormenta c/ granizo", 99: "Tormenta c/ granizo fuerte"
+    };
+    return map[code] || "—";
+}
+
+// ─────────────────────────────────────────────
+// UV NIVEL
+// ─────────────────────────────────────────────
+function uvLabel(uv) {
+    if (uv === null || uv === undefined) return "—";
+    if (uv <= 2) return `${uv} Bajo`;
+    if (uv <= 5) return `${uv} Moderado`;
+    if (uv <= 7) return `${uv} Alto`;
+    if (uv <= 10) return `${uv} Muy alto`;
+    return `${uv} Extremo`;
+}
+
+// ─────────────────────────────────────────────
+// RENDER PANEL DETALLES CAMPO
+// ─────────────────────────────────────────────
+function renderFieldPanel(container, summary, alerts) {
+    const wc = summary.weathercode ?? 0;
+
+    // Riesgo granizo color
+    const hailPct = summary.hail_risk_6h ?? 0;
+    const hailColor = hailPct >= 70 ? "#e53935" : hailPct >= 40 ? "#ff9800" : "#4caf50";
+
+    // Humedad suelo en %
+    const soilPct = summary.soil_moisture !== null && summary.soil_moisture !== undefined
+        ? `${(summary.soil_moisture * 100).toFixed(0)}%` : "—";
+
+    // ET₀ interpretación
+    let et0Tip = "";
+    if (summary.et0_today !== null && summary.et0_today !== undefined) {
+        if (summary.et0_today >= 5) et0Tip = "💧 Regar hoy";
+        else if (summary.et0_today >= 3) et0Tip = "💧 Monitorizar";
+        else et0Tip = "✅ Sin riego urgente";
+    }
+
+    // Alertas
+    const TIPOS = ["calor", "lluvia", "nieve", "granizo"];
+    const LABELS = { calor: "🌡️ Calor", lluvia: "🌧️ Lluvia", nieve: "❄️ Nieve", granizo: "🧊 Granizo" };
+    let worstNivel = "verde";
+    const alertsHTML = alerts ? TIPOS.map(tipo => {
+        const nivel = alerts[tipo]?.nivel || "verde";
+        if (NIVEL_ORDER[nivel] > NIVEL_ORDER[worstNivel]) worstNivel = nivel;
+        return `<div class="fdp-alert-item nivel-${nivel}">${LABELS[tipo]}</div>`;
+    }).join("") : `<div class="fdp-alert-item nivel-verde">Sin alertas activas</div>`;
+
+    const tickerMsg = alerts?.ticker?.length ? alerts.ticker.join(" · ") : "No hay alertas activas";
+
+    container.innerHTML = `
+        <!-- ALERTAS -->
+        <div class="fdp-alerts">
+            <div class="fdp-alerts-title">🚨 Alertas AEMET</div>
+            <div class="fdp-alert-icons">${alertsHTML}</div>
+            <div class="fdp-ticker">${tickerMsg}</div>
+        </div>
+
+        <!-- TIEMPO ACTUAL -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">🌤️</div>
+            <div class="fdp-card-label">Tiempo</div>
+            <div class="fdp-card-value" style="font-size:16px;">${weatherShort(wc)}</div>
+            <div class="fdp-card-sub">${summary.temp ?? "—"} ºC · ${summary.wind ?? "—"} km/h</div>
+        </div>
+
+        <!-- TEMP MAX/MIN -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">🌡️</div>
+            <div class="fdp-card-label">Temp. hoy</div>
+            <div class="fdp-card-value">${summary.temp ?? "—"} ºC</div>
+            <div class="fdp-card-sub">↑${summary.temp_max ?? "—"}° ↓${summary.temp_min ?? "—"}°</div>
+        </div>
+
+        <!-- ET₀ -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">💧</div>
+            <div class="fdp-card-label">ET₀ hoy</div>
+            <div class="fdp-card-value">${summary.et0_today !== null && summary.et0_today !== undefined ? summary.et0_today + " mm" : "—"}</div>
+            <div class="fdp-card-sub">${et0Tip}</div>
+        </div>
+
+        <!-- HUMEDAD SUELO -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">🌍</div>
+            <div class="fdp-card-label">Hum. suelo</div>
+            <div class="fdp-card-value">${soilPct}</div>
+            <div class="fdp-card-sub">Capa 0–1 cm</div>
+        </div>
+
+        <!-- UV -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">☀️</div>
+            <div class="fdp-card-label">Índice UV</div>
+            <div class="fdp-card-value">${uvLabel(summary.uv_index)}</div>
+            <div class="fdp-card-sub">${summary.humidity !== null ? `Hum. aire: ${summary.humidity}%` : ""}</div>
+        </div>
+
+        <!-- PRESIÓN -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">🌀</div>
+            <div class="fdp-card-label">Presión</div>
+            <div class="fdp-card-value">${summary.pressure !== null && summary.pressure !== undefined ? summary.pressure + " hPa" : "—"}</div>
+            <div class="fdp-card-sub">${summary.pressure < 1005 ? "⚠️ Baja — posible mal tiempo" : summary.pressure > 1020 ? "☀️ Alta — tiempo estable" : "Normal"}</div>
+        </div>
+
+        <!-- GRANIZO -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">🧊</div>
+            <div class="fdp-card-label">Granizo 6h</div>
+            <div class="fdp-card-value" style="color:${hailColor};">${hailPct.toFixed(0)}%</div>
+            <div class="fdp-card-sub">Riesgo próx. 6 horas</div>
+        </div>
+
+        <!-- HORAS FRÍO -->
+        <div class="fdp-card">
+            <div class="fdp-card-icon">❄️</div>
+            <div class="fdp-card-label">Horas frío</div>
+            <div class="fdp-card-value">${summary.cold_hours_24h ?? "—"}</div>
+            <div class="fdp-card-sub">últimas 24h (0–7°C)</div>
+        </div>
+
+        <!-- LINK AL CAMPO -->
+        <div class="fdp-card" style="grid-column:span 4; background:#e8f5e9; justify-content:center; align-items:center; flex-direction:row; gap:10px; cursor:pointer;" id="fdp-goto-${container.id}">
+            <span style="font-size:14px;font-weight:700;color:#00796b;">Ver campo completo →</span>
+        </div>
+    `;
+}
+
+// ─────────────────────────────────────────────
+// CARGAR DATOS DEL PANEL
+// ─────────────────────────────────────────────
+async function loadFieldPanel(fieldId, lat, lon, container) {
+    try {
+        const [summaryRes, alertsRes, hailRes] = await Promise.allSettled([
+            fetch(`/get-field-summary?lat=${lat}&lon=${lon}`).then(r => r.json()),
+            fetch(`/get-aemet-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
+            fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`).then(r => r.json()),
+        ]);
+
+        const summary = summaryRes.status === "fulfilled" ? summaryRes.value : {};
+        const alerts = alertsRes.status === "fulfilled" ? alertsRes.value : null;
+        const hail = hailRes.status === "fulfilled" ? hailRes.value : [];
+
+        // Granizo próximas 6h
+        const now = new Date();
+        const in6h = new Date(now.getTime() + 6 * 3600 * 1000);
+        summary.hail_risk_6h = Array.isArray(hail)
+            ? Math.max(0, ...hail.filter(h => { const t = new Date(h.time); return t >= now && t <= in6h; }).map(h => h.hail_probability))
+            : 0;
+
+        renderFieldPanel(container, summary, alerts);
+
+        // Click "Ver campo completo"
+        const gotoBtn = container.querySelector(`#fdp-goto-${container.id}`);
+        if (gotoBtn) {
+            gotoBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                window.location.href = `/field/edit/${fieldId}`;
+            });
+        }
+
+    } catch (e) {
+        container.innerHTML = `<div class="fdp-loading" style="color:#e53935;">⚠️ Error cargando datos del campo.</div>`;
+        console.error("[FieldPanel]", e);
+    }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
 
     updateDateTime();
@@ -21,31 +207,50 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 60 * 60 * 1000);
     }
 
-    // Cargar alertas AEMET para cada campo
-    document.querySelectorAll(".field-alerts[data-lat]").forEach(panel => {
-        const lat = parseFloat(panel.dataset.lat);
-        const lon = parseFloat(panel.dataset.lon);
-        if (!lat || !lon) { setAlertPanel(panel, null); return; }
-        loadAemetAlerts(panel, lat, lon);
-    });
-
-    // Click en filas del dashboard
     const dashboard = document.querySelector(".dashboard");
+
+    // Estado de paneles cargados (por fieldId)
+    const panelLoaded = {};
+
+    // ── CLICK EN FILAS ──
     dashboard.addEventListener("click", (e) => {
         const row = e.target.closest(".field-row");
         if (!row) return;
         const fieldId = row.dataset.id;
 
-        if (e.target.classList.contains("action-btn")) {
-            e.stopPropagation();
-            toggleRoof(row, e.target, fieldId);
+        // Botón techo
+        if (e.target.closest(".action-btn")) {
+            toggleRoof(row, row.querySelector(".action-btn"), fieldId);
             return;
         }
-        if (!e.target.closest(".field-buttons") && !e.target.closest(".field-alerts")) {
+
+        // Botón detalles
+        const detailBtn = e.target.closest(".field-detail-btn");
+        if (detailBtn) {
+            const lat = parseFloat(detailBtn.dataset.lat);
+            const lon = parseFloat(detailBtn.dataset.lon);
+            const panel = document.getElementById(`field-panel-${fieldId}`);
+            const inner = document.getElementById(`field-panel-inner-${fieldId}`);
+
+            if (!panel || !inner || !lat || !lon) return;
+
+            const isOpen = panel.classList.toggle("open");
+            detailBtn.classList.toggle("open", isOpen);
+
+            if (isOpen && !panelLoaded[fieldId]) {
+                panelLoaded[fieldId] = true;
+                loadFieldPanel(fieldId, lat, lon, inner);
+            }
+            return;
+        }
+
+        // Click en el resto de la fila → ir al campo
+        if (!e.target.closest(".field-buttons")) {
             window.location.href = `/field/edit/${fieldId}`;
         }
     });
 
+    // ── AÑADIR CAMPO ──
     const addBtn = document.querySelector(".add-field-btn");
     if (addBtn) {
         addBtn.addEventListener("click", () => { window.location.href = "/field/new"; });
@@ -103,67 +308,5 @@ document.addEventListener("DOMContentLoaded", () => {
                 button.classList.remove("disabled");
             }
         }, 3000);
-    }
-
-    // ── ALERTAS AEMET ──
-    const NIVEL_ORDER = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
-
-    async function loadAemetAlerts(panel, lat, lon) {
-        try {
-            const res = await fetch(`/get-aemet-alerts?lat=${lat}&lon=${lon}`);
-            if (!res.ok) throw new Error("HTTP " + res.status);
-            const data = await res.json();
-            setAlertPanel(panel, data);
-        } catch (e) {
-            console.warn("AEMET no disponible:", e);
-            setAlertPanel(panel, null);
-        }
-    }
-
-    function setAlertPanel(panel, data) {
-        const TIPOS = ["calor", "lluvia", "nieve", "granizo"];
-        let peorNivel = "verde";
-
-        TIPOS.forEach(tipo => {
-            const iconEl = panel.querySelector(`[id^="alert-${tipo}-"]`);
-            if (!iconEl) return;
-            const nivel = (data && data[tipo]) ? (data[tipo].nivel || "verde") : "verde";
-            iconEl.className = `alert-icon-item nivel-${nivel}`;
-            if (NIVEL_ORDER[nivel] > NIVEL_ORDER[peorNivel]) peorNivel = nivel;
-        });
-
-        // Barra de color
-        const bar = panel.querySelector(".alert-bar");
-        if (bar) bar.className = `alert-bar alert-bar-${peorNivel}`;
-
-        // Ticker con fade: un solo span visible, rotando mensajes con CSS animation
-        const tickerWrap = panel.querySelector(".alert-ticker-mini");
-        const tickerSpan = panel.querySelector(".alert-ticker-mini-text");
-        if (!tickerWrap || !tickerSpan) return;
-
-        tickerWrap.className = `alert-ticker-mini ticker-${peorNivel}`;
-
-        const mensajes = (data && data.ticker && data.ticker.length)
-            ? data.ticker : ["No hay alertas activas"];
-
-        // Eliminar el segundo span (ya no se usa para scroll)
-        const spans = panel.querySelectorAll(".alert-ticker-mini-text");
-        spans.forEach((s, i) => { if (i > 0) s.remove(); });
-
-        if (mensajes.length === 1) {
-            tickerSpan.textContent = mensajes[0];
-            tickerSpan.style.animationDuration = "5s";
-        } else {
-            // Rotar mensajes cambiando el texto en cada ciclo de animación
-            let idx = 0;
-            tickerSpan.textContent = mensajes[0];
-            // Escuchar el fin de animación para cambiar al siguiente mensaje
-            tickerSpan.addEventListener("animationiteration", () => {
-                idx = (idx + 1) % mensajes.length;
-                tickerSpan.textContent = mensajes[idx];
-            });
-            // Duración por mensaje: 6s base
-            tickerSpan.style.animationDuration = "6s";
-        }
     }
 });

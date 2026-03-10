@@ -1,0 +1,772 @@
+/* agro.css — Sección agronómica y panel expandible del dashboard */
+
+/* ══════════════════════════════════════════
+   SELECTOR DE CULTIVO
+══════════════════════════════════════════ */
+.crop-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #f0fff0;
+    border: 1.5px solid #c8e6c9;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.crop-label {
+    font-weight: 700;
+    color: #00796b;
+    font-size: 15px;
+    white-space: nowrap;
+}
+
+.crop-select {
+    flex: 1;
+    min-width: 200px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #a5d6a7;
+    background: #fff;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.crop-select:focus {
+    border-color: #4caf50;
+}
+
+.crop-tip {
+    font-size: 13px;
+    color: #5a7a5a;
+    font-style: italic;
+    min-height: 18px;
+}
+
+/* ══════════════════════════════════════════
+   SECCIÓN AGRONÓMICA PRINCIPAL
+══════════════════════════════════════════ */
+.agro-section {
+    margin-top: 30px;
+    padding: 24px;
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+    border-radius: 20px;
+    border: 1.5px solid #c8e6c9;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    margin-bottom: 30px;
+}
+
+.agro-title {
+    margin: 0 0 20px 0;
+    color: #00796b;
+    font-size: 20px;
+}
+
+.agro-subtitle {
+    color: #00796b;
+    margin: 20px 0 12px;
+    font-size: 15px;
+}
+
+/* ══════════════════════════════════════════
+   ALERTAS AEMET EN FIELD
+══════════════════════════════════════════ */
+.agro-alerts-block {
+    background: #fff;
+    border-radius: 14px;
+    border: 1.5px solid #c8e6c9;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.agro-block-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.agro-block-icon {
+    font-size: 20px;
+}
+
+.agro-block-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #333;
+    flex: 1;
+}
+
+.agro-alert-bar-inline {
+    height: 8px;
+    width: 80px;
+    border-radius: 4px;
+    background: #2ecc40;
+    transition: background 0.4s;
+    flex-shrink: 0;
+}
+
+.agro-alert-icons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.agro-alert-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #444;
+    border: 1.5px solid transparent;
+    transition: all 0.3s;
+    min-width: 64px;
+}
+
+.agro-alert-img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+}
+
+.agro-alert-ticker {
+    font-size: 13px;
+    color: #555;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+    font-weight: 500;
+}
+
+.ticker-text-verde { color: #00796b; }
+.ticker-text-amarillo { color: #7a5a00; }
+.ticker-text-naranja { color: #7a3000; }
+.ticker-text-rojo { color: #8a0000; }
+
+/* ══════════════════════════════════════════
+   GRID DE TARJETAS AGRONÓMICAS
+══════════════════════════════════════════ */
+.agro-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.agro-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    border: 1.5px solid #e0f0e0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: box-shadow 0.2s;
+}
+
+.agro-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.09);
+}
+
+.agro-card-wide {
+    grid-column: span 2;
+}
+
+.agro-card-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.agro-card-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #00796b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.agro-card-value {
+    font-size: 26px;
+    font-weight: 800;
+    color: #333;
+    line-height: 1.1;
+}
+
+.agro-card-sub {
+    font-size: 12px;
+    color: #777;
+}
+
+.agro-card-tip {
+    font-size: 12px;
+    color: #5a7a5a;
+    margin-top: 4px;
+    font-style: italic;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 6px;
+}
+
+/* UV colores */
+.uv-low    { color: #4caf50; }
+.uv-moderate { color: #ffc107; }
+.uv-high   { color: #ff9800; }
+.uv-veryhigh { color: #f44336; }
+.uv-extreme { color: #9c27b0; }
+
+/* ══════════════════════════════════════════
+   SUELO — BARRAS DE PROFUNDIDAD
+══════════════════════════════════════════ */
+.agro-soil-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 6px 0;
+}
+
+.agro-soil-layer {
+    display: grid;
+    grid-template-columns: 55px 1fr 40px;
+    align-items: center;
+    gap: 8px;
+}
+
+.soil-depth {
+    font-size: 11px;
+    color: #888;
+    font-weight: 600;
+}
+
+.soil-bar-wrap {
+    height: 10px;
+    background: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.soil-bar-fill {
+    height: 100%;
+    border-radius: 5px;
+    width: 0%;
+    transition: width 0.6s ease, background 0.3s;
+}
+
+.soil-value {
+    font-size: 12px;
+    font-weight: 700;
+    color: #333;
+    text-align: right;
+}
+
+/* ══════════════════════════════════════════
+   TEMPERATURA DEL SUELO
+══════════════════════════════════════════ */
+.agro-soiltemp-grid {
+    display: flex;
+    gap: 14px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+}
+
+.agro-soiltemp-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f5fff5;
+    border-radius: 8px;
+    padding: 8px 12px;
+    border: 1px solid #e0f0e0;
+    flex: 1;
+    min-width: 60px;
+}
+
+.soiltemp-depth {
+    font-size: 10px;
+    color: #888;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.soiltemp-val {
+    font-size: 18px;
+    font-weight: 800;
+    color: #333;
+}
+
+/* ══════════════════════════════════════════
+   GRANIZO BARRA
+══════════════════════════════════════════ */
+.agro-hail-bar-wrap {
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.agro-hail-bar {
+    height: 100%;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.6s ease, background 0.3s;
+}
+
+/* ══════════════════════════════════════════
+   ET₀ FORECAST 4 DÍAS
+══════════════════════════════════════════ */
+.agro-forecast-block {
+    margin-top: 10px;
+}
+
+.agro-forecast-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.agro-et0-day {
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e0f0e0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+}
+
+.agro-et0-day-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #00796b;
+    text-transform: capitalize;
+    margin-bottom: 4px;
+}
+
+.agro-et0-day-et0, .agro-et0-day-rain, .agro-et0-day-uv, .agro-et0-day-range {
+    color: #555;
+}
+
+.uv-label {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+/* ══════════════════════════════════════════
+   RECOMENDACIONES
+══════════════════════════════════════════ */
+.agro-reco-block {
+    margin-top: 16px;
+}
+
+.agro-reco-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.agro-reco-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.4;
+    border-left: 4px solid transparent;
+}
+
+.agro-reco-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.agro-reco-text {
+    color: #333;
+}
+
+.agro-reco-ok      { background: #f0fff0; border-left-color: #4caf50; }
+.agro-reco-info    { background: #e3f2fd; border-left-color: #2196f3; }
+.agro-reco-warning { background: #fff8e1; border-left-color: #ffc107; }
+.agro-reco-danger  { background: #fce4ec; border-left-color: #f44336; }
+.agro-reco-loading { background: #f5f5f5; border-left-color: #bbb; color: #888; }
+
+/* ══════════════════════════════════════════
+   LUNA EN FIELD
+══════════════════════════════════════════ */
+.agro-moon-block {
+    margin-top: 30px;
+    padding: 20px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid #c8e6c9;
+}
+
+/* ══════════════════════════════════════════
+   PANEL EXPANDIBLE EN DASHBOARD (main.html)
+══════════════════════════════════════════ */
+
+/* Botón "Ver detalles" en la fila del campo */
+.field-detail-btn {
+    height: 38px;
+    padding: 0 14px;
+    border: 1.5px solid #a5d6a7;
+    border-radius: 20px;
+    background: #fff;
+    color: #00796b;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.field-detail-btn:hover {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+
+.field-detail-btn .detail-arrow {
+    font-size: 10px;
+    transition: transform 0.3s;
+    display: inline-block;
+}
+
+.field-detail-btn.open .detail-arrow {
+    transform: rotate(180deg);
+}
+
+/* Panel expandible debajo de la fila */
+.field-detail-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.45s ease;
+    background: #f5fff5;
+    border-radius: 0 0 15px 15px;
+    margin-top: -8px;
+    margin-bottom: 10px;
+    border: 1.5px solid #c8e6c9;
+    border-top: none;
+}
+
+.field-detail-panel.open {
+    max-height: 900px;
+}
+
+.field-detail-inner {
+    padding: 18px 20px 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+}
+
+/* Tarjeta dentro del panel */
+.fdp-card {
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e0f0e0;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.fdp-card-icon {
+    font-size: 20px;
+}
+
+.fdp-card-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #00796b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fdp-card-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #222;
+}
+
+.fdp-card-sub {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Alertas dentro del panel */
+.fdp-alerts {
+    grid-column: span 4;
+    background: #fff;
+    border-radius: 12px;
+    border: 1.5px solid #e0f0e0;
+    padding: 14px 16px;
+}
+
+.fdp-alerts-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #00796b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.fdp-alert-icons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.fdp-alert-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1.5px solid transparent;
+}
+
+.fdp-alert-img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
+
+.fdp-ticker {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #555;
+    padding: 6px 10px;
+    background: rgba(0,0,0,0.03);
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+/* Estado de carga */
+.fdp-loading {
+    grid-column: span 4;
+    text-align: center;
+    color: #aaa;
+    font-size: 13px;
+    padding: 20px;
+}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE MÓVIL
+══════════════════════════════════════════ */
+@media (max-width: 768px) {
+    .agro-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .agro-card-wide {
+        grid-column: span 2;
+    }
+
+    .agro-forecast-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .field-detail-inner {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .fdp-alerts {
+        grid-column: span 2;
+    }
+
+    .fdp-loading {
+        grid-column: span 2;
+    }
+
+    .crop-selector-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .crop-select {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .agro-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .agro-card-wide {
+        grid-column: span 1;
+    }
+
+    .agro-forecast-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .field-detail-inner {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Badge cultivo en la fila del campo */
+.field-crop-badge {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 11px;
+    background: #e8f5e9;
+    color: #00796b;
+    border: 1px solid #a5d6a7;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-weight: 600;
+}
+
+/* ══════════════════════════════════════════
+   RECOMENDACIONES IA — ESTILOS NUEVOS
+══════════════════════════════════════════ */
+
+/* Cabecera con badge IA y botón regenerar */
+.agro-reco-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.agro-reco-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.agro-reco-badge-ia {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.agro-reco-regen-btn {
+    padding: 6px 14px;
+    border: 1.5px solid #a5d6a7;
+    border-radius: 20px;
+    background: #fff;
+    color: #00796b;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    width: auto;
+    min-height: unset;
+    margin: 0;
+}
+
+.agro-reco-regen-btn:hover {
+    background: #e8f5e9;
+    border-color: #4caf50;
+}
+
+.agro-reco-regen-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Etiqueta de grupo (urgente / semanal) */
+.agro-reco-group-label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin: 14px 0 6px;
+    padding-left: 4px;
+    border-left: 3px solid #4caf50;
+}
+
+/* Cuerpo de la recomendación con título */
+.agro-reco-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.agro-reco-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #222;
+}
+
+.agro-reco-text {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.4;
+}
+
+/* Loading con skeleton */
+.agro-reco-loading-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    color: #888;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.agro-reco-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ddd;
+    border-top-color: #4caf50;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.agro-reco-skeleton {
+    height: 52px;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+
+@keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}

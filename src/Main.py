@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import json
+import os
 import requests
 from datetime import datetime
 
@@ -63,7 +64,6 @@ def mainPage(request: Request):
         return RedirectResponse(url="/", status_code=303)
     fields = fieldDAO.getAllFieldsByUser(current_user.id)
 
-    # Añadir centroide lat/lon a cada campo para las alertas
     for field in fields:
         points = pointDAO.getPointsByField(field.id)
         if points:
@@ -95,7 +95,8 @@ def saveField(
     name: str = Form(...),
     municipality: str = Form(...),
     area: str = Form(...),
-    points: str = Form(...)
+    points: str = Form(...),
+    crop_type: str = Form(default="")
 ):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
@@ -103,6 +104,7 @@ def saveField(
     area_float = float(area.replace(",", "."))
     new_field = Field(name=name, municipality=municipality, area_m2=area_float)
     new_field.state = "open"
+    new_field.crop_type = crop_type
     field_id = fieldDAO.insertField(new_field, current_user.id)
 
     points_list = json.loads(points)
@@ -139,7 +141,8 @@ def updateField(
     name: str = Form(...),
     municipality: str = Form(...),
     area: str = Form(...),
-    points: str = Form(...)
+    points: str = Form(...),
+    crop_type: str = Form(default="")
 ):
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
@@ -151,6 +154,7 @@ def updateField(
     field.name = name
     field.municipality = municipality
     field.area_m2 = float(area.replace(",", "."))
+    field.crop_type = crop_type
     fieldDAO.updateField(field)
 
     pointDAO.deletePointsByField(field.id)
@@ -385,7 +389,218 @@ def get_hourly_weather(lat: float, lon: float):
 
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
-    
+
+
+# --------------------
+# AGRONOMIC DATA (nuevo endpoint completo)
+# --------------------
+@app.get("/get-agronomic-data")
+def get_agronomic_data(lat: float, lon: float):
+    """
+    Devuelve datos agronómicos completos:
+    - ET₀ (evapotranspiración de referencia FAO-56)
+    - Índice UV
+    - Presión atmosférica
+    - Humedad del suelo a múltiples profundidades
+    - Temperatura del suelo
+    - Velocidad de viento a 100m (para cálculo ET₀)
+    - Horas de frío acumuladas (últimas 24h, Tcbase=7°C)
+    """
+    try:
+        url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            "&hourly="
+            "et0_fao_evapotranspiration,"
+            "uv_index,"
+            "surface_pressure,"
+            "soil_moisture_0_1cm,"
+            "soil_moisture_1_3cm,"
+            "soil_moisture_3_9cm,"
+            "soil_temperature_0cm,"
+            "soil_temperature_6cm,"
+            "soil_temperature_18cm,"
+            "temperature_2m,"
+            "windspeed_10m,"
+            "shortwave_radiation,"
+            "vapour_pressure_deficit"
+            "&daily="
+            "et0_fao_evapotranspiration,"
+            "uv_index_max,"
+            "precipitation_sum,"
+            "rain_sum,"
+            "sunrise,"
+            "sunset,"
+            "temperature_2m_max,"
+            "temperature_2m_min"
+            "&forecast_days=5"
+            "&timezone=auto"
+        )
+
+        response = requests.get(url, timeout=12)
+        response.raise_for_status()
+        data = response.json()
+
+        hourly = data.get("hourly", {})
+        daily = data.get("daily", {})
+        times = hourly.get("time", [])
+
+        now = datetime.now().replace(minute=0, second=0, microsecond=0)
+        current_index = 0
+        for i, t in enumerate(times):
+            if datetime.fromisoformat(t) == now:
+                current_index = i
+                break
+
+        # Horas de frío acumuladas últimas 24h (Tcbase = 7°C, método Weinberger)
+        temps_24h = hourly.get("temperature_2m", [])
+        cold_hours = 0
+        start_idx = max(0, current_index - 24)
+        for temp in temps_24h[start_idx:current_index + 1]:
+            if temp is not None and 0 < temp <= 7:
+                cold_hours += 1
+
+        def safe(lst, idx, decimals=2):
+            if lst and idx < len(lst) and lst[idx] is not None:
+                return round(float(lst[idx]), decimals)
+            return None
+
+        result = {
+            # Valores actuales (hora actual)
+            "et0_current": safe(hourly.get("et0_fao_evapotranspiration", []), current_index, 3),
+            "uv_index": safe(hourly.get("uv_index", []), current_index, 1),
+            "pressure": safe(hourly.get("surface_pressure", []), current_index, 1),
+            "soil_moisture_0": safe(hourly.get("soil_moisture_0_1cm", []), current_index, 3),
+            "soil_moisture_1": safe(hourly.get("soil_moisture_1_3cm", []), current_index, 3),
+            "soil_moisture_3": safe(hourly.get("soil_moisture_3_9cm", []), current_index, 3),
+            "soil_temp_surface": safe(hourly.get("soil_temperature_0cm", []), current_index, 1),
+            "soil_temp_6cm": safe(hourly.get("soil_temperature_6cm", []), current_index, 1),
+            "soil_temp_18cm": safe(hourly.get("soil_temperature_18cm", []), current_index, 1),
+            "solar_radiation": safe(hourly.get("shortwave_radiation", []), current_index, 1),
+            "vpd": safe(hourly.get("vapour_pressure_deficit", []), current_index, 3),
+            "cold_hours_24h": cold_hours,
+
+            # Valores diarios (hoy = índice 0)
+            "et0_today": safe(daily.get("et0_fao_evapotranspiration", []), 0, 2),
+            "uv_max_today": safe(daily.get("uv_index_max", []), 0, 1),
+            "rain_today": safe(daily.get("rain_sum", []), 0, 1),
+            "temp_max_today": safe(daily.get("temperature_2m_max", []), 0, 1),
+            "temp_min_today": safe(daily.get("temperature_2m_min", []), 0, 1),
+
+            # ET₀ próximos 4 días
+            "et0_forecast": [
+                {
+                    "date": daily.get("time", [])[i] if i < len(daily.get("time", [])) else None,
+                    "et0": safe(daily.get("et0_fao_evapotranspiration", []), i, 2),
+                    "uv_max": safe(daily.get("uv_index_max", []), i, 1),
+                    "rain": safe(daily.get("rain_sum", []), i, 1),
+                    "tmax": safe(daily.get("temperature_2m_max", []), i, 1),
+                    "tmin": safe(daily.get("temperature_2m_min", []), i, 1),
+                }
+                for i in range(1, min(5, len(daily.get("time", []))))
+            ],
+
+            # Horario ET₀ hoy para gráfica
+            "et0_hourly_today": [
+                {
+                    "time": times[i].split("T")[1][:5] if i < len(times) else "",
+                    "et0": safe(hourly.get("et0_fao_evapotranspiration", []), i, 3),
+                    "uv": safe(hourly.get("uv_index", []), i, 1),
+                    "radiation": safe(hourly.get("shortwave_radiation", []), i, 1),
+                }
+                for i in range(current_index, min(current_index + 24, len(times)))
+            ]
+        }
+
+        return JSONResponse(result)
+
+    except Exception as e:
+        print(f"[AgronomicData] Error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# --------------------
+# RESUMEN CAMPO para panel expandible del dashboard
+# --------------------
+@app.get("/get-field-summary")
+def get_field_summary(lat: float, lon: float):
+    """
+    Resumen rápido para el panel expandible del dashboard:
+    temp actual, ET₀ hoy, UV, humedad suelo, granizo próx 6h, presión
+    """
+    try:
+        url = (
+            "https://api.open-meteo.com/v1/forecast"
+            f"?latitude={lat}&longitude={lon}"
+            "&current=temperature_2m,weathercode,windspeed_10m"
+            "&hourly="
+            "temperature_2m,"
+            "et0_fao_evapotranspiration,"
+            "uv_index,"
+            "surface_pressure,"
+            "soil_moisture_0_1cm,"
+            "precipitation_probability,"
+            "weathercode,"
+            "relativehumidity_2m"
+            "&daily=et0_fao_evapotranspiration,temperature_2m_max,temperature_2m_min,sunrise,sunset"
+            "&forecast_days=2"
+            "&timezone=auto"
+        )
+
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        current = data.get("current", {})
+        hourly = data.get("hourly", {})
+        daily = data.get("daily", {})
+        times = hourly.get("time", [])
+
+        now = datetime.now().replace(minute=0, second=0, microsecond=0)
+        current_index = 0
+        for i, t in enumerate(times):
+            if datetime.fromisoformat(t) == now:
+                current_index = i
+                break
+
+        def safe(lst, idx, dec=1):
+            if lst and idx < len(lst) and lst[idx] is not None:
+                return round(float(lst[idx]), dec)
+            return None
+
+        # Probabilidad máxima de granizo próximas 6h
+        hail_probs = []
+        codes_6h = hourly.get("weathercode", [])[current_index:current_index + 6]
+        for code in codes_6h:
+            if code == 77: hail_probs.append(50)
+            elif code == 96: hail_probs.append(70)
+            elif code == 99: hail_probs.append(100)
+            else: hail_probs.append(0)
+        max_hail_6h = max(hail_probs) if hail_probs else 0
+
+        # Horas de frío últimas 24h
+        temps = hourly.get("temperature_2m", [])
+        cold_hours = sum(1 for t in temps[max(0, current_index-24):current_index+1] if t is not None and 0 < t <= 7)
+
+        return JSONResponse({
+            "temp": current.get("temperature_2m"),
+            "weathercode": current.get("weathercode", 0),
+            "wind": current.get("windspeed_10m"),
+            "humidity": safe(hourly.get("relativehumidity_2m", []), current_index),
+            "pressure": safe(hourly.get("surface_pressure", []), current_index, 1),
+            "soil_moisture": safe(hourly.get("soil_moisture_0_1cm", []), current_index, 3),
+            "uv_index": safe(hourly.get("uv_index", []), current_index, 1),
+            "et0_today": safe(daily.get("et0_fao_evapotranspiration", []), 0, 2),
+            "temp_max": safe(daily.get("temperature_2m_max", []), 0, 1),
+            "temp_min": safe(daily.get("temperature_2m_min", []), 0, 1),
+            "hail_risk_6h": max_hail_6h,
+            "cold_hours_24h": cold_hours,
+        })
+
+    except Exception as e:
+        print(f"[FieldSummary] Error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
 
 # --------------------
 # AEMET ALERTAS
@@ -393,32 +608,25 @@ def get_hourly_weather(lat: float, lon: float):
 
 AEMET_KEY = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhbHZhcm9ndWlqYXJyb21hcnRpbmV6QGdtYWlsLmNvbSIsImp0aSI6ImE5NGNmZTFkLWQwMWYtNGEwOS04ZmEwLTA4OTA2OGRkYTNhZSIsImlzcyI6IkFFTUVUIiwiaWF0IjoxNzQ1OTQwMjYxLCJ1c2VySWQiOiJhOTRjZmUxZC1kMDFmLTRhMDktOGZhMC0wODkwNjhkZGEzYWUiLCJyb2xlIjoiIn0.eVr2czlOHVEpBn3IFG4c8W0SoRxqwCzHCOKSbBFU0KA"
 
-# Mapa CAP event → tipo interno
 CAP_EVENT_MAP = {
-    # Calor / temperaturas altas
     "calor": "calor", "heat": "calor",
     "temperatura máxima": "calor", "temperatura minima": "calor",
     "bochorno": "calor",
-    # Lluvia / tormenta
     "lluvia": "lluvia", "rain": "lluvia",
     "precipitaciones": "lluvia",
     "tormenta": "lluvia", "storm": "lluvia",
     "thunderstorm": "lluvia",
-    # Nieve
     "nieve": "nieve", "snow": "nieve",
     "nevada": "nieve",
-    # Granizo
     "granizo": "granizo", "hail": "granizo",
     "piedra": "granizo",
 }
 
-# CAP severity → nivel interno
 CAP_SEVERITY_MAP = {
     "minor":    "amarillo",
     "moderate": "naranja",
     "severe":   "rojo",
     "extreme":  "rojo",
-    # AEMET también usa estos en español
     "amarillo": "amarillo",
     "naranja":  "naranja",
     "rojo":     "rojo",
@@ -442,16 +650,6 @@ def _default_result():
 
 @app.get("/get-aemet-alerts")
 def get_aemet_alerts(lat: float, lon: float):
-    """
-    Consulta AEMET OpenData (avisos CAP) y devuelve niveles de alerta
-    para calor, lluvia, nieve y granizo según las coordenadas dadas.
-    
-    Los avisos CAP de AEMET están en formato XML con campos:
-    <event> → tipo de fenómeno
-    <severity> → Minor/Moderate/Severe/Extreme
-    <areaDesc> → nombre de la zona
-    <parameter><valueName>awareness_type</valueName>...</parameter>
-    """
     cache_key = f"aemet_{round(lat, 2)}_{round(lon, 2)}"
     now = datetime.now()
 
@@ -467,7 +665,6 @@ def get_aemet_alerts(lat: float, lon: float):
 
         headers = {"api_key": AEMET_KEY, "Accept": "application/json"}
 
-        # 1) Obtener URL de datos
         r1 = requests.get(
             "https://opendata.aemet.es/opendata/api/avisos_cap/ultimoelaborado/todasAreas",
             headers=headers, timeout=10
@@ -478,12 +675,10 @@ def get_aemet_alerts(lat: float, lon: float):
         if not data_url:
             raise ValueError("Sin URL de datos AEMET")
 
-        # 2) Descargar datos CAP
         r2 = requests.get(data_url, headers=headers, timeout=15)
         r2.raise_for_status()
         content_type = r2.headers.get("Content-Type", "")
 
-        # 3) Obtener provincia para filtrar zonas
         prov_res = requests.get(
             "https://nominatim.openstreetmap.org/reverse",
             headers={"User-Agent": "GranizoApp/1.0"},
@@ -492,30 +687,24 @@ def get_aemet_alerts(lat: float, lon: float):
         )
         addr = prov_res.json().get("address", {})
         province = (addr.get("province") or addr.get("state") or "").lower()
-        # Normalizar: "Álava/Araba" → "alava"
         province_words = set(
             w.strip("/()")
             for w in province.replace("á","a").replace("é","e").replace("í","i")
                              .replace("ó","o").replace("ú","u").lower().split()
         )
 
-        # 4) Parsear XML CAP (AEMET usa formato CAP 1.2, un <alert> por aviso,
-        #    o bien un fichero multi-alert)
         ns = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
 
         def parse_cap_xml(xml_text):
-            """Extrae alertas relevantes del XML CAP."""
             try:
                 root = ET.fromstring(xml_text)
             except ET.ParseError:
                 return
 
-            # El fichero puede ser un <alert> o un wrapper con múltiples <alert>
             alerts = root.findall(".//cap:alert", ns) or ([root] if root.tag.endswith("alert") else [])
 
             for alert in alerts:
                 for info in alert.findall("cap:info", ns):
-                    # Solo español
                     lang = info.findtext("cap:language", default="es", namespaces=ns)
                     if lang and lang.lower() not in ("es", "es-es", ""):
                         continue
@@ -527,7 +716,6 @@ def get_aemet_alerts(lat: float, lon: float):
                     for area in info.findall("cap:area", ns):
                         area_desc += (area.findtext("cap:areaDesc", default="", namespaces=ns) or "").lower() + " "
 
-                    # También mirar parámetros awareness_type / awareness_level
                     awareness_type = ""
                     awareness_level = ""
                     for param in info.findall("cap:parameter", ns):
@@ -538,12 +726,10 @@ def get_aemet_alerts(lat: float, lon: float):
                         if "awareness_level" in pname:
                             awareness_level = pval
 
-                    # Filtrar por zona geográfica
                     zona_text = area_desc + " " + event
                     if province_words and not any(w in zona_text for w in province_words):
                         continue
 
-                    # Determinar tipo de fenómeno
                     tipo = None
                     search_text = event + " " + awareness_type
                     for keyword, category in CAP_EVENT_MAP.items():
@@ -554,10 +740,8 @@ def get_aemet_alerts(lat: float, lon: float):
                     if not tipo:
                         continue
 
-                    # Determinar nivel
                     nivel = CAP_SEVERITY_MAP.get(severity_raw) or CAP_SEVERITY_MAP.get(awareness_level, "amarillo")
 
-                    # Umbral / valor
                     valor = None
                     for param in info.findall("cap:parameter", ns):
                         pname = (param.findtext("cap:valueName", default="", namespaces=ns) or "").lower()
@@ -566,16 +750,13 @@ def get_aemet_alerts(lat: float, lon: float):
                             valor = pval
                             break
 
-                    # Actualizar si este nivel es peor
                     if LEVEL_ORDER[nivel] > LEVEL_ORDER[result[tipo]["nivel"]]:
                         result[tipo]["nivel"] = nivel
                         result[tipo]["valor"] = valor
 
-        # Intentar parsear como XML
         if "xml" in content_type or r2.text.strip().startswith("<"):
             parse_cap_xml(r2.text)
         elif "json" in content_type:
-            # Algunos endpoints devuelven JSON con lista de avisos
             try:
                 avisos = r2.json()
                 if isinstance(avisos, list):
@@ -596,9 +777,7 @@ def get_aemet_alerts(lat: float, lon: float):
 
     except Exception as e:
         print(f"[AEMET] Error: {e} — usando valores por defecto")
-        # Sin datos AEMET: dejar todo verde, no mostrar error al usuario
 
-    # Construir ticker
     LABEL = {"calor": "calor", "lluvia": "lluvia/tormentas", "nieve": "nieve", "granizo": "granizo"}
     UNIT  = {"calor": "ºC", "lluvia": " mm", "nieve": " cm", "granizo": ""}
     mensajes = []
@@ -637,4 +816,50 @@ def get_hail_prediction(lat: float, lon: float):
         return JSONResponse(prediction)
     except Exception as e:
         print(f"[HailPrediction] Error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# ─────────────────────────────────────────────
+# RECOMENDACIONES IA — Proxy hacia Anthropic
+# ─────────────────────────────────────────────
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+@app.post("/get-ai-recommendations")
+def get_ai_recommendations(payload: dict):
+    if not ANTHROPIC_API_KEY:
+        return JSONResponse({"error": "ANTHROPIC_API_KEY no configurada"}, status_code=503)
+
+    try:
+        prompt = payload.get("prompt", "")
+        if not prompt:
+            return JSONResponse({"error": "prompt vacío"}, status_code=400)
+
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 1000,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        text = data.get("content", [{}])[0].get("text", "[]")
+        # Strip markdown fences if present
+        clean = text.strip()
+        if clean.startswith("```"):
+            clean = clean.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+        recos = __import__("json").loads(clean)
+        return JSONResponse(recos)
+
+    except requests.exceptions.Timeout:
+        return JSONResponse({"error": "timeout"}, status_code=504)
+    except Exception as e:
+        print(f"[AIRecos] Error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)

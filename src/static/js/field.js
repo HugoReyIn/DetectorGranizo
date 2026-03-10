@@ -1,4 +1,4 @@
-import { loadWeatherByCoords } from "./weather.js";
+import { loadWeatherByCoords, getHailPrediction, getMaxHailNext6h } from "./weather.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 

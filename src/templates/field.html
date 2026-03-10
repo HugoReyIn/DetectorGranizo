@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/field.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/agro.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
@@ -21,6 +22,59 @@
                 <button type="submit" class="btn-save">{% if field %}Guardar cambios{% else %}Guardar terreno{% endif %}</button>
                 <button type="button" class="delete-btn" id="delete-field-btn" {% if not field %}disabled{% endif %}>Eliminar terreno</button>
             </div>
+        </div>
+
+        <!-- SELECTOR DE CULTIVO -->
+        <div class="crop-selector-row">
+            <label class="crop-label">🌱 Tipo de cultivo</label>
+            <select id="crop-type-select" name="crop_type" class="crop-select">
+                <option value="">— Sin especificar —</option>
+                <optgroup label="🌾 Cereales">
+                    <option value="trigo">Trigo</option>
+                    <option value="cebada">Cebada</option>
+                    <option value="maiz">Maíz</option>
+                    <option value="arroz">Arroz</option>
+                    <option value="avena">Avena</option>
+                    <option value="centeno">Centeno</option>
+                    <option value="sorgo">Sorgo</option>
+                </optgroup>
+                <optgroup label="🍇 Frutales y viña">
+                    <option value="vid">Vid / Uva</option>
+                    <option value="manzano">Manzano</option>
+                    <option value="peral">Peral</option>
+                    <option value="melocotonero">Melocotonero</option>
+                    <option value="cerezo">Cerezo</option>
+                    <option value="olivo">Olivo</option>
+                    <option value="citricos">Cítricos</option>
+                    <option value="almendro">Almendro</option>
+                </optgroup>
+                <optgroup label="🥦 Hortalizas">
+                    <option value="tomate">Tomate</option>
+                    <option value="pimiento">Pimiento</option>
+                    <option value="lechuga">Lechuga</option>
+                    <option value="zanahoria">Zanahoria</option>
+                    <option value="patata">Patata</option>
+                    <option value="cebolla">Cebolla</option>
+                    <option value="ajo">Ajo</option>
+                    <option value="espinaca">Espinaca</option>
+                    <option value="brocoli">Brócoli</option>
+                </optgroup>
+                <optgroup label="🌻 Oleaginosas y legumbres">
+                    <option value="girasol">Girasol</option>
+                    <option value="colza">Colza</option>
+                    <option value="soja">Soja</option>
+                    <option value="garbanzo">Garbanzo</option>
+                    <option value="lenteja">Lenteja</option>
+                    <option value="guisante">Guisante</option>
+                </optgroup>
+                <optgroup label="🌿 Forrajes y otros">
+                    <option value="alfalfa">Alfalfa</option>
+                    <option value="remolacha">Remolacha azucarera</option>
+                    <option value="tabaco">Tabaco</option>
+                    <option value="prado">Prado / Pradera</option>
+                </optgroup>
+            </select>
+            <span class="crop-tip" id="crop-tip"></span>
         </div>
 
         <div class="info-box">
@@ -48,7 +102,194 @@
         <div id="map" style="height: 400px;"></div>
 
         {% if field %}
-        <h2>Tiempo</h2>
+
+        <!-- ══════════════════════════════════════════
+             SECCIÓN: INFORMACIÓN AGRONÓMICA
+        ══════════════════════════════════════════ -->
+        <div class="agro-section">
+            <h2 class="agro-title">📊 Información agronómica</h2>
+
+            <!-- ALERTAS AEMET integradas -->
+            <div class="agro-block agro-alerts-block" id="agro-alerts-block">
+                <div class="agro-block-header">
+                    <span class="agro-block-icon">🚨</span>
+                    <span class="agro-block-title">Alertas AEMET</span>
+                    <span class="agro-alert-bar-inline" id="agro-alert-bar"></span>
+                </div>
+                <div class="agro-alert-icons" id="agro-alert-icons">
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-calor">
+                        <img src="/static/img/heat.png" class="agro-alert-img">
+                        <span>Calor</span>
+                    </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-lluvia">
+                        <img src="/static/img/rain.png" class="agro-alert-img">
+                        <span>Lluvia</span>
+                    </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-nieve">
+                        <img src="/static/img/snow.png" class="agro-alert-img">
+                        <span>Nieve</span>
+                    </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-granizo">
+                        <img src="/static/img/hail.png" class="agro-alert-img">
+                        <span>Granizo</span>
+                    </div>
+                </div>
+                <div class="agro-alert-ticker" id="agro-alert-ticker">Sin alertas activas</div>
+            </div>
+
+            <!-- GRID DE DATOS AGRONÓMICOS -->
+            <div class="agro-grid" id="agro-grid">
+
+                <!-- ET₀ Evapotranspiración -->
+                <div class="agro-card agro-card-et0">
+                    <div class="agro-card-icon">💧</div>
+                    <div class="agro-card-label">ET₀ hoy</div>
+                    <div class="agro-card-value" id="agro-et0-today">-- mm</div>
+                    <div class="agro-card-sub" id="agro-et0-current">Actual: -- mm/h</div>
+                    <div class="agro-card-tip" id="agro-et0-tip">Calculando necesidad de riego...</div>
+                </div>
+
+                <!-- Índice UV -->
+                <div class="agro-card agro-card-uv">
+                    <div class="agro-card-icon">☀️</div>
+                    <div class="agro-card-label">Índice UV</div>
+                    <div class="agro-card-value" id="agro-uv">--</div>
+                    <div class="agro-card-sub" id="agro-uv-max">Máx. hoy: --</div>
+                    <div class="agro-card-tip" id="agro-uv-tip">Calculando...</div>
+                </div>
+
+                <!-- Presión atmosférica -->
+                <div class="agro-card agro-card-pressure">
+                    <div class="agro-card-icon">🌡️</div>
+                    <div class="agro-card-label">Presión</div>
+                    <div class="agro-card-value" id="agro-pressure">-- hPa</div>
+                    <div class="agro-card-sub" id="agro-vpd">VPD: -- kPa</div>
+                    <div class="agro-card-tip" id="agro-pressure-tip">Calculando...</div>
+                </div>
+
+                <!-- Radiación solar -->
+                <div class="agro-card agro-card-radiation">
+                    <div class="agro-card-icon">🔆</div>
+                    <div class="agro-card-label">Radiación solar</div>
+                    <div class="agro-card-value" id="agro-radiation">-- W/m²</div>
+                    <div class="agro-card-sub">Energía fotosintética activa</div>
+                    <div class="agro-card-tip" id="agro-radiation-tip">Calculando...</div>
+                </div>
+
+                <!-- Humedad del suelo -->
+                <div class="agro-card agro-card-soil agro-card-wide">
+                    <div class="agro-card-icon">🌍</div>
+                    <div class="agro-card-label">Humedad del suelo</div>
+                    <div class="agro-soil-layers">
+                        <div class="agro-soil-layer">
+                            <span class="soil-depth">0–1 cm</span>
+                            <div class="soil-bar-wrap">
+                                <div class="soil-bar-fill" id="soil-bar-0"></div>
+                            </div>
+                            <span class="soil-value" id="agro-soil-0">--%</span>
+                        </div>
+                        <div class="agro-soil-layer">
+                            <span class="soil-depth">1–3 cm</span>
+                            <div class="soil-bar-wrap">
+                                <div class="soil-bar-fill" id="soil-bar-1"></div>
+                            </div>
+                            <span class="soil-value" id="agro-soil-1">--%</span>
+                        </div>
+                        <div class="agro-soil-layer">
+                            <span class="soil-depth">3–9 cm</span>
+                            <div class="soil-bar-wrap">
+                                <div class="soil-bar-fill" id="soil-bar-3"></div>
+                            </div>
+                            <span class="soil-value" id="agro-soil-3">--%</span>
+                        </div>
+                    </div>
+                    <div class="agro-card-tip" id="agro-soil-tip">Calculando estado hídrico...</div>
+                </div>
+
+                <!-- Temperatura del suelo -->
+                <div class="agro-card agro-card-soiltemp agro-card-wide">
+                    <div class="agro-card-icon">🌡️</div>
+                    <div class="agro-card-label">Temperatura del suelo</div>
+                    <div class="agro-soiltemp-grid">
+                        <div class="agro-soiltemp-item">
+                            <span class="soiltemp-depth">Superficie</span>
+                            <span class="soiltemp-val" id="agro-soiltemp-0">-- ºC</span>
+                        </div>
+                        <div class="agro-soiltemp-item">
+                            <span class="soiltemp-depth">6 cm</span>
+                            <span class="soiltemp-val" id="agro-soiltemp-6">-- ºC</span>
+                        </div>
+                        <div class="agro-soiltemp-item">
+                            <span class="soiltemp-depth">18 cm</span>
+                            <span class="soiltemp-val" id="agro-soiltemp-18">-- ºC</span>
+                        </div>
+                    </div>
+                    <div class="agro-card-tip" id="agro-soiltemp-tip">Calculando actividad microbiana...</div>
+                </div>
+
+                <!-- Horas de frío -->
+                <div class="agro-card agro-card-cold">
+                    <div class="agro-card-icon">❄️</div>
+                    <div class="agro-card-label">Horas de frío</div>
+                    <div class="agro-card-value" id="agro-cold-hours">--</div>
+                    <div class="agro-card-sub">últimas 24h (0–7°C)</div>
+                    <div class="agro-card-tip" id="agro-cold-tip">Calculando acumulado...</div>
+                </div>
+
+                <!-- Granizo IA -->
+                <div class="agro-card agro-card-hail">
+                    <div class="agro-card-icon">🧊</div>
+                    <div class="agro-card-label">Riesgo granizo</div>
+                    <div class="agro-card-value" id="agro-hail-risk">--%</div>
+                    <div class="agro-card-sub">Próximas 6h (IA)</div>
+                    <div class="agro-hail-bar-wrap">
+                        <div class="agro-hail-bar" id="agro-hail-bar"></div>
+                    </div>
+                </div>
+
+            </div><!-- /agro-grid -->
+
+            <!-- ET₀ PREVISIÓN 4 DÍAS -->
+            <div class="agro-forecast-block">
+                <h4 class="agro-subtitle">💧 Previsión ET₀ y lluvia — próximos 4 días</h4>
+                <div class="agro-forecast-grid" id="agro-et0-forecast">
+                    <!-- Generado por JS -->
+                </div>
+            </div>
+
+            <!-- GRÁFICA ET₀ HORARIA HOY -->
+            <div class="chart-toggle-row" id="agro-et0-chart-toggle">
+                <span class="chart-toggle-label">📈 ET₀ horaria hoy (necesidad de riego)</span>
+                <div class="chart-arrow">▼</div>
+            </div>
+            <div class="chart-panel" id="agro-et0-chart-panel">
+                <div class="chart-panel-inner">
+                    <div class="chart-canvas-wrapper" style="height:180px;">
+                        <canvas id="agro-et0-canvas"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RECOMENDACIONES AGRONÓMICAS IA -->
+            <div class="agro-reco-block" id="agro-reco-block">
+                <div class="agro-reco-header">
+                    <h4 class="agro-subtitle" style="margin:0;">🌱 Recomendaciones para tu cultivo</h4>
+                    <div class="agro-reco-header-right">
+                        <span class="agro-reco-badge-ia">✨ IA</span>
+                        <button class="agro-reco-regen-btn" id="agro-reco-regen">🔄 Regenerar</button>
+                    </div>
+                </div>
+                <div class="agro-reco-list" id="agro-reco-list">
+                    <div class="agro-reco-item agro-reco-loading">⏳ Cargando recomendaciones...</div>
+                </div>
+            </div>
+
+        </div><!-- /agro-section -->
+
+        <!-- ══════════════════════════════════════════
+             SECCIÓN: TIEMPO (la existente)
+        ══════════════════════════════════════════ -->
+        <h2>🌤️ Tiempo</h2>
         <h4>Hoy</h4>
         <div id="weather-actual-info" class="weather-grid">
             <div class="weather-summary">
@@ -139,7 +380,7 @@
             </div>
         </div>
 
-        <!-- ── GRÁFICA HOY ── -->
+        <!-- GRÁFICA HOY -->
         <div class="chart-toggle-row" id="today-chart-toggle">
             <span class="chart-toggle-label">Gráfica detallada de hoy</span>
             <div class="chart-arrow">▼</div>
@@ -184,7 +425,7 @@
             {% endfor %}
         </div>
 
-        <!-- ── GRÁFICAS 4 DÍAS ── -->
+        <!-- GRÁFICAS 4 DÍAS -->
         <div class="chart-toggle-row" id="forecast-charts-toggle">
             <span class="chart-toggle-label">Gráficas detalladas de los próximos 4 días</span>
             <div class="chart-arrow">▼</div>
@@ -211,6 +452,25 @@
             <canvas id="hail-forecast-canvas"></canvas>
         </div>
 
+        <!-- LUNA -->
+        <div class="agro-moon-block">
+            <h4 class="agro-subtitle">🌙 Fase lunar</h4>
+            <div class="moon-grid">
+                <div class="moon-main-card">
+                    <div class="moon-visual-wrapper">
+                        <canvas id="moon-canvas" width="120" height="120"></canvas>
+                    </div>
+                    <div class="moon-phase-name" id="moon-phase-name">—</div>
+                    <div class="moon-illumination" id="moon-illumination">— %</div>
+                    <div class="moon-illumination-label">iluminación</div>
+                </div>
+                <div class="moon-phases-card">
+                    <div class="moon-phases-title">Próximas fases</div>
+                    <div class="moon-phases-list" id="moon-phases-list"></div>
+                </div>
+            </div>
+        </div>
+
         {% endif %}
 
         <input type="hidden" id="field-id-hidden" name="field_id" value="{{ field.id if field else '' }}">
@@ -228,7 +488,6 @@
 
 {% if field %}
 <script>
-    // Coordenadas del centroide del campo para weatherChart.js
     (function () {
         try {
             const pts = JSON.parse(document.getElementById("field-points-hidden").value || "[]");
@@ -239,16 +498,28 @@
                 };
             }
         } catch (e) {}
-        // Evita que weatherChart.js recargue el clima (ya lo hace field.js)
         window.chartsOnly = true;
+        window.fieldCropType = "{{ field.crop_type if field and field.crop_type else '' }}";
     })();
 </script>
 {% endif %}
+
+<!-- Preselect crop type -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const sel = document.getElementById("crop-type-select");
+        if (sel && window.fieldCropType) {
+            sel.value = window.fieldCropType;
+        }
+    });
+</script>
 
 <script type="module" src="/static/js/field.js"></script>
 <script type="module" src="/static/js/weather.js"></script>
 {% if field %}
 <script type="module" src="/static/js/weatherChart.js"></script>
+<script type="module" src="/static/js/agro.js"></script>
+<script src="/static/js/moon.js"></script>
 {% endif %}
 </body>
 </html>
