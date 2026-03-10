@@ -4,14 +4,14 @@
 }
 
 body {
-  background-color: #E8F5E9;
-  font-family: Arial, sans-serif;
+  background-color: #F2ECD8;
+  font-family: 'Nunito', sans-serif;
   margin: 0;
 }
 
 /* Header */
 header {
-  background-color: #4CAF50;
+  background-color: #2D4A22;
   color: white;
   padding: 20px;
   text-align: center;
@@ -39,7 +39,7 @@ header {
 }
 
 h2 {
-  color: #4CAF50;
+  color: #4A7C3F;
   margin-bottom: 30px;
 }
 
@@ -50,16 +50,16 @@ input[type="email"] {
   padding: 12px;
   margin: 10px 0;
   border: 1px solid #ccc;
-  border-radius: 5px;
+  border-radius: 10px;
 }
 
 button {
   width: 100%;
   padding: 12px;
-  background-color: #4CAF50;
+  background-color: #2D4A22;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 16px;
   margin-top: 10px;
@@ -67,13 +67,13 @@ button {
 }
 
 button:hover {
-  background-color: #388E3C;
+  background-color: #2D4A22;
 }
 
 .link {
   margin-top: 15px;
   display: block;
-  color: #4CAF50;
+  color: #4A7C3F;
   text-decoration: none;
 }
 

@@ -8,9 +8,110 @@
     <link rel="stylesheet" href="/static/css/field.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">
     <link rel="stylesheet" href="/static/css/agro.css">
+    <link rel="stylesheet" href="/static/css/sidebar.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
+
+<!-- ═══════════════════════════════════════
+     SIDEBAR — incluir en cada template
+═══════════════════════════════════════ -->
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menú">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<nav class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <a class="sidebar-logo" href="/main">
+        <div class="sidebar-logo-icon">🌾</div>
+        <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">DetectorGranizo</span>
+            <span class="sidebar-logo-subtitle">Gestión agrícola</span>
+        </div>
+    </a>
+
+    <!-- Navegación principal -->
+    <div class="sidebar-nav">
+
+        <div class="sidebar-section-label">Principal</div>
+
+        <a href="/main" class="sidebar-link {% if active_page == 'main' %}active{% endif %}">
+            <span class="nav-icon">🏡</span>
+            <span class="nav-label">Mis terrenos</span>
+        </a>
+
+        <a href="/field/new" class="sidebar-link {% if active_page == 'new_field' %}active{% endif %}">
+            <span class="nav-icon">➕</span>
+            <span class="nav-label">Añadir terreno</span>
+        </a>
+
+        <div class="sidebar-section-label">Tiempo</div>
+
+        <a href="#{% if active_page == 'main' %}weather-container{% elif active_page == 'field' %}section-tiempo{% else %}section-tiempo{% endif %}"
+           class="sidebar-link" onclick="scrollToSection(this)">
+            <span class="nav-icon">🌤️</span>
+            <span class="nav-label">🌤️ Tiempo</span>
+        </a>
+
+        <a href="#{% if active_page == 'main' %}moon-container{% elif active_page == 'field' %}section-luna{% else %}section-luna{% endif %}"
+           class="sidebar-link" onclick="scrollToSection(this)">
+            <span class="nav-icon">🌙</span>
+            <span class="nav-label">🌙 Fase lunar</span>
+        </a>
+
+        <div class="sidebar-section-label">Alertas</div>
+
+        <div class="sidebar-link" id="sidebar-hail-status">
+            <span class="nav-icon">🧊</span>
+            <span class="nav-label">Granizo — <span id="sidebar-hail-pct">—</span></span>
+        </div>
+
+        <div class="sidebar-link" id="sidebar-aemet-status">
+            <span class="nav-icon">⚠️</span>
+            <span class="nav-label">Alertas AEMET — <span id="sidebar-aemet-level">—</span></span>
+        </div>
+
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Footer usuario -->
+    <div class="sidebar-footer">
+        <div class="sidebar-user">
+            <div class="sidebar-avatar">👤</div>
+            <div>
+                <div class="sidebar-username">{{ current_user.name or current_user.email }}</div>
+                <div class="sidebar-role">Agricultor</div>
+            </div>
+        </div>
+        <a href="/" class="sidebar-logout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-label">Cerrar sesión</span>
+        </a>
+    </div>
+
+</nav>
+
+<script>
+// Toggle sidebar en móvil
+(function() {
+    const toggle   = document.getElementById("sidebar-toggle");
+    const sidebar  = document.getElementById("sidebar");
+    const overlay  = document.getElementById("sidebar-overlay");
+    if (!toggle) return;
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        overlay.classList.toggle("show");
+    });
+    overlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("show");
+    });
+})();
+</script>
+
+
+<div class="main-content">
 
 <div class="container">
     <h2>{% if field %}Editar{% else %}Nuevo{% endif %} terreno</h2>
@@ -291,7 +392,7 @@
         <!-- ══════════════════════════════════════════
              SECCIÓN: TIEMPO (la existente)
         ══════════════════════════════════════════ -->
-        <h2>🌤️ Tiempo</h2>
+        <h2 id="section-tiempo">🌤️ Tiempo</h2>
         <h4>Hoy</h4>
         <div id="weather-actual-info" class="weather-grid">
             <div class="weather-summary">
@@ -452,7 +553,7 @@
 
 
         <!-- LUNA -->
-        <div class="agro-moon-block">
+        <div class="agro-moon-block" id="section-luna">
             <h4 class="agro-subtitle">🌙 Fase lunar</h4>
             <div class="moon-grid">
                 <div class="moon-main-card">
@@ -520,5 +621,6 @@
 <script type="module" src="/static/js/agro.js"></script>
 <script src="/static/js/moon.js"></script>
 {% endif %}
+</div><!-- /main-content -->
 </body>
 </html>

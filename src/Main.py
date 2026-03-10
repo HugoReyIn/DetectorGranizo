@@ -48,10 +48,13 @@ def registerPage(request: Request):
     return templates.TemplateResponse("register.html", {"request": request})
 
 @app.post("/register")
-def register(name: str = Form(...), email: str = Form(...), password: str = Form(...)):
+def register(request: Request, name: str = Form(...), email: str = Form(...), password: str = Form(...)):
     existing_user = userDAO.getUserByEmail(email)
     if existing_user:
-        return RedirectResponse(url="/register", status_code=303)
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": "Este email ya está registrado. Usa otro o inicia sesión."
+        })
     new_user = User(name=name, email=email, password=password)
     userDAO.insertUser(new_user)
     return RedirectResponse(url="/", status_code=303)
@@ -76,8 +79,62 @@ def mainPage(request: Request):
 
     return templates.TemplateResponse(
         "main.html",
-        {"request": request, "fields": fields}
+        {"request": request, "fields": fields, "current_user": current_user, "active_page": "main"}
     )
+
+# --------------------
+# PERFIL DE USUARIO
+# --------------------
+@app.get("/profile", response_class=HTMLResponse)
+def profilePage(request: Request):
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "current_user": current_user, "active_page": "profile", "msg": None, "msg_type": ""}
+    )
+
+@app.post("/profile")
+def updateProfile(
+    request: Request,
+    name: str = Form(...),
+    email: str = Form(...),
+    current_password: str = Form(default=""),
+    new_password: str = Form(default="")
+):
+    global current_user
+    if not current_user:
+        return RedirectResponse(url="/", status_code=303)
+
+    # Check email unique (excluding current user)
+    existing = userDAO.getUserByEmail(email)
+    if existing and existing.id != current_user.id:
+        return templates.TemplateResponse("profile.html", {
+            "request": request, "current_user": current_user,
+            "active_page": "profile",
+            "msg": "Ese email ya está en uso por otra cuenta.", "msg_type": "error"
+        })
+
+    # Check current password if changing password
+    if new_password:
+        if current_password != current_user.password:
+            return templates.TemplateResponse("profile.html", {
+                "request": request, "current_user": current_user,
+                "active_page": "profile",
+                "msg": "La contraseña actual no es correcta.", "msg_type": "error"
+            })
+        current_user.password = new_password
+
+    current_user.name  = name
+    current_user.email = email
+    userDAO.updateUser(current_user)
+
+    return templates.TemplateResponse("profile.html", {
+        "request": request, "current_user": current_user,
+        "active_page": "profile",
+        "msg": "Perfil actualizado correctamente.", "msg_type": "ok"
+    })
+
 
 # --------------------
 # FIELD CRUD
@@ -88,7 +145,7 @@ def newFieldPage(request: Request):
         return RedirectResponse(url="/", status_code=303)
     return templates.TemplateResponse(
         "field.html",
-        {"request": request, "field": None, "points_json": "[]"}
+        {"request": request, "field": None, "points_json": "[]", "current_user": current_user, "active_page": "new_field"}
     )
 
 @app.post("/field/new")
@@ -132,7 +189,9 @@ def editFieldPage(request: Request, field_id: int):
         {
             "request": request,
             "field": field,
-            "points_json": points_json
+            "points_json": points_json,
+            "current_user": current_user,
+            "active_page": "field"
         }
     )
 

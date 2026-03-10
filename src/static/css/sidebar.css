@@ -1,0 +1,304 @@
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR — Detector Granizo
+   Paleta tierra: arcilla, musgo, trigo, madera
+═══════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap');
+
+/* ── Variables de color ── */
+:root {
+    --tierra-dark:    #2C1810;   /* madera oscura */
+    --tierra-mid:     #5C3D2E;   /* arcilla */
+    --tierra-warm:    #8B5E3C;   /* tierra quemada */
+    --musgo-dark:     #2D4A22;   /* musgo oscuro */
+    --musgo:          #4A7C3F;   /* musgo medio */
+    --musgo-light:    #7FB069;   /* hoja joven */
+    --trigo:          #D4A853;   /* trigo maduro */
+    --trigo-light:    #F0D090;   /* paja */
+    --crema:          #FAF3E0;   /* crema papel */
+    --crema-dark:     #EDE0C4;   /* pergamino */
+    --sidebar-w:      240px;
+    --sidebar-collapsed: 64px;
+}
+
+/* ── Reset tipografía global ── */
+body {
+    font-family: 'Nunito', sans-serif !important;
+    background-color: #F2ECD8 !important;
+    margin: 0 !important;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: var(--sidebar-w);
+    background: var(--tierra-dark);
+    display: flex;
+    flex-direction: column;
+    z-index: 1000;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+    transition: width 0.3s ease;
+    overflow: hidden;
+}
+
+/* ── Logo / marca ── */
+.sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+.sidebar-logo-icon {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, var(--musgo), var(--trigo));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.sidebar-logo-text {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-logo-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--trigo-light);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.sidebar-logo-subtitle {
+    font-size: 10px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+/* ── Navegación ── */
+.sidebar-nav {
+    flex: 1;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    padding: 12px 8px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: rgba(255,255,255,0.65);
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.18s, color 0.18s;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+
+.sidebar-link:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.95);
+}
+
+.sidebar-link.active {
+    background: linear-gradient(135deg, var(--musgo-dark), var(--musgo));
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(74,124,63,0.4);
+}
+
+.sidebar-link .nav-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    width: 22px;
+    text-align: center;
+}
+
+.sidebar-link .nav-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Separador ── */
+.sidebar-divider {
+    height: 1px;
+    background: rgba(255,255,255,0.07);
+    margin: 8px 12px;
+    flex-shrink: 0;
+}
+
+/* ── Footer del sidebar (usuario + logout) ── */
+.sidebar-footer {
+    padding: 14px 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+}
+
+.sidebar-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+}
+
+.sidebar-avatar {
+    width: 34px;
+    height: 34px;
+    background: linear-gradient(135deg, var(--tierra-warm), var(--trigo));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: opacity 0.18s;
+    text-decoration: none;
+}
+
+.sidebar-avatar:hover { opacity: 0.82; }
+
+.sidebar-username {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-role {
+    font-size: 10px;
+    color: rgba(255,255,255,0.35);
+}
+
+.sidebar-logout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    color: rgba(255,100,80,0.75);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-decoration: none;
+}
+
+.sidebar-logout:hover {
+    background: rgba(255,80,60,0.12);
+    color: rgba(255,120,100,1);
+}
+
+/* ── Contenido principal desplazado ── */
+.main-content {
+    margin-left: var(--sidebar-w);
+    min-height: 100vh;
+    transition: margin-left 0.3s ease;
+    padding: 28px 32px;
+}
+
+/* ── Toggle collapse (móvil) ── */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 1100;
+    background: var(--tierra-dark);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Overlay móvil ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 999;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    .main-content {
+        margin-left: 0;
+        padding: 16px;
+    }
+    .sidebar-toggle {
+        display: flex;
+    }
+    .sidebar-overlay.show {
+        display: block;
+    }
+}
+
+
+
+/* ── Scroll suave a secciones ── */
+html {
+    scroll-behavior: smooth;
+}
+
+.sidebar-link[href^="#"] {
+    cursor: pointer;
+}

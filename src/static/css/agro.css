@@ -679,3 +679,9 @@
     border-top: 1px solid #bbdefb;
     line-height: 1.5;
 }
+
+/* disimula fondo blanco en imágenes agronómicas */
+.agro-alert-img,
+.agro-alert-item img {
+    mix-blend-mode: multiply;
+}

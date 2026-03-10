@@ -207,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 60 * 60 * 1000);
     }
 
-    const dashboard = document.querySelector(".dashboard");
+    const dashboard = document.querySelector(".dashboard") || document.querySelector(".main-content") || document;
 
     // Estado de paneles cargados (por fieldId)
     const panelLoaded = {};
@@ -255,6 +255,32 @@ document.addEventListener("DOMContentLoaded", () => {
     if (addBtn) {
         addBtn.addEventListener("click", () => { window.location.href = "/field/new"; });
     }
+
+    // ── ACTUALIZAR SIDEBAR con datos en vivo ──
+    function updateSidebarAlerts(fieldId) {
+        const hailEl = document.getElementById(`alerts-${fieldId}`);
+        const sidebarHail = document.getElementById("sidebar-hail-pct");
+        const sidebarAemet = document.getElementById("sidebar-aemet-level");
+        if (sidebarHail) {
+            const hailSpan = document.getElementById(`hail-${fieldId}`) || document.querySelector("[id^='hail-']");
+            if (hailSpan) sidebarHail.textContent = hailSpan.textContent;
+        }
+        if (sidebarAemet) {
+            const bar = document.getElementById(`alert-bar-${fieldId}`);
+            if (bar) {
+                const level = [...bar.classList].find(c => c.startsWith("alert-bar-"))?.replace("alert-bar-", "") || "verde";
+                const labels = { verde: "Sin alertas", amarillo: "Amarilla", naranja: "Naranja", rojo: "Roja" };
+                sidebarAemet.textContent = labels[level] || level;
+                sidebarAemet.style.color = level === "verde" ? "#7FB069" : level === "amarillo" ? "#D4A853" : level === "naranja" ? "#E87040" : "#E53935";
+            }
+        }
+    }
+
+    // Actualizar sidebar tras cargar alertas (3s delay)
+    setTimeout(() => {
+        const firstField = document.querySelector(".field-row");
+        if (firstField) updateSidebarAlerts(firstField.dataset.id);
+    }, 3000);
 
     // ── RELOJ ──
     function updateDateTime() {
