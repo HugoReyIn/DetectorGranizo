@@ -39,12 +39,12 @@
             {% if field.state == "open" %}Abierto{% else %}Cerrado{% endif %}
         </div>
 
-        <div class="field-buttons" style="display:flex;gap:8px;align-items:center;">
+        <div class="field-buttons" style="display:flex;gap:8px;align-items:center;min-width:300px;flex-shrink:0;">
             <button class="action-btn">
                 {% if field.state == "open" %}Cierre manual{% else %}Apertura manual{% endif %}
             </button>
             <button class="field-detail-btn" data-field-id="{{ field.id }}" data-lat="{{ field.lat if field.lat else '' }}" data-lon="{{ field.lon if field.lon else '' }}">
-                📊 Detalles <span class="detail-arrow">▼</span>
+                Detalles
             </button>
         </div>
     </div>

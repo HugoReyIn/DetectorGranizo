@@ -31,7 +31,7 @@ h4 {
 
 .field-row {
     display: grid;
-    grid-template-columns: 1fr 220px 120px 160px;
+    grid-template-columns: 1fr 220px 320px;
     align-items: center;
     background: #90ee90;
     border-radius: 15px;
@@ -78,6 +78,9 @@ h4 {
 
 .field-buttons {
     width: 100%;
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
 .action-btn {

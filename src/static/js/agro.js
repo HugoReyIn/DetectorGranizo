@@ -3,28 +3,6 @@
 const LEVEL_ORDER = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
 // ─────────────────────────────────────────────
-// RECOMENDACIONES POR CULTIVO
-// ─────────────────────────────────────────────
-const CROP_TIPS = {
-    trigo:       { et0_threshold: 4, cold_optimal: [300, 600], frost_risk: -2 },
-    cebada:      { et0_threshold: 3.5, cold_optimal: [400, 700], frost_risk: -3 },
-    maiz:        { et0_threshold: 6, cold_optimal: null, frost_risk: 0 },
-    arroz:       { et0_threshold: 7, cold_optimal: null, frost_risk: 5 },
-    vid:         { et0_threshold: 4, cold_optimal: [200, 600], frost_risk: -1 },
-    olivo:       { et0_threshold: 3, cold_optimal: [200, 400], frost_risk: -5 },
-    tomate:      { et0_threshold: 5, cold_optimal: null, frost_risk: 2 },
-    patata:      { et0_threshold: 4.5, cold_optimal: null, frost_risk: -1 },
-    almendro:    { et0_threshold: 3.5, cold_optimal: [300, 500], frost_risk: -2 },
-    girasol:     { et0_threshold: 5, cold_optimal: null, frost_risk: 0 },
-    alfalfa:     { et0_threshold: 7, cold_optimal: null, frost_risk: -4 },
-    default:     { et0_threshold: 4, cold_optimal: null, frost_risk: -1 }
-};
-
-function getCropConfig(cropType) {
-    return CROP_TIPS[cropType] || CROP_TIPS.default;
-}
-
-// ─────────────────────────────────────────────
 // CATEGORÍAS UV
 // ─────────────────────────────────────────────
 function uvCategory(uv) {
@@ -34,137 +12,6 @@ function uvCategory(uv) {
     if (uv <= 7) return { label: "Alto", cls: "uv-high" };
     if (uv <= 10) return { label: "Muy alto", cls: "uv-veryhigh" };
     return { label: "Extremo", cls: "uv-extreme" };
-}
-
-// ─────────────────────────────────────────────
-// RECOMENDACIONES VÍA CLAUDE API
-// ─────────────────────────────────────────────
-
-function buildContextPrompt(data, cropType, alerts, moonPhase) {
-    const now = new Date();
-    const month = now.toLocaleString("es-ES", { month: "long" });
-    const crop = cropType || "cultivo no especificado";
-
-    const alertLines = alerts ? ["calor", "lluvia", "nieve", "granizo"]
-        .filter(t => alerts[t]?.nivel && alerts[t].nivel !== "verde")
-        .map(t => `- Alerta AEMET ${alerts[t].nivel.toUpperCase()} por ${t}`)
-        .join("\n") : "";
-
-    return `Eres un agrónomo experto. Analiza los datos actuales del terreno y genera recomendaciones precisas para el agricultor.
-
-CULTIVO: ${crop}
-MES: ${month}
-FASE LUNAR: ${moonPhase || "no disponible"}
-
-DATOS METEOROLÓGICOS Y DEL SUELO:
-- Temperatura actual: ${data.temp ?? "—"}°C (máx ${data.temp_max ?? "—"}°C / mín ${data.temp_min_today ?? "—"}°C)
-- ET₀ hoy: ${data.et0_today ?? "—"} mm/día (demanda evapotranspirativa)
-- Lluvia prevista hoy: ${data.rain_today ?? "—"} mm
-- Humedad del suelo superficie (0-1cm): ${data.soil_moisture_0 !== null && data.soil_moisture_0 !== undefined ? (data.soil_moisture_0 * 100).toFixed(0) + "%" : "—"}
-- Humedad suelo 1-3cm: ${data.soil_moisture_1 !== null && data.soil_moisture_1 !== undefined ? (data.soil_moisture_1 * 100).toFixed(0) + "%" : "—"}
-- Temperatura suelo superficie: ${data.soil_temp_surface ?? "—"}°C
-- Índice UV máx. hoy: ${data.uv_max_today ?? "—"}
-- Presión atmosférica: ${data.pressure ?? "—"} hPa
-- VPD (déficit presión vapor): ${data.vpd ?? "—"} kPa
-- Radiación solar: ${data.solar_radiation ?? "—"} W/m²
-- Horas de frío (últimas 24h, 0-7°C): ${data.cold_hours_24h ?? "—"}h
-- Riesgo de granizo próximas 6h (IA): ${data.hail_risk_6h !== undefined ? data.hail_risk_6h.toFixed(0) + "%" : "—"}
-- Humedad relativa del aire: ${data.humidity ?? "—"}%
-${alertLines ? "\nALERTAS AEMET ACTIVAS:\n" + alertLines : "\nSin alertas AEMET activas."}
-
-Genera entre 4 y 7 recomendaciones agronómicas. Mezcla acciones urgentes del día con tareas semanales propias del cultivo en esta época del año.
-
-Responde ÚNICAMENTE con un array JSON válido, sin markdown ni texto adicional. Cada elemento tiene:
-- "icon": emoji relevante
-- "level": "danger" | "warning" | "info" | "ok"
-- "type": "urgente" | "semanal"  
-- "title": título corto (máx 6 palabras)
-- "text": explicación concreta y accionable (1-2 frases)
-
-Criterios de nivel: danger=riesgo inmediato para el cultivo, warning=acción recomendada hoy, info=tarea de la semana, ok=condición favorable.`;
-}
-
-async function fetchClaudeRecommendations(data, cropType, alerts, moonPhase) {
-    const prompt = buildContextPrompt(data, cropType, alerts, moonPhase);
-
-    const response = await fetch("/get-ai-recommendations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-    });
-
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const recos = await response.json();
-    if (recos.error) throw new Error(recos.error);
-    return recos;
-}
-
-// ─────────────────────────────────────────────
-// RENDER RECOMENDACIONES — UI RICA
-// ─────────────────────────────────────────────
-function renderRecommendations(recos) {
-    const list = document.getElementById("agro-reco-list");
-    if (!list) return;
-
-    const urgentes  = recos.filter(r => r.type === "urgente");
-    const semanales = recos.filter(r => r.type === "semanal");
-    const resto     = recos.filter(r => !r.type);
-
-    const renderGroup = (items, groupLabel) => {
-        if (!items.length) return "";
-        return `
-            <div class="agro-reco-group-label">${groupLabel}</div>
-            ${items.map(r => `
-                <div class="agro-reco-item agro-reco-${r.level}">
-                    <span class="agro-reco-icon">${r.icon}</span>
-                    <div class="agro-reco-body">
-                        ${r.title ? `<span class="agro-reco-title">${r.title}</span>` : ""}
-                        <span class="agro-reco-text">${r.text}</span>
-                    </div>
-                </div>
-            `).join("")}
-        `;
-    };
-
-    list.innerHTML =
-        renderGroup(urgentes,  "🔴 Acciones urgentes — hoy") +
-        renderGroup(semanales, "📅 Tareas de la semana") +
-        renderGroup(resto, "📋 Recomendaciones");
-}
-
-function renderRecommendationsLoading() {
-    const list = document.getElementById("agro-reco-list");
-    if (!list) return;
-    list.innerHTML = `
-        <div class="agro-reco-loading-wrap">
-            <div class="agro-reco-spinner"></div>
-            <span>Analizando datos del campo con IA...</span>
-        </div>
-        ${[1,2,3,4].map(() => `<div class="agro-reco-skeleton"></div>`).join("")}
-    `;
-}
-
-function renderRecommendationsError(fallbackRecos) {
-    const list = document.getElementById("agro-reco-list");
-    if (!list) return;
-    const fallbackHtml = fallbackRecos.map(r => `
-        <div class="agro-reco-item agro-reco-${r.level}">
-            <span class="agro-reco-icon">${r.icon}</span>
-            <div class="agro-reco-body">
-                <span class="agro-reco-text">${r.text}</span>
-            </div>
-        </div>
-    `).join("");
-    list.innerHTML = `
-        <div class="agro-reco-item agro-reco-info" style="margin-bottom:8px;">
-            <span class="agro-reco-icon">ℹ️</span>
-            <div class="agro-reco-body">
-                <span class="agro-reco-text">Recomendaciones básicas (IA no disponible).</span>
-            </div>
-        </div>
-        ${fallbackHtml}
-    `;
 }
 
 // ─────────────────────────────────────────────
@@ -319,70 +166,29 @@ function renderSoilBars(data) {
 }
 
 // ─────────────────────────────────────────────
-// MAIN: CARGA DATOS AGRONÓMICOS
+// EXPLICACIÓN DINÁMICA DEL GRÁFICO ET₀
 // ─────────────────────────────────────────────
+function renderEt0ChartTip(hourlyData, et0Today, cropType) {
+    const tipEl = document.getElementById("et0-chart-tip");
+    if (!tipEl || !hourlyData || !hourlyData.length) return;
 
-// ─────────────────────────────────────────────
-// RECOMENDACIONES ESTÁTICAS (fallback)
-// ─────────────────────────────────────────────
-function buildRecommendations(data, cropType) {
-    const cfg = getCropConfig(cropType);
-    const recos = [];
+    const peak = hourlyData.reduce((a, b) => (b.et0 ?? 0) > (a.et0 ?? 0) ? b : a, hourlyData[0]);
+    const peakHour = peak.time || "—";
+    const peakVal  = peak.et0 !== null ? peak.et0.toFixed(2) : "—";
+    const activeHours = hourlyData.filter(h => (h.et0 ?? 0) > 0.05).length;
 
-    if (data.et0_today !== null && data.et0_today !== undefined) {
-        if (data.et0_today >= cfg.et0_threshold) {
-            recos.push({ icon: "💧", level: "warning", type: "urgente",
-                text: `ET₀ alta (${data.et0_today} mm/día). Se recomienda regar hoy para evitar estrés hídrico.` });
-        } else if (data.rain_today && data.rain_today >= data.et0_today) {
-            recos.push({ icon: "✅", level: "ok", type: "semanal",
-                text: `La lluvia prevista (${data.rain_today} mm) cubre la demanda ET₀ (${data.et0_today} mm). No es necesario regar.` });
-        } else {
-            recos.push({ icon: "💧", level: "info", type: "semanal",
-                text: `ET₀ moderada (${data.et0_today} mm/día). Monitoriza la humedad del suelo.` });
-        }
-    }
+    let advice = "";
+    if (!et0Today || et0Today <= 1.5)
+        advice = "La demanda hídrica de hoy es baja — no es necesario regar.";
+    else if (et0Today <= 3.5)
+        advice = "Demanda moderada. Riega preferiblemente al amanecer o al atardecer, fuera del pico.";
+    else if (et0Today <= 5.5)
+        advice = `Demanda alta. Programa el riego antes de las ${peakHour}h o después de las 18:00h para reducir pérdidas.`;
+    else
+        advice = "Demanda muy alta. Riega en dos turnos: madrugada y tarde. Evita el mediodía solar.";
 
-    if (data.hail_risk_6h !== undefined) {
-        if (data.hail_risk_6h >= 70)
-            recos.push({ icon: "🧊", level: "danger", type: "urgente",
-                text: `Riesgo alto de granizo en las próximas 6h (${data.hail_risk_6h}%). Activa protecciones.` });
-        else if (data.hail_risk_6h >= 40)
-            recos.push({ icon: "🧊", level: "warning", type: "urgente",
-                text: `Riesgo moderado de granizo (${data.hail_risk_6h}%). Mantente atento a las alertas.` });
-    }
-
-    if (data.temp_min_today !== null && data.temp_min_today !== undefined) {
-        if (data.temp_min_today <= cfg.frost_risk)
-            recos.push({ icon: "🥶", level: "danger", type: "urgente",
-                text: `Temperatura mínima prevista: ${data.temp_min_today}°C. Riesgo de helada. Protege el cultivo.` });
-        else if (data.temp_min_today <= cfg.frost_risk + 3)
-            recos.push({ icon: "❄️", level: "warning", type: "urgente",
-                text: `Temperatura mínima (${data.temp_min_today}°C) próxima al umbral de helada. Vigilancia recomendada.` });
-    }
-
-    if (data.uv_max_today >= 7)
-        recos.push({ icon: "☀️", level: "warning", type: "semanal",
-            text: `Índice UV muy alto (${data.uv_max_today}). Evita tratamientos fitosanitarios en horas centrales.` });
-
-    if (data.soil_moisture_0 !== null && data.soil_moisture_0 !== undefined) {
-        const pct = (data.soil_moisture_0 * 100).toFixed(0);
-        if (data.soil_moisture_0 < 0.1)
-            recos.push({ icon: "🏜️", level: "danger", type: "urgente",
-                text: `Suelo muy seco en superficie (${pct}%). Riego urgente recomendado.` });
-        else if (data.soil_moisture_0 > 0.45)
-            recos.push({ icon: "🌊", level: "warning", type: "semanal",
-                text: `Suelo saturado (${pct}%). Riesgo de asfixia radicular o enfermedades fúngicas.` });
-    }
-
-    if (data.vpd !== null && data.vpd > 2.0)
-        recos.push({ icon: "🌬️", level: "warning", type: "semanal",
-            text: `VPD alto (${data.vpd} kPa). Condiciones de estrés hídrico. Considera riego de apoyo.` });
-
-    if (recos.length === 0)
-        recos.push({ icon: "✅", level: "ok", type: "semanal",
-            text: "Condiciones agronómicas favorables. No hay recomendaciones urgentes." });
-
-    return recos;
+    const crop = cropType ? ` para ${cropType}` : "";
+    tipEl.innerHTML = `📊 <strong>Pico${crop}:</strong> ${peakVal} mm/h a las ${peakHour}h (${activeHours}h de demanda activa). ${advice}`;
 }
 
 async function loadAgroData(lat, lon, cropType) {
@@ -490,6 +296,38 @@ async function loadAgroData(lat, lon, cropType) {
             hailBar.style.background = hailMax >= 70 ? "#e53935" : hailMax >= 40 ? "#ff9800" : "#4caf50";
         }
 
+        // ── CIERRE AUTOMÁTICO si riesgo >= 35% ──
+        if (hailMax >= 35) {
+            const fieldId = document.getElementById("field-id-hidden")?.value;
+            const statusEl = document.querySelector(".field-status");
+            const currentState = statusEl?.dataset?.state || statusEl?.className;
+            const alreadyClosed = currentState?.includes("closed") || currentState?.includes("closing");
+
+            if (fieldId && !alreadyClosed) {
+                console.warn(`[AgroAgent] Granizo ${hailMax.toFixed(0)}% — cerrando techo`);
+                fetch(`/field/update-status/${fieldId}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ state: "closed" })
+                }).then(() => {
+                    if (statusEl) {
+                        statusEl.className = "field-status status-closed";
+                        statusEl.textContent = "Cerrado";
+                    }
+                });
+
+                // Banner de aviso
+                if (!document.getElementById("hail-auto-close-banner")) {
+                    const banner = document.createElement("div");
+                    banner.id = "hail-auto-close-banner";
+                    banner.innerHTML = `🧊 <strong>Riesgo de granizo ${hailMax.toFixed(0)}%</strong> — Techo cerrado automáticamente`;
+                    banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#e53935;color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);";
+                    document.body.prepend(banner);
+                    setTimeout(() => banner.remove(), 10000);
+                }
+            }
+        }
+
         // ── FORECAST ET₀ ──
         renderEt0Forecast(agro.et0_forecast);
 
@@ -504,45 +342,17 @@ async function loadAgroData(lat, lon, cropType) {
                 if (isOpen && !window._agroChartRendered) {
                     window._agroChartRendered = true;
                     renderEt0Chart(agro.et0_hourly_today);
+                    renderEt0ChartTip(agro.et0_hourly_today, agro.et0_today, cropType);
                 }
             });
         }
 
-        // ── RECOMENDACIONES IA ──
+        // ── INSIGHTS POR TARJETA (agente local) ──
         const allData = { ...agro, hail_risk_6h: hailMax };
-        const fallbackRecos = buildRecommendations(allData, cropType);
-
-        // Obtener fase lunar del DOM si está disponible
-        const moonPhase = document.getElementById("moon-phase-name")?.textContent || "";
-
-        renderRecommendationsLoading();
-
-        try {
-            const aiRecos = await fetchClaudeRecommendations(allData, cropType, alerts, moonPhase);
-            renderRecommendations(aiRecos);
-        } catch (aiErr) {
-            console.warn("[AgroIA] Claude no disponible, usando fallback:", aiErr);
-            renderRecommendationsError(fallbackRecos);
-        }
-
-        // Botón regenerar
-        const regenBtn = document.getElementById("agro-reco-regen");
-        if (regenBtn) {
-            regenBtn.addEventListener("click", async () => {
-                regenBtn.disabled = true;
-                regenBtn.textContent = "⏳ Regenerando...";
-                renderRecommendationsLoading();
-                try {
-                    const moonPhaseNow = document.getElementById("moon-phase-name")?.textContent || "";
-                    const aiRecos = await fetchClaudeRecommendations(allData, cropType, alerts, moonPhaseNow);
-                    renderRecommendations(aiRecos);
-                } catch {
-                    renderRecommendationsError(fallbackRecos);
-                } finally {
-                    regenBtn.disabled = false;
-                    regenBtn.textContent = "🔄 Regenerar";
-                }
-            });
+        if (cropType) {
+            fetchCardInsights(allData, cropType)
+                .then(insights => applyCardInsights(insights))
+                .catch(err => console.warn("[CardInsights] error:", err));
         }
 
     } catch (e) {

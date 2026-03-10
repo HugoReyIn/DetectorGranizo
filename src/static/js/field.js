@@ -1,4 +1,4 @@
-import { loadWeatherByCoords, getHailPrediction, getMaxHailNext6h } from "./weather.js";
+import { loadWeatherByCoords } from "./weather.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -196,16 +196,50 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         const prediction = await getHailPrediction(centroid.lat, centroid.lng);
 
-        // Probabilidad máxima próximas 6h para mostrar en el widget actual
+        // Probabilidad máxima próximas 6h (de la IA)
         const maxHail6h = getMaxHailNext6h(prediction);
         const hailEl = document.getElementById("hail");
         if (hailEl) hailEl.textContent = `${maxHail6h.toFixed(0)} %`;
 
-        // Guardar en window para que weatherChart.js pueda usarla
+        // Guardar en window para uso externo
         window.hailPrediction = prediction;
 
-        // Mostrar en la gráfica si existe
-        renderHailForecastChart(prediction);
+        // ── CIERRE AUTOMÁTICO si riesgo >= 35% ──
+        if (maxHail6h >= 35) {
+            const fieldId = fieldIdInput?.value;
+            if (fieldId) {
+                console.warn(`[Granizo] Riesgo ${maxHail6h.toFixed(0)}% — cerrando techo automáticamente`);
+
+                // Notificación visual
+                const banner = document.createElement("div");
+                banner.id = "hail-auto-close-banner";
+                banner.innerHTML = `🧊 <strong>Riesgo de granizo ${maxHail6h.toFixed(0)}%</strong> — Techo cerrado automáticamente por la IA`;
+                banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#e53935;color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);";
+                if (!document.getElementById("hail-auto-close-banner")) {
+                    document.body.prepend(banner);
+                    setTimeout(() => banner.remove(), 10000);
+                }
+
+                // Llamar al endpoint de cierre
+                const currentState = document.querySelector(".field-status")?.dataset?.state
+                    || document.querySelector("[data-state]")?.dataset?.state;
+
+                if (currentState !== "closed" && currentState !== "closing") {
+                    await fetch(`/field/update-status/${fieldId}`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ state: "closed" })
+                    });
+
+                    // Actualizar UI
+                    const statusEl = document.querySelector(".field-status");
+                    if (statusEl) {
+                        statusEl.className = "field-status status-closed";
+                        statusEl.textContent = "Cerrado";
+                    }
+                }
+            }
+        }
 
     } catch (e) {
         console.warn("Predicción granizo no disponible:", e);

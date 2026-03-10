@@ -245,6 +245,7 @@
                     <div class="agro-hail-bar-wrap">
                         <div class="agro-hail-bar" id="agro-hail-bar"></div>
                     </div>
+                    <div class="agro-card-tip" id="agro-hail-tip"></div>
                 </div>
 
             </div><!-- /agro-grid -->
@@ -267,22 +268,23 @@
                     <div class="chart-canvas-wrapper" style="height:180px;">
                         <canvas id="agro-et0-canvas"></canvas>
                     </div>
+                    <div class="et0-chart-legend">
+                        <div class="et0-legend-item">
+                            <span class="et0-legend-color" style="background:#2196f3;"></span>
+                            <span><strong>Barras azules — ET₀ (mm/h):</strong> cuánta agua evapora y transpira tu cultivo cada hora. Cuanto más alta la barra, más sed tiene el campo.</span>
+                        </div>
+                        <div class="et0-legend-item">
+                            <span class="et0-legend-color" style="background:#ff9800;"></span>
+                            <span><strong>Línea naranja — Radiación (W/m²):</strong> energía solar que llega al suelo. Siempre sigue la misma forma que el ET₀ porque el sol es quien impulsa la evaporación.</span>
+                        </div>
+                        <div class="et0-chart-tip" id="et0-chart-tip">
+                            📊 Cargando interpretación...
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- RECOMENDACIONES AGRONÓMICAS IA -->
-            <div class="agro-reco-block" id="agro-reco-block">
-                <div class="agro-reco-header">
-                    <h4 class="agro-subtitle" style="margin:0;">🌱 Recomendaciones para tu cultivo</h4>
-                    <div class="agro-reco-header-right">
-                        <span class="agro-reco-badge-ia">✨ IA</span>
-                        <button class="agro-reco-regen-btn" id="agro-reco-regen">🔄 Regenerar</button>
-                    </div>
-                </div>
-                <div class="agro-reco-list" id="agro-reco-list">
-                    <div class="agro-reco-item agro-reco-loading">⏳ Cargando recomendaciones...</div>
-                </div>
-            </div>
+
 
         </div><!-- /agro-section -->
 
@@ -447,10 +449,7 @@
             </div>
         </div>
 
-        <h4>Predicción granizo (próximas 24h) — IA</h4>
-        <div class="chart-canvas-wrapper" style="height: 200px;">
-            <canvas id="hail-forecast-canvas"></canvas>
-        </div>
+
 
         <!-- LUNA -->
         <div class="agro-moon-block">

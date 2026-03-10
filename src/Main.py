@@ -14,6 +14,7 @@ from models.User import User
 from models.Field import Field
 from models.Point import Point
 from ia.HailPredictor import predict_hail
+from ia.AgroAgent import get_card_insights
 
 app = FastAPI()
 
@@ -820,46 +821,15 @@ def get_hail_prediction(lat: float, lon: float):
 
 
 # ─────────────────────────────────────────────
-# RECOMENDACIONES IA — Proxy hacia Anthropic
+# AGENTE AGRONÓMICO LOCAL — insights por tarjeta
 # ─────────────────────────────────────────────
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-
-@app.post("/get-ai-recommendations")
-def get_ai_recommendations(payload: dict):
-    if not ANTHROPIC_API_KEY:
-        return JSONResponse({"error": "ANTHROPIC_API_KEY no configurada"}, status_code=503)
-
+@app.post("/get-card-insights")
+def get_card_insights_endpoint(payload: dict):
     try:
-        prompt = payload.get("prompt", "")
-        if not prompt:
-            return JSONResponse({"error": "prompt vacío"}, status_code=400)
-
-        response = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 1000,
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        text = data.get("content", [{}])[0].get("text", "[]")
-        # Strip markdown fences if present
-        clean = text.strip()
-        if clean.startswith("```"):
-            clean = clean.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        recos = __import__("json").loads(clean)
-        return JSONResponse(recos)
-
-    except requests.exceptions.Timeout:
-        return JSONResponse({"error": "timeout"}, status_code=504)
+        data      = payload.get("data", {})
+        crop_type = payload.get("crop_type", "")
+        insights  = get_card_insights(data, crop_type)
+        return JSONResponse(insights)
     except Exception as e:
-        print(f"[AIRecos] Error: {e}")
+        print(f"[AgroAgent] Error: {e}")
         return JSONResponse({"error": str(e)}, status_code=500)

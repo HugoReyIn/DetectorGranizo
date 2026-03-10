@@ -422,37 +422,35 @@
    PANEL EXPANDIBLE EN DASHBOARD (main.html)
 ══════════════════════════════════════════ */
 
-/* Botón "Ver detalles" en la fila del campo */
+/* Botón "Detalles" — igual que action-btn */
 .field-detail-btn {
-    height: 38px;
-    padding: 0 14px;
-    border: 1.5px solid #a5d6a7;
-    border-radius: 20px;
-    background: #fff;
-    color: #00796b;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
+    height: 45px;
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 6px;
-    transition: background 0.2s, border-color 0.2s;
+    justify-content: center;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 14px;
+    border: none;
+    background: #e0e0e0;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
     white-space: nowrap;
 }
 
 .field-detail-btn:hover {
-    background: #e8f5e9;
-    border-color: #4caf50;
+    background: #d0d0d0;
 }
 
-.field-detail-btn .detail-arrow {
-    font-size: 10px;
-    transition: transform 0.3s;
-    display: inline-block;
+.field-detail-btn:active {
+    transform: scale(0.98);
 }
 
-.field-detail-btn.open .detail-arrow {
-    transform: rotate(180deg);
+.field-detail-btn.open {
+    background: #c8e6c9;
+    color: #1b5e20;
 }
 
 /* Panel expandible debajo de la fila */
@@ -462,10 +460,8 @@
     transition: max-height 0.45s ease;
     background: #f5fff5;
     border-radius: 0 0 15px 15px;
-    margin-top: -8px;
+    margin-top: 0;
     margin-bottom: 10px;
-    border: 1.5px solid #c8e6c9;
-    border-top: none;
 }
 
 .field-detail-panel.open {
@@ -644,129 +640,42 @@
     font-weight: 600;
 }
 
-/* ══════════════════════════════════════════
-   RECOMENDACIONES IA — ESTILOS NUEVOS
-══════════════════════════════════════════ */
 
-/* Cabecera con badge IA y botón regenerar */
-.agro-reco-header {
+/* ══════════════════════════════════════════
+   EXPLICACIÓN GRÁFICO ET₀
+══════════════════════════════════════════ */
+.et0-chart-legend {
+    margin-top: 14px;
+    padding: 12px 16px;
+    background: #f0f7ff;
+    border-radius: 10px;
+    border-left: 3px solid #2196f3;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
 }
 
-.agro-reco-header-right {
+.et0-legend-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 10px;
-}
-
-.agro-reco-badge-ia {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-}
-
-.agro-reco-regen-btn {
-    padding: 6px 14px;
-    border: 1.5px solid #a5d6a7;
-    border-radius: 20px;
-    background: #fff;
-    color: #00796b;
     font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s, border-color 0.2s;
-    width: auto;
-    min-height: unset;
-    margin: 0;
-}
-
-.agro-reco-regen-btn:hover {
-    background: #e8f5e9;
-    border-color: #4caf50;
-}
-
-.agro-reco-regen-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Etiqueta de grupo (urgente / semanal) */
-.agro-reco-group-label {
-    font-size: 11px;
-    font-weight: 800;
-    color: #555;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    margin: 14px 0 6px;
-    padding-left: 4px;
-    border-left: 3px solid #4caf50;
-}
-
-/* Cuerpo de la recomendación con título */
-.agro-reco-body {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.agro-reco-title {
-    font-weight: 700;
-    font-size: 14px;
-    color: #222;
-}
-
-.agro-reco-text {
-    font-size: 13px;
     color: #444;
     line-height: 1.4;
 }
 
-/* Loading con skeleton */
-.agro-reco-loading-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: #f5f5f5;
-    border-radius: 10px;
-    color: #888;
-    font-size: 13px;
-    margin-bottom: 10px;
-}
-
-.agro-reco-spinner {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #ddd;
-    border-top-color: #4caf50;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+.et0-legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
     flex-shrink: 0;
+    margin-top: 2px;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.agro-reco-skeleton {
-    height: 52px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s infinite;
-    border-radius: 10px;
-    margin-bottom: 8px;
-}
-
-@keyframes shimmer {
-    0%   { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+.et0-chart-tip {
+    font-size: 12px;
+    color: #1565c0;
+    padding-top: 6px;
+    border-top: 1px solid #bbdefb;
+    line-height: 1.5;
 }
