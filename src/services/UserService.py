@@ -50,6 +50,7 @@ class UserService:
         email: str,
         current_password: str,
         new_password: str,
+        confirm_password: str = "",
     ) -> tuple[User, str | None, str]:
         """
         Actualiza nombre, email y contraseña del usuario.
@@ -67,6 +68,8 @@ class UserService:
         if new_password:
             if current_password != current_user.password:
                 return current_user, "La contraseña actual no es correcta.", "error"
+            if new_password != confirm_password:
+                return current_user, "La nueva contraseña y su confirmación no coinciden.", "error"
             current_user.password = new_password
 
         current_user.name  = name

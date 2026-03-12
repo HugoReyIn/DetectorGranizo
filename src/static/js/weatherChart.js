@@ -18,31 +18,36 @@ document.addEventListener("DOMContentLoaded", async () => {
     let lat, lon;
 
     if (window.fieldCoords) {
-        // Coordenadas del campo (field.html): ya inyectadas, no pedir geoloc
         lat = window.fieldCoords.lat;
         lon = window.fieldCoords.lon;
     } else if (navigator.geolocation) {
-        // main.html: usar geolocalización
         await new Promise(resolve => {
-            navigator.geolocation.getCurrentPosition(pos => {
-                lat = pos.coords.latitude;
-                lon = pos.coords.longitude;
-                resolve();
-            }, () => resolve());
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    lat = pos.coords.latitude;
+                    lon = pos.coords.longitude;
+                    resolve();
+                },
+                () => resolve()
+            );
         });
     }
 
     if (!lat || !lon) return;
 
-    // Si window.chartsOnly está activo (field.html), el clima ya lo carga field.js
-    // Solo pedimos datos horarios para las gráficas
-    if (!window.chartsOnly) {
-        const data = await loadWeatherByCoords(lat, lon);
-        updateGeneralWeatherDOM(data);
-    }
+    try {
+        // Si window.chartsOnly está activo (field.html), el clima ya lo carga field.js
+        if (!window.chartsOnly) {
+            const data = await loadWeatherByCoords(lat, lon);
+            updateGeneralWeatherDOM(data);
+        }
 
-    const hourlyData = await getHourlyWeather(lat, lon);
-    setupCharts(hourlyData);
+        const hourlyData = await getHourlyWeather(lat, lon);
+        setupCharts(hourlyData);
+
+    } catch (e) {
+        console.error("[weatherChart] Error cargando datos:", e);
+    }
 });
 
 // ─────────────────────────────────────────────
@@ -62,8 +67,8 @@ function setupCharts(grouped) {
 
     // ── HOY ──
     const todayToggleRow = document.getElementById("today-chart-toggle");
-    const todayPanel = document.getElementById("today-chart-panel");
-    const todayCanvas = document.getElementById("today-chart-canvas");
+    const todayPanel     = document.getElementById("today-chart-panel");
+    const todayCanvas    = document.getElementById("today-chart-canvas");
 
     if (todayToggleRow && todayPanel && todayCanvas) {
         let todayChartInstance = null;
@@ -82,20 +87,26 @@ function setupCharts(grouped) {
             e.stopPropagation();
             todayMode = "temp";
             setActiveTab("today-btn-temp", "today-btn-humidity");
-            if (todayChartInstance) { todayChartInstance.destroy(); todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode); }
+            if (todayChartInstance) {
+                todayChartInstance.destroy();
+                todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode);
+            }
         });
 
         document.getElementById("today-btn-humidity")?.addEventListener("click", (e) => {
             e.stopPropagation();
             todayMode = "humidity";
             setActiveTab("today-btn-humidity", "today-btn-temp");
-            if (todayChartInstance) { todayChartInstance.destroy(); todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode); }
+            if (todayChartInstance) {
+                todayChartInstance.destroy();
+                todayChartInstance = drawChart(todayCanvas, todayFiltered, todayMode);
+            }
         });
     }
 
     // ── PRÓXIMOS 4 DÍAS ──
     const forecastToggleRow = document.getElementById("forecast-charts-toggle");
-    const forecastPanel = document.getElementById("forecast-charts-panel");
+    const forecastPanel     = document.getElementById("forecast-charts-panel");
 
     if (forecastToggleRow && forecastPanel) {
         let forecastRendered = false;
@@ -108,10 +119,10 @@ function setupCharts(grouped) {
             if (isOpen && !forecastRendered) {
                 forecastRendered = true;
                 days.slice(1, 5).forEach((day, i) => {
-                    const canvas = document.getElementById(`forecast-canvas-${i}`);
+                    const canvas    = document.getElementById(`forecast-canvas-${i}`);
                     const dateLabel = document.getElementById(`forecast-chart-date-${i}`);
-                    const btnTemp = document.getElementById(`forecast-btn-temp-${i}`);
-                    const btnHum = document.getElementById(`forecast-btn-humidity-${i}`);
+                    const btnTemp   = document.getElementById(`forecast-btn-temp-${i}`);
+                    const btnHum    = document.getElementById(`forecast-btn-humidity-${i}`);
                     if (!canvas) return;
 
                     if (dateLabel) dateLabel.textContent = formatDateLabel(day);
@@ -178,9 +189,6 @@ function drawChart(canvas, hourlyData, mode = "temp") {
 
     const color      = isTemp ? "#e0a800" : "#2196f3";
     const colorLight = isTemp ? "rgba(224,168,0,0.13)" : "rgba(33,150,243,0.13)";
-    const minVal = Math.min(...values);
-    const yMin = isTemp ? (minVal >= 0 ? 0 : undefined) : 0;
-    const yMax = isTemp ? undefined : 100;
 
     const chart = new Chart(canvas, {
         type: "line",
@@ -237,7 +245,11 @@ function drawChart(canvas, hourlyData, mode = "temp") {
                 x: {
                     grid: { display: false },
                     border: { display: true, color: "#ccc" },
-                    ticks: { color: "#666", font: { size: 11, family: "'Segoe UI', Arial, sans-serif" }, maxRotation: 0 }
+                    ticks: {
+                        color: "#666",
+                        font: { size: 11, family: "'Segoe UI', Arial, sans-serif" },
+                        maxRotation: 0
+                    }
                 },
                 y: {
                     display: !isTemp,

@@ -86,6 +86,22 @@ class FieldDAO:
             fields.append(f)
         return fields
 
+    def getAllFields(self):
+        """Devuelve todos los campos de todos los usuarios. Usado por AlertMonitor."""
+        self.cursor.execute(
+            "SELECT id, user_id, name, municipality, areaM2, state, crop_type FROM fields"
+        )
+        rows = self.cursor.fetchall()
+        fields = []
+        for row in rows:
+            f = Field(name=row[2], municipality=row[3], area_m2=row[4])
+            f.state = row[5]
+            f.id = row[0]
+            f.user_id = row[1]
+            f.crop_type = row[6] or ""
+            fields.append(f)
+        return fields
+
     def updateField(self, field: Field):
         sql = """
             UPDATE fields 

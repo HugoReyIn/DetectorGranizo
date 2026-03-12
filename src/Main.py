@@ -26,20 +26,14 @@ from facades.AemetFacade import AemetFacade
 from services.UserService import UserService
 from services.FieldService import FieldService
 from services.WeatherService import WeatherService
-
+from services.EmailService import EmailService
+from AlertMonitor import AlertMonitor
+from contextlib import asynccontextmanager
 from config import AEMET_API_KEY
-
-# ──────────────────────────────────────────────
-# APP + ESTÁTICOS
-# ──────────────────────────────────────────────
-app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
 
 # ──────────────────────────────────────────────
 # INYECCIÓN DE DEPENDENCIAS
 # ──────────────────────────────────────────────
-
 _user_dao  = UserDAO()
 _field_dao = FieldDAO()
 _point_dao = PointDAO()
@@ -51,9 +45,36 @@ _aemet_facade     = AemetFacade(api_key=AEMET_API_KEY)
 user_service    = UserService(_user_dao)
 field_service   = FieldService(_field_dao, _point_dao)
 weather_service = WeatherService(_meteo_facade, _nominatim_facade, _aemet_facade)
+email_service   = EmailService()
+
+alert_monitor = AlertMonitor(
+    user_dao        = _user_dao,
+    field_dao       = _field_dao,
+    point_dao       = _point_dao,
+    weather_service = weather_service,
+    email_service   = email_service,
+)
 
 # Estado de sesión (en producción reemplazar por sesiones reales)
 current_user = None
+
+
+# ──────────────────────────────────────────────
+# LIFESPAN — arranque y parada del scheduler
+# ──────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app):
+    alert_monitor.start()
+    yield
+    alert_monitor.stop()
+
+
+# ──────────────────────────────────────────────
+# APP + ESTÁTICOS
+# ──────────────────────────────────────────────
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 
 # ──────────────────────────────────────────────
@@ -121,13 +142,14 @@ def update_profile(
     email:            str = Form(...),
     current_password: str = Form(default=""),
     new_password:     str = Form(default=""),
+    confirm_password: str = Form(default=""),
 ):
     global current_user
     if not current_user:
         return RedirectResponse(url="/", status_code=303)
 
     updated_user, msg, msg_type = user_service.update_profile(
-        current_user, name, email, current_password, new_password
+        current_user, name, email, current_password, new_password, confirm_password
     )
     current_user = updated_user
     return templates.TemplateResponse(

@@ -75,13 +75,13 @@
 
     <!-- Footer usuario -->
     <div class="sidebar-footer">
-        <div class="sidebar-user">
-            <div class="sidebar-avatar">👤</div>
+        <a href="/profile" class="sidebar-user" style="text-decoration:none;">
+            <div class="sidebar-avatar" title="Editar perfil">👤</div>
             <div>
                 <div class="sidebar-username">{{ current_user.name or current_user.email }}</div>
                 <div class="sidebar-role">Agricultor</div>
             </div>
-        </div>
+        </a>
         <a href="/" class="sidebar-logout">
             <span class="nav-icon">🚪</span>
             <span class="nav-label">Cerrar sesión</span>

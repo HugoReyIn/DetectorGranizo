@@ -261,7 +261,7 @@ class WeatherService:
 
         try:
             province_words = self._get_province_words(lat, lon)
-            content_type, body = self._aemet.fetch_alerts_raw()
+            content_type, body = self._aemet.fetch_alerts_raw(lat, lon)
 
             if "xml" in content_type or body.strip().startswith("<"):
                 self._parse_cap_xml(body, province_words, result)

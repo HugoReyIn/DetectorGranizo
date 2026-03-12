@@ -108,11 +108,16 @@
             transition: color 0.18s;
         }
         .back-link:hover { color: var(--musgo); }
+        .profile-hint {
+            font-size: 11px;
+            font-weight: 400;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--text-soft);
+        }
     </style>
 </head>
 <body>
-
-{% set sidebar_fragment %}{% include "sidebar_fragment.html" %}{% endset %}
 
 <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menú">☰</button>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -163,8 +168,9 @@
             <div class="profile-msg {{ msg_type }}">{{ msg }}</div>
         {% endif %}
 
-        <form method="post" action="/profile">
+        <form method="post" action="/profile" id="profile-form">
 
+            <!-- ── DATOS PERSONALES ── -->
             <div class="profile-section-title">Datos personales</div>
 
             <div class="profile-field">
@@ -179,16 +185,25 @@
 
             <div class="profile-divider"></div>
 
-            <div class="profile-section-title">Cambiar contraseña <span style="font-weight:400;text-transform:none;letter-spacing:0">(dejar en blanco para no cambiar)</span></div>
+            <!-- ── CONTRASEÑA ── -->
+            <div class="profile-section-title">
+                Cambiar contraseña
+                <span class="profile-hint">(dejar en blanco para no cambiar)</span>
+            </div>
 
             <div class="profile-field">
                 <label>Contraseña actual</label>
-                <input type="password" name="current_password" placeholder="••••••••">
+                <input type="password" name="current_password" id="current_password" placeholder="••••••••" autocomplete="current-password">
             </div>
 
             <div class="profile-field">
                 <label>Nueva contraseña</label>
-                <input type="password" name="new_password" placeholder="••••••••">
+                <input type="password" name="new_password" id="new_password" placeholder="••••••••" autocomplete="new-password">
+            </div>
+
+            <div class="profile-field">
+                <label>Confirmar nueva contraseña</label>
+                <input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••" autocomplete="new-password">
             </div>
 
             <button type="submit" class="profile-save-btn">Guardar cambios</button>
@@ -197,13 +212,41 @@
 </div>
 
 <script>
-(function() {
+(function () {
+    // Toggle sidebar
     const toggle  = document.getElementById("sidebar-toggle");
     const sidebar = document.getElementById("sidebar");
     const overlay = document.getElementById("sidebar-overlay");
-    if (!toggle) return;
-    toggle.addEventListener("click", () => { sidebar.classList.toggle("open"); overlay.classList.toggle("show"); });
-    overlay.addEventListener("click", () => { sidebar.classList.remove("open"); overlay.classList.remove("show"); });
+    if (toggle) {
+        toggle.addEventListener("click", () => { sidebar.classList.toggle("open"); overlay.classList.toggle("show"); });
+        overlay.addEventListener("click", () => { sidebar.classList.remove("open"); overlay.classList.remove("show"); });
+    }
+
+    // Validación de contraseñas en cliente antes de enviar
+    document.getElementById("profile-form").addEventListener("submit", function (e) {
+        const newPwd     = document.getElementById("new_password").value;
+        const confirmPwd = document.getElementById("confirm_password").value;
+        const currentPwd = document.getElementById("current_password").value;
+
+        // Si se quiere cambiar contraseña, los tres campos son obligatorios
+        if (newPwd || confirmPwd || currentPwd) {
+            if (!currentPwd) {
+                e.preventDefault();
+                alert("Debes introducir tu contraseña actual para cambiarla.");
+                return;
+            }
+            if (!newPwd) {
+                e.preventDefault();
+                alert("Introduce la nueva contraseña.");
+                return;
+            }
+            if (newPwd !== confirmPwd) {
+                e.preventDefault();
+                alert("La nueva contraseña y su confirmación no coinciden.");
+                return;
+            }
+        }
+    });
 })();
 </script>
 </body>

@@ -1,41 +1,33 @@
-"""
-AemetFacade.py
-Remote Facade — encapsula las llamadas HTTP a la API de AEMET OpenData.
-Separa la obtención de datos de su interpretación (que vive en WeatherService).
-"""
-
 import requests
-from config import AEMET_API_URL, AEMET_TIMEOUT
+from config import AEMET_BASE_URL, AEMET_TIMEOUT
 
 
 class AemetFacade:
 
-    API_URL = AEMET_API_URL
-    TIMEOUT = AEMET_TIMEOUT
+    BASE_URL = AEMET_BASE_URL
+    TIMEOUT  = AEMET_TIMEOUT
 
     def __init__(self, api_key: str):
         self._headers = {"api_key": api_key, "Accept": "application/json"}
 
-    def fetch_alerts_raw(self) -> tuple[str, str]:
-        """
-        Obtiene el contenido bruto de alertas CAP de AEMET.
+    @staticmethod
+    def _get_area(lat: float, lon: float) -> str:
+        """Devuelve el código de área AEMET según coordenadas."""
+        if 27.0 <= lat <= 29.5 and -18.5 <= lon <= -13.0:
+            return "62"  # Canarias
+        return "61"      # Península + Baleares
 
-        Returns:
-            (content_type, body_text) — el content-type y el cuerpo de la respuesta
-            de datos, para que el servicio decida cómo parsearlo.
+    def fetch_alerts_raw(self, lat: float, lon: float) -> tuple[str, str]:
+        area    = self._get_area(lat, lon)
+        api_url = self.BASE_URL.format(area=area)
 
-        Raises:
-            requests.HTTPError si cualquiera de las dos peticiones falla.
-        """
-        # Paso 1: metadata → URL de datos real
-        r1 = requests.get(self.API_URL, headers=self._headers, timeout=10)
+        r1 = requests.get(api_url, headers=self._headers, timeout=self.TIMEOUT)
         r1.raise_for_status()
         meta     = r1.json()
         data_url = meta.get("datos")
         if not data_url:
             raise ValueError("AEMET no devolvió URL de datos")
 
-        # Paso 2: datos reales (XML o JSON según AEMET)
         r2 = requests.get(data_url, headers=self._headers, timeout=self.TIMEOUT)
         r2.raise_for_status()
 
