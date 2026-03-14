@@ -105,11 +105,38 @@
     flex-shrink: 0;
 }
 
+.alert-bar-verde    { background: var(--musgo-light) !important; }
+.alert-bar-amarillo { background: #F59E0B !important; }
+.alert-bar-naranja  { background: #EA580C !important; }
+.alert-bar-rojo     { background: #DC2626 !important; }
+
 .agro-alert-icons {
-    display: flex;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
     flex-wrap: wrap;
     margin-bottom: 12px;
+}
+
+@media (max-width: 700px) {
+    .agro-alert-icons {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 7px;
+    }
+}
+
+@media (max-width: 480px) {
+    .agro-alert-icons {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 5px;
+    }
+    .agro-alert-item {
+        min-width: unset;
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+    .agro-alert-img { width: 22px; height: 22px; }
+    .agro-alert-emoji { font-size: 20px; }
 }
 
 .agro-alert-item {
@@ -129,7 +156,52 @@
     border-color: rgba(90,143,74,0.20);
 }
 
-.agro-alert-img { width: 28px; height: 28px; object-fit: contain; mix-blend-mode: multiply; }
+.agro-alert-emoji {
+    font-size: 26px;
+    line-height: 1;
+    margin-bottom: 2px;
+}
+
+.agro-alert-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.agro-alert-valor {
+    font-size: 10px;
+    font-weight: 700;
+    opacity: 0.85;
+    text-align: center;
+    line-height: 1.2;
+    max-width: 70px;
+    word-break: break-word;
+}
+
+/* ── Niveles de alerta — fondos más visibles ── */
+.nivel-verde    {
+    background: rgba(90,143,74,0.08)   !important;
+    border-color: rgba(90,143,74,0.22) !important;
+    color: var(--text);
+}
+.nivel-amarillo {
+    background: rgba(212,168,83,0.28)  !important;
+    border-color: rgba(212,168,83,0.70) !important;
+    box-shadow: 0 0 0 2px rgba(212,168,83,0.25);
+    color: #6b4a00;
+}
+.nivel-naranja  {
+    background: rgba(232,112,64,0.25)  !important;
+    border-color: rgba(232,112,64,0.70) !important;
+    box-shadow: 0 0 0 2px rgba(232,112,64,0.25);
+    color: #7a2800;
+}
+.nivel-rojo     {
+    background: rgba(192,57,43,0.22)   !important;
+    border-color: rgba(192,57,43,0.70) !important;
+    color: #7a0000;
+    animation: pulse-alert 1.4s ease-in-out infinite;
+}
 
 .agro-alert-ticker {
     font-size: 13px;
@@ -147,11 +219,6 @@
 .ticker-text-rojo     { color: #7a0000; }
 
 /* ── Niveles de alerta ── */
-.nivel-verde    { background: rgba(90,143,74,0.07)  !important; border-color: rgba(90,143,74,0.22)  !important; }
-.nivel-amarillo { background: rgba(212,168,83,0.18) !important; border-color: rgba(212,168,83,0.55) !important; box-shadow: 0 0 0 2px rgba(212,168,83,0.20); }
-.nivel-naranja  { background: rgba(232,112,64,0.18) !important; border-color: rgba(232,112,64,0.55) !important; box-shadow: 0 0 0 2px rgba(232,112,64,0.20); }
-.nivel-rojo     { background: rgba(192,57,43,0.15)  !important; border-color: rgba(192,57,43,0.55)  !important; animation: pulse-alert 1.4s ease-in-out infinite; }
-
 @keyframes pulse-alert {
     0%, 100% { box-shadow: 0 0 0 2px rgba(192,57,43,0.25); }
     50%       { box-shadow: 0 0 0 5px rgba(192,57,43,0.08); }
@@ -417,14 +484,6 @@
 .fdp-label { font-size: 11px; font-weight: 700; color: var(--musgo); text-transform: uppercase; letter-spacing: 0.4px; }
 .fdp-value { font-size: 20px; font-weight: 800; color: var(--t-dark); }
 .fdp-sub   { font-size: 11px; color: var(--text-soft); }
-
-/* ═══════════════════════════════════════════
-   MIX BLEND — imágenes con fondo blanco
-═══════════════════════════════════════════ */
-.agro-alert-img,
-.agro-alert-item img {
-    mix-blend-mode: multiply;
-}
 
 /* ═══════════════════════════════════════════
    SCROLL SUAVE

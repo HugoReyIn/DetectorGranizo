@@ -23,19 +23,21 @@ document.addEventListener("DOMContentLoaded", () => {
     // MAPA
     // ===============================
 
-    function initMap(lat, lng) {
+    // Umbral en píxeles para detectar click sobre una línea
+    const LINE_HIT_PX = 12;
 
+    const whiteIcon = L.divIcon({
+        className: "",
+        html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;cursor:grab;"></div>`,
+        iconSize: [14, 14],
+        iconAnchor: [7, 7]
+    });
+
+    function initMap(lat, lng) {
         map = L.map("map").setView([lat, lng], 16);
 
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
         L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19 }).addTo(map);
-
-        const whiteIcon = L.divIcon({
-            className: "",
-            html: `<div style="width:10px;height:10px;background:white;border:2px solid black;border-radius:50%;"></div>`,
-            iconSize: [14, 14],
-            iconAnchor: [7, 7]
-        });
 
         points.forEach(p => {
             const marker = L.marker([p.lat, p.lng], { draggable: true, icon: whiteIcon }).addTo(map);
@@ -46,67 +48,87 @@ document.addEventListener("DOMContentLoaded", () => {
         redraw();
 
         map.on("click", e => {
-            if (polygon && polygon.getBounds().contains(e.latlng)) {
-                addPointOnLine(e);
+            // Comprobar si el click está cerca de algún segmento (en píxeles de pantalla)
+            const nearSegIdx = getNearestSegmentIndex(e);
+
+            if (nearSegIdx !== -1) {
+                // Insertar nuevo punto en ese segmento
+                insertPointOnSegment(e.latlng, nearSegIdx);
             } else {
-                points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+                // Añadir punto nuevo al final
                 const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
                 markers.push(marker);
+                points.push({ lat: e.latlng.lat, lng: e.latlng.lng });
                 addMarkerEvents(marker);
                 redraw();
             }
         });
     }
 
-    function addPointOnLine(e) {
-        // Encuentra el segmento más cercano al click e inserta el punto ahí
-        if (points.length < 2) return;
+    /**
+     * Devuelve el índice del segmento más cercano al click si está dentro
+     * del umbral LINE_HIT_PX en coordenadas de pantalla, o -1 si no hay ninguno.
+     * Solo activo cuando hay al menos 2 puntos.
+     */
+    function getNearestSegmentIndex(e) {
+        if (points.length < 2) return -1;
 
-        let bestIdx = 0;
-        let bestDist = Infinity;
+        const clickPx = map.latLngToContainerPoint(e.latlng);
+        let bestIdx  = -1;
+        let bestDist = LINE_HIT_PX;
 
-        for (let i = 0; i < points.length; i++) {
-            const a = points[i];
-            const b = points[(i + 1) % points.length];
+        const n = points.length;
+        for (let i = 0; i < n; i++) {
+            // Solo iterar segmentos cerrados si hay al menos 3 puntos
+            if (i === n - 1 && n < 3) continue;
 
-            // Distancia del punto al segmento a-b
-            const dist = distToSegment(e.latlng, a, b);
+            const aPx = map.latLngToContainerPoint(L.latLng(points[i].lat, points[i].lng));
+            const bPx = map.latLngToContainerPoint(L.latLng(points[(i + 1) % n].lat, points[(i + 1) % n].lng));
+
+            const dist = distToSegmentPx(clickPx, aPx, bPx);
             if (dist < bestDist) {
                 bestDist = dist;
-                bestIdx = i;
+                bestIdx  = i;
             }
         }
 
-        // Insertar el nuevo punto después de bestIdx
-        const newPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
-        points.splice(bestIdx + 1, 0, newPoint);
-
-        const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
-        markers.splice(bestIdx + 1, 0, marker);
-        addMarkerEvents(marker);
-        redraw();
+        return bestIdx;
     }
 
-    function distToSegment(p, a, b) {
-        // Distancia en grados (suficiente para comparar)
-        const dx = b.lng - a.lng;
-        const dy = b.lat - a.lat;
+    /** Distancia en píxeles de un punto p al segmento a-b */
+    function distToSegmentPx(p, a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
         const lenSq = dx * dx + dy * dy;
-        if (lenSq === 0) return Math.hypot(p.lng - a.lng, p.lat - a.lat);
-        let t = ((p.lng - a.lng) * dx + (p.lat - a.lat) * dy) / lenSq;
+        if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+        let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
         t = Math.max(0, Math.min(1, t));
-        return Math.hypot(p.lng - (a.lng + t * dx), p.lat - (a.lat + t * dy));
+        return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    }
+
+    /** Inserta un punto nuevo después del segmento segIdx */
+    function insertPointOnSegment(latlng, segIdx) {
+        const newPoint = { lat: latlng.lat, lng: latlng.lng };
+        const marker   = L.marker(latlng, { draggable: true, icon: whiteIcon }).addTo(map);
+
+        points.splice(segIdx + 1, 0, newPoint);
+        markers.splice(segIdx + 1, 0, marker);
+        addMarkerEvents(marker);
+        redraw();
     }
 
     function addMarkerEvents(marker) {
         marker.on("drag", () => {
             const i = markers.indexOf(marker);
+            if (i === -1) return;
             points[i] = { lat: marker.getLatLng().lat, lng: marker.getLatLng().lng };
             redraw();
         });
 
-        marker.on("contextmenu", () => {
+        marker.on("contextmenu", (e) => {
+            L.DomEvent.stopPropagation(e); // evitar que suba al mapa
             const i = markers.indexOf(marker);
+            if (i === -1) return;
             map.removeLayer(marker);
             markers.splice(i, 1);
             points.splice(i, 1);

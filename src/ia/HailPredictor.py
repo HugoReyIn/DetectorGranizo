@@ -18,6 +18,23 @@ def weathercode_to_hail_score(code: int) -> float:
     return {77: 0.5, 96: 0.7, 99: 1.0}.get(int(code), 0.0)
 
 
+def cape_bonus(cape: float) -> float:
+    """
+    Bonus al hail_score basado en CAPE (J/kg).
+    CAPE > 1500 → +0.3 (condición severa)
+    CAPE > 800  → +0.15 (condición moderada)
+    CAPE > 400  → +0.05 (condición leve)
+    Se aplica solo si ya hay alguna señal convectiva (score > 0).
+    """
+    if cape >= 1500:
+        return 0.30
+    if cape >= 800:
+        return 0.15
+    if cape >= 400:
+        return 0.05
+    return 0.0
+
+
 # ──────────────────────────────────────────
 # HISTÓRICO VERIFICADO (Open-Meteo Archive API)
 # Descarga hasta 60 días de datos reales
@@ -55,6 +72,13 @@ def fetch_historical_data(lat: float, lon: float) -> pd.DataFrame:
             df.rename(columns={"weather_code": "weathercode"}, inplace=True)
         df = df.ffill().fillna(0)
         df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
+        # Refuerzo con CAPE: solo aumenta score si ya hay señal convectiva
+        if "cape" in df.columns:
+            df["hail_score"] = df.apply(
+                lambda row: min(1.0, row["hail_score"] + cape_bonus(row["cape"]))
+                if row["hail_score"] > 0 else row["hail_score"],
+                axis=1
+            )
         return df
 
     except Exception as e:
@@ -90,6 +114,12 @@ def fetch_recent_and_forecast(lat: float, lon: float) -> tuple[pd.DataFrame, pd.
     df = df.set_index("time")
     df = df.ffill().fillna(0)
     df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
+    if "cape" in df.columns:
+        df["hail_score"] = df.apply(
+            lambda row: min(1.0, row["hail_score"] + cape_bonus(row["cape"]))
+            if row["hail_score"] > 0 else row["hail_score"],
+            axis=1
+        )
 
     now = pd.Timestamp.now().floor("h")
     history_recent = df[df.index <= now].copy()

@@ -85,6 +85,23 @@ class OpenMeteoFacade:
         return response.json()
 
     # ──────────────────────────────────────────────
+    # ALERTS DATA (usado por LocalAlertService)
+    # Variables: temperatura, lluvia, nieve, viento, niebla, helada, tormenta
+    # ──────────────────────────────────────────────
+    def get_alerts_data(self, lat: float, lon: float) -> dict:
+        url = (
+            f"{self.BASE_URL}"
+            f"?latitude={lat}&longitude={lon}"
+            "&hourly=temperature_2m,dew_point_2m,precipitation,snowfall,"
+            "wind_speed_10m,wind_gusts_10m,relative_humidity_2m,"
+            "visibility,cape,weathercode,precipitation_probability"
+            "&forecast_days=2&timezone=auto"
+        )
+        response = requests.get(url, timeout=self.TIMEOUT)
+        response.raise_for_status()
+        return response.json()
+
+    # ──────────────────────────────────────────────
     # HAIL PREDICTOR — histórico + forecast (usado por HailPredictor)
     # ──────────────────────────────────────────────
     def get_hail_forecast(self, lat: float, lon: float) -> dict:

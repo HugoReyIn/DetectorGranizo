@@ -210,29 +210,45 @@
         <div class="agro-section">
             <h2 class="agro-title">📊 Información agronómica</h2>
 
-            <!-- ALERTAS AEMET integradas -->
+            <!-- ALERTAS integradas -->
             <div class="agro-block agro-alerts-block" id="agro-alerts-block">
                 <div class="agro-block-header">
                     <span class="agro-block-icon">🚨</span>
-                    <span class="agro-block-title">Alertas AEMET</span>
+                    <span class="agro-block-title">Alertas meteorológicas</span>
                     <span class="agro-alert-bar-inline" id="agro-alert-bar"></span>
                 </div>
                 <div class="agro-alert-icons" id="agro-alert-icons">
                     <div class="agro-alert-item nivel-verde" id="agro-alert-calor">
-                        <img src="/static/img/heat.png" class="agro-alert-img">
+                        <span class="agro-alert-emoji">🌡️</span>
                         <span>Calor</span>
                     </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-helada">
+                        <span class="agro-alert-emoji">🥶</span>
+                        <span>Helada</span>
+                    </div>
                     <div class="agro-alert-item nivel-verde" id="agro-alert-lluvia">
-                        <img src="/static/img/rain.png" class="agro-alert-img">
+                        <span class="agro-alert-emoji">🌧️</span>
                         <span>Lluvia</span>
                     </div>
                     <div class="agro-alert-item nivel-verde" id="agro-alert-nieve">
-                        <img src="/static/img/snow.png" class="agro-alert-img">
+                        <span class="agro-alert-emoji">❄️</span>
                         <span>Nieve</span>
                     </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-viento">
+                        <span class="agro-alert-emoji">💨</span>
+                        <span>Viento</span>
+                    </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-tormenta">
+                        <span class="agro-alert-emoji">⛈️</span>
+                        <span>Tormenta</span>
+                    </div>
                     <div class="agro-alert-item nivel-verde" id="agro-alert-granizo">
-                        <img src="/static/img/hail.png" class="agro-alert-img">
+                        <span class="agro-alert-emoji">🧊</span>
                         <span>Granizo</span>
+                    </div>
+                    <div class="agro-alert-item nivel-verde" id="agro-alert-niebla">
+                        <span class="agro-alert-emoji">🌫️</span>
+                        <span>Niebla</span>
                     </div>
                 </div>
                 <div class="agro-alert-ticker" id="agro-alert-ticker">Sin alertas activas</div>
@@ -491,8 +507,8 @@
         <div class="chart-panel" id="today-chart-panel">
             <div class="chart-panel-inner">
                 <div class="chart-controls">
-                    <button type="button" class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
-                    <button type="button" class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
+                    <button class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
+                    <button class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
                 </div>
                 <div class="chart-canvas-wrapper">
                     <canvas id="today-chart-canvas"></canvas>
@@ -539,8 +555,8 @@
                 <div class="forecast-chart-block">
                     <div class="forecast-chart-date" id="forecast-chart-date-{{ i }}">—</div>
                     <div class="chart-controls">
-                        <button type="button" class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
-                        <button type="button" class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
+                        <button class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
+                        <button class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
                     </div>
                     <div class="chart-canvas-wrapper">
                         <canvas id="forecast-canvas-{{ i }}"></canvas>

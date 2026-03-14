@@ -54,13 +54,23 @@ function renderFieldPanel(container, summary, alerts) {
     }
 
     // Alertas
-    const TIPOS = ["calor", "lluvia", "nieve", "granizo"];
-    const LABELS = { calor: "🌡️ Calor", lluvia: "🌧️ Lluvia", nieve: "❄️ Nieve", granizo: "🧊 Granizo" };
+    const TIPOS  = ["calor", "helada", "lluvia", "nieve", "viento", "tormenta", "granizo", "niebla"];
+    const LABELS = {
+        calor:    "🌡️ Calor",
+        helada:   "🥶 Helada",
+        lluvia:   "🌧️ Lluvia",
+        nieve:    "❄️ Nieve",
+        viento:   "💨 Viento",
+        tormenta: "⛈️ Tormenta",
+        granizo:  "🧊 Granizo",
+        niebla:   "🌫️ Niebla",
+    };
     let worstNivel = "verde";
     const alertsHTML = alerts ? TIPOS.map(tipo => {
         const nivel = alerts[tipo]?.nivel || "verde";
+        const valor = alerts[tipo]?.valor || "";
         if (NIVEL_ORDER[nivel] > NIVEL_ORDER[worstNivel]) worstNivel = nivel;
-        return `<div class="fdp-alert-item nivel-${nivel}">${LABELS[tipo]}</div>`;
+        return `<div class="fdp-alert-item nivel-${nivel}" title="${valor}">${LABELS[tipo]}</div>`;
     }).join("") : `<div class="fdp-alert-item nivel-verde">Sin alertas activas</div>`;
 
     const tickerMsg = alerts?.ticker?.length ? alerts.ticker.join(" · ") : "No hay alertas activas";

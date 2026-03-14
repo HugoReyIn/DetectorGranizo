@@ -17,24 +17,60 @@ function uvCategory(uv) {
 // ─────────────────────────────────────────────
 // RENDER ALERTAS AEMET EN FIELD
 // ─────────────────────────────────────────────
+const ALERT_EMOJI = {
+    calor:    "🌡️",
+    helada:   "🥶",
+    lluvia:   "🌧️",
+    nieve:    "❄️",
+    viento:   "💨",
+    tormenta: "⛈️",
+    granizo:  "🧊",
+    niebla:   "🌫️",
+};
+
+const ALERT_LABEL = {
+    calor:    "Calor",
+    helada:   "Helada",
+    lluvia:   "Lluvia",
+    nieve:    "Nieve",
+    viento:   "Viento",
+    tormenta: "Tormenta",
+    granizo:  "Granizo",
+    niebla:   "Niebla",
+};
+
 function renderAgroAlerts(data) {
-    const TIPOS = ["calor", "lluvia", "nieve", "granizo"];
+    const TIPOS = ["calor", "helada", "lluvia", "nieve", "viento", "tormenta", "granizo", "niebla"];
     let worst = "verde";
 
     TIPOS.forEach(tipo => {
         const el = document.getElementById(`agro-alert-${tipo}`);
         if (!el) return;
-        const nivel = data && data[tipo] ? (data[tipo].nivel || "verde") : "verde";
+
+        const nivel = data?.[tipo]?.nivel || "verde";
+        const valor = data?.[tipo]?.valor || null;
+
+        // Actualizar clase de nivel
         el.className = `agro-alert-item nivel-${nivel}`;
+
+        // Reconstruir contenido para evitar bugs de DOM incremental
+        el.innerHTML = `
+            <span class="agro-alert-emoji">${ALERT_EMOJI[tipo]}</span>
+            <span class="agro-alert-name">${ALERT_LABEL[tipo]}</span>
+            ${nivel !== "verde" && valor ? `<span class="agro-alert-valor">${valor}</span>` : ""}
+        `;
+
         if (LEVEL_ORDER[nivel] > LEVEL_ORDER[worst]) worst = nivel;
     });
 
+    // Barra de nivel máximo
     const bar = document.getElementById("agro-alert-bar");
     if (bar) bar.className = `agro-alert-bar-inline alert-bar-${worst}`;
 
+    // Ticker
     const ticker = document.getElementById("agro-alert-ticker");
     if (ticker) {
-        const msgs = data && data.ticker && data.ticker.length ? data.ticker : ["No hay alertas activas"];
+        const msgs = data?.ticker?.length ? data.ticker : ["No hay alertas activas"];
         ticker.textContent = msgs.join(" · ");
         ticker.className = `agro-alert-ticker ticker-text-${worst}`;
     }

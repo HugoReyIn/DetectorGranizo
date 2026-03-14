@@ -48,6 +48,20 @@ _AEMET_TTL  = 3600   # segundos
 _HAIL_TTL   = 3600
 
 
+def _default_alert_result() -> dict:
+    return {
+        "calor":    {"nivel": "verde", "valor": None},
+        "helada":   {"nivel": "verde", "valor": None},
+        "lluvia":   {"nivel": "verde", "valor": None},
+        "nieve":    {"nivel": "verde", "valor": None},
+        "viento":   {"nivel": "verde", "valor": None},
+        "tormenta": {"nivel": "verde", "valor": None},
+        "granizo":  {"nivel": "verde", "valor": None},
+        "niebla":   {"nivel": "verde", "valor": None},
+        "ticker":   ["No hay alertas activas"],
+    }
+
+
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -240,7 +254,7 @@ class WeatherService:
     # ALERTAS LOCALES (sin AEMET, basadas en Open-Meteo)
     # ──────────────────────────────────────────────
     def get_aemet_alerts(self, lat: float, lon: float) -> dict:
-        """Calcula alertas meteorológicas propias usando Open-Meteo."""
+        """Calcula alertas meteorológicas propias usando Open-Meteo + IA de granizo."""
         cache_key = f"alerts_{round(lat, 2)}_{round(lon, 2)}"
         now       = datetime.now()
 
@@ -249,17 +263,13 @@ class WeatherService:
             return cached["data"]
 
         try:
-            meteo_data = self._meteo.get_alerts_data(lat, lon)
-            result     = calculate_alerts(meteo_data, lat=lat, lon=lon)
+            meteo_data       = self._meteo.get_alerts_data(lat, lon)
+            hail_prediction  = self.get_hail_prediction(lat, lon)
+            result           = calculate_alerts(meteo_data, lat=lat, lon=lon,
+                                                hail_prediction=hail_prediction)
         except Exception as e:
             print(f"[Alertas] Error calculando alertas: {e}")
-            result = {
-                "calor":   {"nivel": "verde", "valor": None},
-                "lluvia":  {"nivel": "verde", "valor": None},
-                "nieve":   {"nivel": "verde", "valor": None},
-                "granizo": {"nivel": "verde", "valor": None},
-                "ticker":  ["No hay alertas activas"],
-            }
+            result = _default_alert_result()
 
         self._aemet_cache[cache_key] = {"ts": now, "data": result}
         return result
