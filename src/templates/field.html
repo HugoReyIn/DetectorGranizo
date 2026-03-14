@@ -491,8 +491,8 @@
         <div class="chart-panel" id="today-chart-panel">
             <div class="chart-panel-inner">
                 <div class="chart-controls">
-                    <button class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
-                    <button class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
+                    <button type="button" class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
+                    <button type="button" class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
                 </div>
                 <div class="chart-canvas-wrapper">
                     <canvas id="today-chart-canvas"></canvas>
@@ -539,8 +539,8 @@
                 <div class="forecast-chart-block">
                     <div class="forecast-chart-date" id="forecast-chart-date-{{ i }}">—</div>
                     <div class="chart-controls">
-                        <button class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
-                        <button class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
+                        <button type="button" class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
+                        <button type="button" class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
                     </div>
                     <div class="chart-canvas-wrapper">
                         <canvas id="forecast-canvas-{{ i }}"></canvas>

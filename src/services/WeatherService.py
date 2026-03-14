@@ -9,8 +9,8 @@ from datetime import datetime
 
 from facades.OpenMeteoFacade import OpenMeteoFacade
 from facades.NominatimFacade import NominatimFacade
-from facades.AemetFacade import AemetFacade
 from ia.HailPredictor import predict_hail
+from services.LocalAlertService import calculate_alerts
 from ia.AgroAgent import get_card_insights
 
 
@@ -48,14 +48,6 @@ _AEMET_TTL  = 3600   # segundos
 _HAIL_TTL   = 3600
 
 
-def _default_aemet_result() -> dict:
-    return {
-        "calor":   {"nivel": "verde", "valor": None},
-        "lluvia":  {"nivel": "verde", "valor": None},
-        "nieve":   {"nivel": "verde", "valor": None},
-        "granizo": {"nivel": "verde", "valor": None},
-        "ticker":  ["No hay alertas activas"],
-    }
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -67,11 +59,9 @@ class WeatherService:
         self,
         meteo_facade:     OpenMeteoFacade,
         nominatim_facade: NominatimFacade,
-        aemet_facade:     AemetFacade,
     ):
         self._meteo     = meteo_facade
         self._nominatim = nominatim_facade
-        self._aemet     = aemet_facade
 
         self._aemet_cache: dict = {}
         self._hail_cache:  dict = {}
@@ -247,31 +237,30 @@ class WeatherService:
         }
 
     # ──────────────────────────────────────────────
-    # AEMET ALERTS (con caché)
+    # ALERTAS LOCALES (sin AEMET, basadas en Open-Meteo)
     # ──────────────────────────────────────────────
     def get_aemet_alerts(self, lat: float, lon: float) -> dict:
-        cache_key = f"aemet_{round(lat, 2)}_{round(lon, 2)}"
+        """Calcula alertas meteorológicas propias usando Open-Meteo."""
+        cache_key = f"alerts_{round(lat, 2)}_{round(lon, 2)}"
         now       = datetime.now()
 
         cached = self._aemet_cache.get(cache_key)
         if cached and (now - cached["ts"]).total_seconds() < _AEMET_TTL:
             return cached["data"]
 
-        result = _default_aemet_result()
-
         try:
-            province_words = self._get_province_words(lat, lon)
-            content_type, body = self._aemet.fetch_alerts_raw(lat, lon)
-
-            if "xml" in content_type or body.strip().startswith("<"):
-                self._parse_cap_xml(body, province_words, result)
-            elif "json" in content_type:
-                self._parse_cap_json(body, province_words, result)
-
+            meteo_data = self._meteo.get_alerts_data(lat, lon)
+            result     = calculate_alerts(meteo_data, lat=lat, lon=lon)
         except Exception as e:
-            print(f"[AEMET] Error: {e} — usando valores por defecto")
+            print(f"[Alertas] Error calculando alertas: {e}")
+            result = {
+                "calor":   {"nivel": "verde", "valor": None},
+                "lluvia":  {"nivel": "verde", "valor": None},
+                "nieve":   {"nivel": "verde", "valor": None},
+                "granizo": {"nivel": "verde", "valor": None},
+                "ticker":  ["No hay alertas activas"],
+            }
 
-        result["ticker"] = self._build_ticker(result)
         self._aemet_cache[cache_key] = {"ts": now, "data": result}
         return result
 
@@ -295,100 +284,3 @@ class WeatherService:
     # ──────────────────────────────────────────────
     def get_agro_insights(self, data: dict, crop_type: str) -> dict:
         return get_card_insights(data, crop_type)
-
-    # ──────────────────────────────────────────────
-    # HELPERS PRIVADOS — AEMET
-    # ──────────────────────────────────────────────
-    def _get_province_words(self, lat: float, lon: float) -> set[str]:
-        province = self._nominatim.get_province(lat, lon)
-        return {w.strip("/()" ) for w in province.split()}
-
-    def _parse_cap_xml(self, xml_text: str, province_words: set, result: dict) -> None:
-        try:
-            root = ET.fromstring(xml_text)
-        except ET.ParseError:
-            return
-
-        alerts = root.findall(".//cap:alert", _CAP_NS) or (
-            [root] if root.tag.endswith("alert") else []
-        )
-
-        for alert in alerts:
-            for info in alert.findall("cap:info", _CAP_NS):
-                lang = info.findtext("cap:language", default="es", namespaces=_CAP_NS)
-                if lang and lang.lower() not in ("es", "es-es", ""):
-                    continue
-
-                event        = (info.findtext("cap:event",    default="", namespaces=_CAP_NS) or "").lower()
-                severity_raw = (info.findtext("cap:severity", default="", namespaces=_CAP_NS) or "").lower()
-                area_desc    = " ".join(
-                    (a.findtext("cap:areaDesc", default="", namespaces=_CAP_NS) or "").lower()
-                    for a in info.findall("cap:area", _CAP_NS)
-                )
-
-                awareness_type  = ""
-                awareness_level = ""
-                valor           = None
-                for param in info.findall("cap:parameter", _CAP_NS):
-                    pname = (param.findtext("cap:valueName", default="", namespaces=_CAP_NS) or "").lower()
-                    pval  = (param.findtext("cap:value",     default="", namespaces=_CAP_NS) or "").lower()
-                    if "awareness_type"  in pname: awareness_type  = pval
-                    if "awareness_level" in pname: awareness_level = pval
-                    if any(k in pname for k in ("umbral", "threshold", "valor", "value")):
-                        valor = pval
-
-                zona_text = area_desc + " " + event
-                if province_words and not any(w in zona_text for w in province_words):
-                    continue
-
-                tipo = next(
-                    (cat for kw, cat in _CAP_EVENT_MAP.items() if kw in event + " " + awareness_type),
-                    None,
-                )
-                if not tipo:
-                    continue
-
-                nivel = _CAP_SEVERITY_MAP.get(severity_raw) or _CAP_SEVERITY_MAP.get(awareness_level, "amarillo")
-                if _LEVEL_ORDER[nivel] > _LEVEL_ORDER[result[tipo]["nivel"]]:
-                    result[tipo]["nivel"] = nivel
-                    result[tipo]["valor"] = valor
-
-    def _parse_cap_json(self, body: str, province_words: set, result: dict) -> None:
-        import json
-        try:
-            avisos = json.loads(body)
-        except Exception:
-            return
-
-        if not isinstance(avisos, list):
-            return
-
-        for aviso in avisos:
-            event  = (aviso.get("evento") or aviso.get("event") or "").lower()
-            severity = (aviso.get("nivel") or aviso.get("severity") or "").lower()
-            zona   = (aviso.get("zona")   or aviso.get("area")    or "").lower()
-            if province_words and not any(w in zona for w in province_words):
-                continue
-            tipo = next((cat for kw, cat in _CAP_EVENT_MAP.items() if kw in event), None)
-            if not tipo:
-                continue
-            nivel = _CAP_SEVERITY_MAP.get(severity, "amarillo")
-            if _LEVEL_ORDER[nivel] > _LEVEL_ORDER[result[tipo]["nivel"]]:
-                result[tipo]["nivel"] = nivel
-                result[tipo]["valor"] = aviso.get("umbral")
-
-    @staticmethod
-    def _build_ticker(result: dict) -> list[str]:
-        LABEL = {"calor": "calor", "lluvia": "lluvia/tormentas", "nieve": "nieve", "granizo": "granizo"}
-        UNIT  = {"calor": "ºC",   "lluvia": " mm",              "nieve": " cm",   "granizo": ""}
-        msgs  = []
-        for tipo, info in result.items():
-            if tipo == "ticker" or info["nivel"] == "verde":
-                continue
-            nivel_txt = info["nivel"].capitalize()
-            valor_txt = (
-                f": temperatura > {info['valor']}{UNIT[tipo]}" if (tipo == "calor" and info["valor"])
-                else (f": {info['valor']}{UNIT[tipo]}" if info["valor"] else "")
-            )
-            msgs.append(f"Alerta {nivel_txt} por {LABEL[tipo]}{valor_txt}")
-        return msgs or ["No hay alertas activas"]

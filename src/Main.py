@@ -21,7 +21,6 @@ from daos.PointDAO import PointDAO
 
 from facades.OpenMeteoFacade import OpenMeteoFacade
 from facades.NominatimFacade import NominatimFacade
-from facades.AemetFacade import AemetFacade
 
 from services.UserService import UserService
 from services.FieldService import FieldService
@@ -29,7 +28,6 @@ from services.WeatherService import WeatherService
 from services.EmailService import EmailService
 from AlertMonitor import AlertMonitor
 from contextlib import asynccontextmanager
-from config import AEMET_API_KEY
 
 # ──────────────────────────────────────────────
 # INYECCIÓN DE DEPENDENCIAS
@@ -40,11 +38,10 @@ _point_dao = PointDAO()
 
 _meteo_facade     = OpenMeteoFacade()
 _nominatim_facade = NominatimFacade()
-_aemet_facade     = AemetFacade(api_key=AEMET_API_KEY)
 
 user_service    = UserService(_user_dao)
 field_service   = FieldService(_field_dao, _point_dao)
-weather_service = WeatherService(_meteo_facade, _nominatim_facade, _aemet_facade)
+weather_service = WeatherService(_meteo_facade, _nominatim_facade)
 email_service   = EmailService()
 
 alert_monitor = AlertMonitor(

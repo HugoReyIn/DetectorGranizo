@@ -22,5 +22,17 @@
     "lluvia": "verde",
     "nieve": "verde",
     "granizo": "verde"
+  },
+  "51": {
+    "calor": "verde",
+    "lluvia": "verde",
+    "nieve": "verde",
+    "granizo": "verde"
+  },
+  "53": {
+    "calor": "verde",
+    "lluvia": "verde",
+    "nieve": "verde",
+    "granizo": "verde"
   }
 }

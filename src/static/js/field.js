@@ -1,4 +1,4 @@
-import { loadWeatherByCoords } from "./weather.js";
+import { loadWeatherByCoords, getHailPrediction, getMaxHailNext6h } from "./weather.js";
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -56,6 +56,46 @@ document.addEventListener("DOMContentLoaded", () => {
                 redraw();
             }
         });
+    }
+
+    function addPointOnLine(e) {
+        // Encuentra el segmento más cercano al click e inserta el punto ahí
+        if (points.length < 2) return;
+
+        let bestIdx = 0;
+        let bestDist = Infinity;
+
+        for (let i = 0; i < points.length; i++) {
+            const a = points[i];
+            const b = points[(i + 1) % points.length];
+
+            // Distancia del punto al segmento a-b
+            const dist = distToSegment(e.latlng, a, b);
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestIdx = i;
+            }
+        }
+
+        // Insertar el nuevo punto después de bestIdx
+        const newPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+        points.splice(bestIdx + 1, 0, newPoint);
+
+        const marker = L.marker(e.latlng, { draggable: true, icon: whiteIcon }).addTo(map);
+        markers.splice(bestIdx + 1, 0, marker);
+        addMarkerEvents(marker);
+        redraw();
+    }
+
+    function distToSegment(p, a, b) {
+        // Distancia en grados (suficiente para comparar)
+        const dx = b.lng - a.lng;
+        const dy = b.lat - a.lat;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Math.hypot(p.lng - a.lng, p.lat - a.lat);
+        let t = ((p.lng - a.lng) * dx + (p.lat - a.lat) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p.lng - (a.lng + t * dx), p.lat - (a.lat + t * dy));
     }
 
     function addMarkerEvents(marker) {
