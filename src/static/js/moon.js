@@ -7,27 +7,20 @@
     // Basado en algoritmo de Jean Meeus "Astronomical Algorithms"
     // ─────────────────────────────────────────────
 
-    /**
-     * Devuelve la fracción del ciclo lunar [0, 1) para una fecha dada.
-     * 0 = Luna nueva, 0.25 = Cuarto creciente, 0.5 = Luna llena, 0.75 = Cuarto menguante
-     */
     function getMoonAge(date) {
-        // Referencia: luna nueva conocida — 6 enero 2000 18:14 UTC
         const KNOWN_NEW_MOON = new Date(Date.UTC(2000, 0, 6, 18, 14, 0));
-        const SYNODIC_MONTH  = 29.530588853; // días
-
+        const SYNODIC_MONTH  = 29.530588853;
         const diffDays = (date - KNOWN_NEW_MOON) / (1000 * 60 * 60 * 24);
         const age = ((diffDays % SYNODIC_MONTH) + SYNODIC_MONTH) % SYNODIC_MONTH;
-        return age; // días desde última luna nueva
+        return age;
     }
 
     function getMoonFraction(age) {
-        // Iluminación como fracción [0,1]
         return (1 - Math.cos((2 * Math.PI * age) / 29.530588853)) / 2;
     }
 
     function getMoonPhaseInfo(age) {
-        const f = age / 29.530588853; // fracción del ciclo [0,1)
+        const f = age / 29.530588853;
         if (f < 0.025 || f >= 0.975) return { name: "Luna nueva",        emoji: "🌑", key: "nueva" };
         if (f < 0.225)                return { name: "Cuarto creciente",  emoji: "🌒", key: "creciente" };
         if (f < 0.275)                return { name: "Cuarto creciente",  emoji: "🌓", key: "creciente" };
@@ -38,7 +31,6 @@
         return                               { name: "Luna nueva",        emoji: "🌘", key: "nueva" };
     }
 
-    // Nombres precisos por fracción de ciclo
     function getExactPhaseName(f) {
         if (f < 0.025 || f >= 0.975) return "Luna nueva";
         if (f < 0.25)                 return "Creciente gibosa";
@@ -50,16 +42,12 @@
         return "Menguante gibosa";
     }
 
-    /**
-     * Encuentra la fecha de la próxima ocurrencia de una fase concreta.
-     * targetFraction: 0=nueva, 0.25=creciente, 0.5=llena, 0.75=menguante
-     */
     function nextPhaseDate(fromDate, targetFraction) {
         const SYNODIC = 29.530588853;
         const age = getMoonAge(fromDate);
         const currentFrac = age / SYNODIC;
         let daysUntil = ((targetFraction - currentFrac) * SYNODIC + SYNODIC) % SYNODIC;
-        if (daysUntil < 0.5) daysUntil += SYNODIC; // evitar "ya pasó hace horas"
+        if (daysUntil < 0.5) daysUntil += SYNODIC;
         const result = new Date(fromDate);
         result.setDate(result.getDate() + Math.round(daysUntil));
         return result;
@@ -71,93 +59,109 @@
 
     // ─────────────────────────────────────────────
     // DIBUJO DEL CANVAS
+    //
+    // Método: path bezier directo, sin globalCompositeOperation.
+    // La zona iluminada se traza como un path cerrado de dos curvas:
+    //   1. LIMBO: semicírculo exterior (arco del borde de la luna)
+    //   2. TERMINADOR: elipse aplastada (bezier) que separa luz/sombra
+    //
+    // Variable clave: k = cos(2π·frac)
+    //   k =  1  → luna nueva      (ex = r, hoz = 0 area)
+    //   k =  0  → cuartos         (ex = 0, terminador vertical)
+    //   k = -1  → luna llena      (ex = r al otro lado, todo iluminado)
+    //
+    // Fases crecientes (frac 0..0.5): limbo en la DERECHA
+    //   k > 0 → hoz creciente       (terminador convexo a la izquierda)
+    //   k < 0 → gibosa creciente    (terminador cóncavo, bulge a la derecha)
+    //
+    // Fases menguantes (frac 0.5..1): limbo en la IZQUIERDA
+    //   k > 0 → gibosa menguante    (terminador convexo a la derecha)  ← caso actual
+    //   k < 0 → hoz menguante       (terminador cóncavo, bulge a la izquierda)
     // ─────────────────────────────────────────────
 
-    /**
-     * Dibuja la luna en el canvas con la parte iluminada correcta.
-     * age: días desde luna nueva
-     */
     function drawMoon(canvas, age) {
-        const ctx    = canvas.getContext("2d");
-        const W      = canvas.width;
-        const H      = canvas.height;
-        const cx     = W / 2;
-        const cy     = H / 2;
-        const r      = W / 2 - 6;
+        const ctx     = canvas.getContext("2d");
+        const W       = canvas.width;
+        const H       = canvas.height;
+        const cx      = W / 2;
+        const cy      = H / 2;
+        const r       = W / 2 - 6;
         const SYNODIC = 29.530588853;
-        const frac   = age / SYNODIC; // [0,1)
+        const frac    = age / SYNODIC; // [0,1)
 
         ctx.clearRect(0, 0, W, H);
 
-        // Fondo oscuro (cielo)
+        // Fondo oscuro
         ctx.fillStyle = "#1a1a2e";
         ctx.beginPath();
         ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Disco de la luna (lado oscuro base)
+        // Disco oscuro base (lado no iluminado)
         ctx.fillStyle = "#2a2a3e";
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
 
-        // ── Parte iluminada ──
-        // La luna crece por la derecha (hemisferio norte)
-        // frac=0: nueva (todo oscuro), frac=0.5: llena (todo claro)
-        // frac=0.25: cuarto creciente (mitad derecha iluminada)
-        // frac=0.75: cuarto menguante (mitad izquierda iluminada)
-
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.clip();
-
-        if (frac < 0.5) {
-            // Fase creciente: iluminado derecha → llena
-            const t = frac * 2; // [0,1]: 0=nueva, 1=llena
-            // Elipse que va de r (ancho) a 0 a medida que crece
-            const ex = r * Math.abs(1 - 2 * t); // ancho del terminador
-            const waxing = t <= 0.5;
+        // ── Zona iluminada ──
+        const illum = (1 - Math.cos(2 * Math.PI * frac)) / 2;
+        if (illum > 0.005) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.clip();
 
             ctx.fillStyle = "#f0e68c";
 
-            // Semicírculo iluminado (derecha)
+            // k = cos(2π·frac): positivo = hoz/gibosa según fase; negativo = el otro caso
+            const k  = Math.cos(2 * Math.PI * frac);
+            // ex: semi-eje horizontal del terminador
+            const ex = r * Math.abs(k);
+            // Factor de control bezier para semielipse (aproximación estándar)
+            const K   = 0.5523;
+            const cpY = r * K;
+            const cpX = ex * K;
+
             ctx.beginPath();
-            ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2); // mitad derecha
+
+            if (frac < 0.5) {
+                // ── CRECIENTE: limbo por la derecha ──
+                ctx.moveTo(cx, cy - r);
+                // Limbo derecho: arco horario de norte a sur
+                ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2);
+                // Terminador: de sur (cx, cy+r) a norte (cx, cy-r)
+                if (k > 0) {
+                    // hoz: terminador convexo hacia la IZQUIERDA
+                    ctx.bezierCurveTo(cx - cpX, cy + cpY, cx - cpX, cy - cpY, cx, cy - r);
+                } else {
+                    // gibosa: terminador convexo hacia la DERECHA (cóncavo desde el limbo)
+                    ctx.bezierCurveTo(cx + cpX, cy + cpY, cx + cpX, cy - cpY, cx, cy - r);
+                }
+            } else {
+                // ── MENGUANTE: limbo por la izquierda ──
+                // Usamos fracM = frac - 0.5 para recalcular k simétricamente
+                const fracM = frac - 0.5;
+                const kM    = Math.cos(2 * Math.PI * fracM);
+                const exM   = r * Math.abs(kM);
+                const cpXM  = exM * K;
+
+                ctx.moveTo(cx, cy - r);
+                // Limbo izquierdo: arco antihorario de norte a sur
+                ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, true);
+                // Terminador: de sur (cx, cy+r) a norte (cx, cy-r)
+                if (kM > 0) {
+                    // gibosa menguante: terminador convexo hacia la DERECHA
+                    ctx.bezierCurveTo(cx + cpXM, cy + cpY, cx + cpXM, cy - cpY, cx, cy - r);
+                } else {
+                    // hoz menguante: terminador convexo hacia la IZQUIERDA (cóncavo desde el limbo)
+                    ctx.bezierCurveTo(cx - cpXM, cy + cpY, cx - cpXM, cy - cpY, cx, cy - r);
+                }
+            }
+
             ctx.closePath();
             ctx.fill();
-
-            // Elipse del terminador
-            ctx.globalCompositeOperation = waxing ? "destination-out" : "source-over";
-            ctx.fillStyle = waxing ? "rgba(0,0,0,1)" : "#f0e68c";
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, ex, r, 0, -Math.PI / 2, Math.PI / 2);
-            ctx.closePath();
-            ctx.fill();
-
-        } else {
-            // Fase menguante: llena → iluminado izquierda → nueva
-            const t = (frac - 0.5) * 2; // [0,1]: 0=llena, 1=nueva
-            const ex = r * Math.abs(1 - 2 * t);
-            const waning = t <= 0.5;
-
-            ctx.fillStyle = "#f0e68c";
-
-            // Semicírculo iluminado (izquierda)
-            ctx.beginPath();
-            ctx.arc(cx, cy, r, Math.PI / 2, -Math.PI / 2); // mitad izquierda
-            ctx.closePath();
-            ctx.fill();
-
-            ctx.globalCompositeOperation = waning ? "destination-out" : "source-over";
-            ctx.fillStyle = waning ? "rgba(0,0,0,1)" : "#f0e68c";
-            ctx.beginPath();
-            ctx.ellipse(cx, cy, ex, r, 0, Math.PI / 2, -Math.PI / 2, true);
-            ctx.closePath();
-            ctx.fill();
+            ctx.restore();
         }
-
-        ctx.restore();
 
         // Borde sutil
         ctx.strokeStyle = "rgba(255,255,255,0.15)";
@@ -166,7 +170,7 @@
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Brillo leve en el limbo iluminado
+        // Brillo leve
         const gradient = ctx.createRadialGradient(cx + r * 0.3, cy - r * 0.3, 0, cx, cy, r);
         gradient.addColorStop(0, "rgba(255,255,240,0.08)");
         gradient.addColorStop(1, "rgba(0,0,0,0)");
@@ -187,17 +191,14 @@
         const illum  = getMoonFraction(age);
         const phase  = getExactPhaseName(frac);
 
-        // Canvas
         const canvas = document.getElementById("moon-canvas");
         if (canvas) drawMoon(canvas, age);
 
-        // Nombre e iluminación
         const nameEl  = document.getElementById("moon-phase-name");
         const illumEl = document.getElementById("moon-illumination");
         if (nameEl)  nameEl.textContent  = phase;
         if (illumEl) illumEl.textContent = Math.round(illum * 100) + " %";
 
-        // Próximas 4 fases
         const list = document.getElementById("moon-phases-list");
         if (!list) return;
 
@@ -208,7 +209,6 @@
             { frac: 0.75, label: "Cuarto menguante", icon: "🌗" },
         ];
 
-        // Generar las próximas 4 ocurrencias en orden cronológico
         const upcoming = [];
         PHASES.forEach(p => {
             const d = nextPhaseDate(now, p.frac);
@@ -228,7 +228,6 @@
         `).join("");
     }
 
-    // Esperar a que el DOM esté listo
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", render);
     } else {
