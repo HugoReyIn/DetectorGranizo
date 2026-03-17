@@ -129,50 +129,91 @@
         <div class="crop-selector-row">
             <label class="crop-label">🌱 Tipo de cultivo</label>
             <select id="crop-type-select" name="crop_type" class="crop-select">
-                <option value="">— Sin especificar —</option>
+                <option value="barbecho" {% if not field or not field.crop_type or field.crop_type == 'barbecho' %}selected{% endif %}>🟤 Barbecho</option>
                 <optgroup label="🌾 Cereales">
-                    <option value="trigo">Trigo</option>
-                    <option value="cebada">Cebada</option>
-                    <option value="maiz">Maíz</option>
-                    <option value="arroz">Arroz</option>
-                    <option value="avena">Avena</option>
-                    <option value="centeno">Centeno</option>
-                    <option value="sorgo">Sorgo</option>
+                    <option value="trigo" {% if field and field.crop_type == 'trigo' %}selected{% endif %}>Trigo</option>
+                    <option value="cebada" {% if field and field.crop_type == 'cebada' %}selected{% endif %}>Cebada</option>
+                    <option value="maiz" {% if field and field.crop_type == 'maiz' %}selected{% endif %}>Maíz</option>
+                    <option value="arroz" {% if field and field.crop_type == 'arroz' %}selected{% endif %}>Arroz</option>
+                    <option value="avena" {% if field and field.crop_type == 'avena' %}selected{% endif %}>Avena</option>
+                    <option value="centeno" {% if field and field.crop_type == 'centeno' %}selected{% endif %}>Centeno</option>
+                    <option value="sorgo" {% if field and field.crop_type == 'sorgo' %}selected{% endif %}>Sorgo</option>
+                    <option value="triticale" {% if field and field.crop_type == 'triticale' %}selected{% endif %}>Triticale</option>
                 </optgroup>
                 <optgroup label="🍇 Frutales y viña">
-                    <option value="vid">Vid / Uva</option>
-                    <option value="manzano">Manzano</option>
-                    <option value="peral">Peral</option>
-                    <option value="melocotonero">Melocotonero</option>
-                    <option value="cerezo">Cerezo</option>
-                    <option value="olivo">Olivo</option>
-                    <option value="citricos">Cítricos</option>
-                    <option value="almendro">Almendro</option>
+                    <option value="vid" {% if field and field.crop_type == 'vid' %}selected{% endif %}>Vid / Uva</option>
+                    <option value="manzano" {% if field and field.crop_type == 'manzano' %}selected{% endif %}>Manzano</option>
+                    <option value="peral" {% if field and field.crop_type == 'peral' %}selected{% endif %}>Peral</option>
+                    <option value="melocotonero" {% if field and field.crop_type == 'melocotonero' %}selected{% endif %}>Melocotonero</option>
+                    <option value="cerezo" {% if field and field.crop_type == 'cerezo' %}selected{% endif %}>Cerezo</option>
+                    <option value="ciruelo" {% if field and field.crop_type == 'ciruelo' %}selected{% endif %}>Ciruelo</option>
+                    <option value="olivo" {% if field and field.crop_type == 'olivo' %}selected{% endif %}>Olivo</option>
+                    <option value="citricos" {% if field and field.crop_type == 'citricos' %}selected{% endif %}>Cítricos</option>
+                    <option value="limonero" {% if field and field.crop_type == 'limonero' %}selected{% endif %}>Limonero</option>
+                    <option value="naranjo" {% if field and field.crop_type == 'naranjo' %}selected{% endif %}>Naranjo</option>
+                    <option value="almendro" {% if field and field.crop_type == 'almendro' %}selected{% endif %}>Almendro</option>
+                    <option value="nogal" {% if field and field.crop_type == 'nogal' %}selected{% endif %}>Nogal</option>
+                    <option value="avellano" {% if field and field.crop_type == 'avellano' %}selected{% endif %}>Avellano</option>
+                    <option value="higuera" {% if field and field.crop_type == 'higuera' %}selected{% endif %}>Higuera</option>
+                    <option value="granado" {% if field and field.crop_type == 'granado' %}selected{% endif %}>Granado</option>
+                    <option value="aguacate" {% if field and field.crop_type == 'aguacate' %}selected{% endif %}>Aguacate</option>
+                    <option value="kiwi" {% if field and field.crop_type == 'kiwi' %}selected{% endif %}>Kiwi</option>
+                </optgroup>
+                <optgroup label="🍓 Bayas y pequeños frutos">
+                    <option value="fresa" {% if field and field.crop_type == 'fresa' %}selected{% endif %}>Fresa / Fresón</option>
+                    <option value="frambuesa" {% if field and field.crop_type == 'frambuesa' %}selected{% endif %}>Frambuesa</option>
+                    <option value="arandano" {% if field and field.crop_type == 'arandano' %}selected{% endif %}>Arándano</option>
+                    <option value="mora" {% if field and field.crop_type == 'mora' %}selected{% endif %}>Mora</option>
                 </optgroup>
                 <optgroup label="🥦 Hortalizas">
-                    <option value="tomate">Tomate</option>
-                    <option value="pimiento">Pimiento</option>
-                    <option value="lechuga">Lechuga</option>
-                    <option value="zanahoria">Zanahoria</option>
-                    <option value="patata">Patata</option>
-                    <option value="cebolla">Cebolla</option>
-                    <option value="ajo">Ajo</option>
-                    <option value="espinaca">Espinaca</option>
-                    <option value="brocoli">Brócoli</option>
+                    <option value="tomate" {% if field and field.crop_type == 'tomate' %}selected{% endif %}>Tomate</option>
+                    <option value="pimiento" {% if field and field.crop_type == 'pimiento' %}selected{% endif %}>Pimiento</option>
+                    <option value="berenjena" {% if field and field.crop_type == 'berenjena' %}selected{% endif %}>Berenjena</option>
+                    <option value="pepino" {% if field and field.crop_type == 'pepino' %}selected{% endif %}>Pepino</option>
+                    <option value="calabacin" {% if field and field.crop_type == 'calabacin' %}selected{% endif %}>Calabacín</option>
+                    <option value="melon" {% if field and field.crop_type == 'melon' %}selected{% endif %}>Melón</option>
+                    <option value="sandia" {% if field and field.crop_type == 'sandia' %}selected{% endif %}>Sandía</option>
+                    <option value="lechuga" {% if field and field.crop_type == 'lechuga' %}selected{% endif %}>Lechuga</option>
+                    <option value="espinaca" {% if field and field.crop_type == 'espinaca' %}selected{% endif %}>Espinaca</option>
+                    <option value="acelga" {% if field and field.crop_type == 'acelga' %}selected{% endif %}>Acelga</option>
+                    <option value="brocoli" {% if field and field.crop_type == 'brocoli' %}selected{% endif %}>Brócoli</option>
+                    <option value="coliflor" {% if field and field.crop_type == 'coliflor' %}selected{% endif %}>Coliflor</option>
+                    <option value="repollo" {% if field and field.crop_type == 'repollo' %}selected{% endif %}>Repollo</option>
+                    <option value="zanahoria" {% if field and field.crop_type == 'zanahoria' %}selected{% endif %}>Zanahoria</option>
+                    <option value="patata" {% if field and field.crop_type == 'patata' %}selected{% endif %}>Patata</option>
+                    <option value="boniato" {% if field and field.crop_type == 'boniato' %}selected{% endif %}>Boniato</option>
+                    <option value="cebolla" {% if field and field.crop_type == 'cebolla' %}selected{% endif %}>Cebolla</option>
+                    <option value="ajo" {% if field and field.crop_type == 'ajo' %}selected{% endif %}>Ajo</option>
+                    <option value="puerro" {% if field and field.crop_type == 'puerro' %}selected{% endif %}>Puerro</option>
+                    <option value="esparrago" {% if field and field.crop_type == 'esparrago' %}selected{% endif %}>Espárrago</option>
+                    <option value="alcachofa" {% if field and field.crop_type == 'alcachofa' %}selected{% endif %}>Alcachofa</option>
                 </optgroup>
                 <optgroup label="🌻 Oleaginosas y legumbres">
-                    <option value="girasol">Girasol</option>
-                    <option value="colza">Colza</option>
-                    <option value="soja">Soja</option>
-                    <option value="garbanzo">Garbanzo</option>
-                    <option value="lenteja">Lenteja</option>
-                    <option value="guisante">Guisante</option>
+                    <option value="girasol" {% if field and field.crop_type == 'girasol' %}selected{% endif %}>Girasol</option>
+                    <option value="colza" {% if field and field.crop_type == 'colza' %}selected{% endif %}>Colza</option>
+                    <option value="soja" {% if field and field.crop_type == 'soja' %}selected{% endif %}>Soja</option>
+                    <option value="garbanzo" {% if field and field.crop_type == 'garbanzo' %}selected{% endif %}>Garbanzo</option>
+                    <option value="lenteja" {% if field and field.crop_type == 'lenteja' %}selected{% endif %}>Lenteja</option>
+                    <option value="guisante" {% if field and field.crop_type == 'guisante' %}selected{% endif %}>Guisante</option>
+                    <option value="haba" {% if field and field.crop_type == 'haba' %}selected{% endif %}>Haba</option>
+                    <option value="judia" {% if field and field.crop_type == 'judia' %}selected{% endif %}>Judía verde / alubia</option>
+                    <option value="altramuz" {% if field and field.crop_type == 'altramuz' %}selected{% endif %}>Altramuz</option>
                 </optgroup>
-                <optgroup label="🌿 Forrajes y otros">
-                    <option value="alfalfa">Alfalfa</option>
-                    <option value="remolacha">Remolacha azucarera</option>
-                    <option value="tabaco">Tabaco</option>
-                    <option value="prado">Prado / Pradera</option>
+                <optgroup label="🌿 Forrajes y pastos">
+                    <option value="alfalfa" {% if field and field.crop_type == 'alfalfa' %}selected{% endif %}>Alfalfa</option>
+                    <option value="veza" {% if field and field.crop_type == 'veza' %}selected{% endif %}>Veza</option>
+                    <option value="ray-grass" {% if field and field.crop_type == 'ray-grass' %}selected{% endif %}>Ray-grass</option>
+                    <option value="prado" {% if field and field.crop_type == 'prado' %}selected{% endif %}>Prado / Pradera</option>
+                    <option value="cesped" {% if field and field.crop_type == 'cesped' %}selected{% endif %}>Césped</option>
+                </optgroup>
+                <optgroup label="🏭 Industriales y otros">
+                    <option value="remolacha" {% if field and field.crop_type == 'remolacha' %}selected{% endif %}>Remolacha azucarera</option>
+                    <option value="tabaco" {% if field and field.crop_type == 'tabaco' %}selected{% endif %}>Tabaco</option>
+                    <option value="algodon" {% if field and field.crop_type == 'algodon' %}selected{% endif %}>Algodón</option>
+                    <option value="lino" {% if field and field.crop_type == 'lino' %}selected{% endif %}>Lino</option>
+                    <option value="caña-azucar" {% if field and field.crop_type == 'caña-azucar' %}selected{% endif %}>Caña de azúcar</option>
+                    <option value="lavanda" {% if field and field.crop_type == 'lavanda' %}selected{% endif %}>Lavanda / Espliego</option>
+                    <option value="azafran" {% if field and field.crop_type == 'azafran' %}selected{% endif %}>Azafrán</option>
                 </optgroup>
             </select>
             <span class="crop-tip" id="crop-tip"></span>
@@ -257,13 +298,31 @@
             <!-- GRID DE DATOS AGRONÓMICOS -->
             <div class="agro-grid" id="agro-grid">
 
-                <!-- ET₀ Evapotranspiración -->
-                <div class="agro-card agro-card-et0">
-                    <div class="agro-card-icon">💧</div>
-                    <div class="agro-card-label">ET₀ hoy</div>
-                    <div class="agro-card-value" id="agro-et0-today">-- mm</div>
-                    <div class="agro-card-sub" id="agro-et0-current">Actual: -- mm/h</div>
-                    <div class="agro-card-tip" id="agro-et0-tip">Calculando necesidad de riego...</div>
+                <!-- Horas de calor -->
+                <div class="agro-card agro-card-heat">
+                    <div class="agro-card-icon">🔥</div>
+                    <div class="agro-card-label">Horas de calor</div>
+                    <div class="agro-card-value" id="agro-heat-hours">--</div>
+                    <div class="agro-card-sub">últimas 24h (&gt;30°C)</div>
+                    <div class="agro-card-tip" id="agro-heat-tip">Calculando estrés térmico...</div>
+                </div>
+
+                <!-- Horas de frío -->
+                <div class="agro-card agro-card-cold">
+                    <div class="agro-card-icon">❄️</div>
+                    <div class="agro-card-label">Horas de frío</div>
+                    <div class="agro-card-value" id="agro-cold-hours">--</div>
+                    <div class="agro-card-sub">últimas 24h (0–7°C)</div>
+                    <div class="agro-card-tip" id="agro-cold-tip">Calculando acumulado...</div>
+                </div>
+
+                <!-- Radiación solar -->
+                <div class="agro-card agro-card-radiation">
+                    <div class="agro-card-icon">🔆</div>
+                    <div class="agro-card-label">Radiación solar</div>
+                    <div class="agro-card-value" id="agro-radiation">-- W/m²</div>
+                    <div class="agro-card-sub">Energía fotosintética activa</div>
+                    <div class="agro-card-tip" id="agro-radiation-tip">Calculando...</div>
                 </div>
 
                 <!-- Índice UV -->
@@ -277,23 +336,44 @@
 
                 <!-- Presión atmosférica -->
                 <div class="agro-card agro-card-pressure">
-                    <div class="agro-card-icon">🌡️</div>
+                    <div class="agro-card-icon">🌀</div>
                     <div class="agro-card-label">Presión</div>
                     <div class="agro-card-value" id="agro-pressure">-- hPa</div>
                     <div class="agro-card-sub" id="agro-vpd">VPD: -- kPa</div>
                     <div class="agro-card-tip" id="agro-pressure-tip">Calculando...</div>
                 </div>
 
-                <!-- Radiación solar -->
-                <div class="agro-card agro-card-radiation">
-                    <div class="agro-card-icon">🔆</div>
-                    <div class="agro-card-label">Radiación solar</div>
-                    <div class="agro-card-value" id="agro-radiation">-- W/m²</div>
-                    <div class="agro-card-sub">Energía fotosintética activa</div>
-                    <div class="agro-card-tip" id="agro-radiation-tip">Calculando...</div>
+                <!-- ET₀ hoy -->
+                <div class="agro-card agro-card-et0">
+                    <div class="agro-card-icon">💧</div>
+                    <div class="agro-card-label">ET₀ hoy</div>
+                    <div class="agro-card-value" id="agro-et0-today">-- mm</div>
+                    <div class="agro-card-sub" id="agro-et0-current">Actual: -- mm/h</div>
+                    <div class="agro-card-tip" id="agro-et0-tip">Calculando necesidad de riego...</div>
                 </div>
 
-                <!-- Humedad del suelo -->
+                <!-- Granizo IA -->
+                <div class="agro-card agro-card-hail">
+                    <div class="agro-card-icon">🧊</div>
+                    <div class="agro-card-label">Riesgo granizo</div>
+                    <div class="agro-card-value" id="agro-hail-risk">--%</div>
+                    <div class="agro-card-sub">Próximas 6h (IA)</div>
+                    <div class="agro-hail-bar-wrap">
+                        <div class="agro-hail-bar" id="agro-hail-bar"></div>
+                    </div>
+                    <div class="agro-card-tip" id="agro-hail-tip"></div>
+                </div>
+
+                <!-- Riesgo de hongos -->
+                <div class="agro-card agro-card-fungus">
+                    <div class="agro-card-icon">🍄</div>
+                    <div class="agro-card-label">Riesgo hongos</div>
+                    <div class="agro-card-value" id="agro-fungus-risk">--</div>
+                    <div class="agro-card-sub">Próximas 12h</div>
+                    <div class="agro-card-tip" id="agro-fungus-tip">Calculando mildiu/botrytis...</div>
+                </div>
+
+                <!-- Humedad del suelo (ancho completo) -->
                 <div class="agro-card agro-card-soil agro-card-wide">
                     <div class="agro-card-icon">🌍</div>
                     <div class="agro-card-label">Humedad del suelo</div>
@@ -323,7 +403,7 @@
                     <div class="agro-card-tip" id="agro-soil-tip">Calculando estado hídrico...</div>
                 </div>
 
-                <!-- Temperatura del suelo -->
+                <!-- Temperatura del suelo (ancho completo) -->
                 <div class="agro-card agro-card-soiltemp agro-card-wide">
                     <div class="agro-card-icon">🌡️</div>
                     <div class="agro-card-label">Temperatura del suelo</div>
@@ -344,43 +424,27 @@
                     <div class="agro-card-tip" id="agro-soiltemp-tip">Calculando actividad microbiana...</div>
                 </div>
 
-                <!-- Horas de frío -->
-                <div class="agro-card agro-card-cold">
-                    <div class="agro-card-icon">❄️</div>
-                    <div class="agro-card-label">Horas de frío</div>
-                    <div class="agro-card-value" id="agro-cold-hours">--</div>
-                    <div class="agro-card-sub">últimas 24h (0–7°C)</div>
-                    <div class="agro-card-tip" id="agro-cold-tip">Calculando acumulado...</div>
-                </div>
-
-                <!-- Granizo IA -->
-                <div class="agro-card agro-card-hail">
-                    <div class="agro-card-icon">🧊</div>
-                    <div class="agro-card-label">Riesgo granizo</div>
-                    <div class="agro-card-value" id="agro-hail-risk">--%</div>
-                    <div class="agro-card-sub">Próximas 6h (IA)</div>
-                    <div class="agro-hail-bar-wrap">
-                        <div class="agro-hail-bar" id="agro-hail-bar"></div>
+                <!-- Balance hídrico (4 columnas) -->
+                <div class="agro-card agro-card-water-balance" style="grid-column: span 4;">
+                    <div class="agro-card-icon">⚖️</div>
+                    <div class="agro-card-label">Balance hídrico (7 días)</div>
+                    <div class="agro-card-value" id="agro-water-balance">-- mm</div>
+                    <div class="agro-water-balance-detail">
+                        <span>💧 ET₀ 7d: <strong id="agro-et0-7d">--</strong></span>
+                        <span>🌧️ Lluvia 7d: <strong id="agro-rain-7d">--</strong></span>
+                        <span>📅 ET₀ 30d: <strong id="agro-et0-30d">--</strong></span>
                     </div>
-                    <div class="agro-card-tip" id="agro-hail-tip"></div>
+                    <div class="agro-card-tip" id="agro-water-balance-tip">Calculando...</div>
                 </div>
 
             </div><!-- /agro-grid -->
 
-            <!-- ET₀ PREVISIÓN 4 DÍAS -->
-            <div class="agro-forecast-block">
-                <h4 class="agro-subtitle">💧 Previsión ET₀ y lluvia — próximos 4 días</h4>
-                <div class="agro-forecast-grid" id="agro-et0-forecast">
-                    <!-- Generado por JS -->
-                </div>
-            </div>
-
-            <!-- GRÁFICA ET₀ HORARIA HOY -->
-            <div class="chart-toggle-row" id="agro-et0-chart-toggle">
+            <!-- GRÁFICA ET₀ HORARIA HOY — SIEMPRE VISIBLE -->
+            <div class="chart-toggle-row rotated-arrow" id="agro-et0-chart-toggle">
                 <span class="chart-toggle-label">📈 ET₀ horaria hoy (necesidad de riego)</span>
-                <div class="chart-arrow">▼</div>
+                <div class="chart-arrow rotated">▼</div>
             </div>
-            <div class="chart-panel" id="agro-et0-chart-panel">
+            <div class="chart-panel open" id="agro-et0-chart-panel">
                 <div class="chart-panel-inner">
                     <div class="chart-canvas-wrapper" style="height:180px;">
                         <canvas id="agro-et0-canvas"></canvas>

@@ -57,10 +57,11 @@ class OpenMeteoFacade:
             "&hourly=et0_fao_evapotranspiration,uv_index,surface_pressure,"
             "soil_moisture_0_1cm,soil_moisture_1_3cm,soil_moisture_3_9cm,"
             "soil_temperature_0cm,soil_temperature_6cm,soil_temperature_18cm,"
-            "temperature_2m,windspeed_10m,shortwave_radiation,vapour_pressure_deficit"
+            "temperature_2m,windspeed_10m,shortwave_radiation,vapour_pressure_deficit,"
+            "relative_humidity_2m,precipitation"
             "&daily=et0_fao_evapotranspiration,uv_index_max,precipitation_sum,"
             "rain_sum,sunrise,sunset,temperature_2m_max,temperature_2m_min"
-            "&forecast_days=5&timezone=auto"
+            "&forecast_days=5&past_days=30&timezone=auto"
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()

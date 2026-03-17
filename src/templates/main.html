@@ -131,7 +131,7 @@
         <div class="field-info">
             <h3>{{ field.name }}</h3>
             <span>{{ field.municipality }}</span>
-            {% if field.crop_type %}
+            {% if field.crop_type and field.crop_type != 'barbecho' %}
             <span class="field-crop-badge">🌱 {{ field.crop_type | capitalize }}</span>
             {% endif %}
         </div>

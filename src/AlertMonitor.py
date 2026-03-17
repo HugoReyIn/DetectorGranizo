@@ -1,8 +1,8 @@
 """
 AlertMonitor.py
 Scheduler que corre cada hora y comprueba alertas AEMET para cada campo.
-Solo envía email cuando un tipo de alerta SUBE de nivel respecto al
-último estado conocido (ej: verde → amarillo, amarillo → naranja).
+Envía email cuando un tipo de alerta SUBE de nivel (ej: verde → amarillo)
+o BAJA de nivel (ej: amarillo → verde = desactivación).
 
 Estado persistido en: alert_state.json
 """
@@ -101,20 +101,28 @@ class AlertMonitor:
         field_key      = str(field.id)
         previous_state = self._state.get(field_key, {})
         new_state      = {}
-        alertas_subida = {}
+        alertas_subida  = {}   # nivel sube  → activación / escalada
+        alertas_bajada  = {}   # nivel baja  → desactivación / mejora
 
-        for tipo in ("calor", "lluvia", "nieve", "granizo"):
+        for tipo in ("calor", "lluvia", "nieve", "granizo", "viento",
+                     "tormenta", "helada", "niebla"):
             nivel_actual   = alerts.get(tipo, {}).get("nivel", "verde")
             nivel_anterior = previous_state.get(tipo, "verde")
             new_state[tipo] = nivel_actual
 
-            # Solo notificar si el nivel SUBE
             if LEVEL_ORDER[nivel_actual] > LEVEL_ORDER[nivel_anterior]:
                 alertas_subida[tipo] = alerts[tipo]
+            elif LEVEL_ORDER[nivel_actual] < LEVEL_ORDER[nivel_anterior]:
+                # Guardamos el nivel anterior para que el email sea informativo
+                alertas_bajada[tipo] = {
+                    "nivel_anterior": nivel_anterior,
+                    "nivel_actual":   nivel_actual,
+                    "valor": alerts.get(tipo, {}).get("valor"),
+                }
 
         self._state[field_key] = new_state
 
-        if not alertas_subida:
+        if not alertas_subida and not alertas_bajada:
             return
 
         # Obtener email del propietario del campo
@@ -122,12 +130,21 @@ class AlertMonitor:
         if not user or not user.email:
             return
 
-        print(f"[AlertMonitor] Alerta subida en campo '{field.name}' → notificando a {user.email}")
-        self._email_service.send_aemet_alert(
-            to         = user.email,
-            field_name = field.name,
-            alerts     = alertas_subida,
-        )
+        if alertas_subida:
+            print(f"[AlertMonitor] Alerta SUBIDA en campo '{field.name}' → notificando a {user.email}")
+            self._email_service.send_aemet_alert(
+                to         = user.email,
+                field_name = field.name,
+                alerts     = alertas_subida,
+            )
+
+        if alertas_bajada:
+            print(f"[AlertMonitor] Alerta BAJADA en campo '{field.name}' → notificando a {user.email}")
+            self._email_service.send_alert_deactivated(
+                to         = user.email,
+                field_name = field.name,
+                alerts     = alertas_bajada,
+            )
 
     # ──────────────────────────────────────────────
     # PERSISTENCIA DE ESTADO

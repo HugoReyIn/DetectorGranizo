@@ -173,24 +173,106 @@ class WeatherService:
             if t is not None and 0 < t <= 7
         )
 
+        # ── ET₀ acumulada: 7 días y 30 días (usando daily forecast disponible) ──
+        et0_daily_list = daily.get("et0_fao_evapotranspiration", [])
+        rain_daily_list = daily.get("rain_sum", [])
+        # Sumamos todos los días disponibles (hasta 5 de forecast)
+        # Para 7d y mes usamos la media del periodo * días — usando historical via hourly
+        et0_all_hourly = hourly.get("et0_fao_evapotranspiration", [])
+        # Suma de ET0 las últimas 168h (7 días) disponibles en el array hourly
+        past_7d_start  = max(0, idx - 168)
+        past_30d_start = max(0, idx - 720)
+        et0_7d  = round(sum(v for v in et0_all_hourly[past_7d_start:idx+1]  if v is not None), 2)
+        et0_30d = round(sum(v for v in et0_all_hourly[past_30d_start:idx+1] if v is not None), 2)
+
+        # ── Lluvia acumulada últimas 24h (desde hourly) ──
+        precip_hourly = hourly.get("precipitation", [])
+        rain_24h  = round(sum(v for v in precip_hourly[max(0,idx-24):idx+1] if v is not None), 2)
+        rain_7d   = round(sum(v for v in precip_hourly[past_7d_start:idx+1] if v is not None), 2)
+
+        # ── Balance hídrico ──
+        water_balance_7d = round(rain_7d - et0_7d, 2)
+
+        # ── Horas de calor (T > 30°C) últimas 24h ──
+        heat_hours = sum(
+            1 for t in temps_24h[start_idx: idx + 1]
+            if t is not None and t > 30
+        )
+
+        # ── Riesgo de hongos ──
+        temps_12h    = hourly.get("temperature_2m",      [])
+        humidity_12h = hourly.get("relative_humidity_2m", []) or hourly.get("relativehumidity_2m", [])
+        fungus_hours = sum(
+            1 for i in range(idx, min(idx+12, len(temps_12h)))
+            if (i < len(temps_12h) and temps_12h[i] is not None and 15 <= temps_12h[i] <= 25
+                and i < len(humidity_12h) and humidity_12h[i] is not None and humidity_12h[i] >= 80)
+        )
+        # Nivel de riesgo: 0=bajo, 1=medio, 2=alto
+        fungus_risk = 0
+        if fungus_hours >= 8:
+            fungus_risk = 2
+        elif fungus_hours >= 4:
+            fungus_risk = 1
+
+        # ── Semáforo agrícola del día ──
+        et0_today_val = safe(et0_daily_list, 0, 2)
+        temp_min_val  = safe(daily.get("temperature_2m_min", []), 0, 1)
+        traffic_lights = []
+        # Riego
+        if et0_today_val is not None:
+            if et0_today_val >= 5:
+                traffic_lights.append({"icon": "🔴", "msg": "Riego urgente — alta demanda hídrica"})
+            elif et0_today_val >= 3:
+                traffic_lights.append({"icon": "🟡", "msg": "Monitorizar riego — demanda moderada"})
+            else:
+                traffic_lights.append({"icon": "🟢", "msg": "Buen día para riego o sin necesidad"})
+        # Helada
+        if temp_min_val is not None and temp_min_val < 3:
+            traffic_lights.append({"icon": "🔴", "msg": "Riesgo de helada esta noche"})
+        # Hongos
+        if fungus_risk == 2:
+            traffic_lights.append({"icon": "🔴", "msg": "Alto riesgo de hongos (mildiu/botrytis)"})
+        elif fungus_risk == 1:
+            traffic_lights.append({"icon": "🟡", "msg": "Riesgo moderado de hongos"})
+        else:
+            traffic_lights.append({"icon": "🟢", "msg": "Condiciones poco favorables para hongos"})
+        # Balance hídrico
+        if water_balance_7d < -15:
+            traffic_lights.append({"icon": "🔴", "msg": f"Déficit hídrico severo ({water_balance_7d} mm/7d)"})
+        elif water_balance_7d < -5:
+            traffic_lights.append({"icon": "🟡", "msg": f"Déficit hídrico leve ({water_balance_7d} mm/7d)"})
+        elif water_balance_7d > 20:
+            traffic_lights.append({"icon": "🟡", "msg": f"Exceso hídrico ({water_balance_7d} mm/7d)"})
+        else:
+            traffic_lights.append({"icon": "🟢", "msg": f"Balance hídrico correcto ({water_balance_7d} mm/7d)"})
+
         return {
-            "et0_current":      safe(hourly.get("et0_fao_evapotranspiration", []), idx, 3),
-            "uv_index":         safe(hourly.get("uv_index",                   []), idx, 1),
-            "pressure":         safe(hourly.get("surface_pressure",           []), idx, 1),
-            "soil_moisture_0":  safe(hourly.get("soil_moisture_0_1cm",        []), idx, 3),
-            "soil_moisture_1":  safe(hourly.get("soil_moisture_1_3cm",        []), idx, 3),
-            "soil_moisture_3":  safe(hourly.get("soil_moisture_3_9cm",        []), idx, 3),
-            "soil_temp_surface":safe(hourly.get("soil_temperature_0cm",       []), idx, 1),
-            "soil_temp_6cm":    safe(hourly.get("soil_temperature_6cm",       []), idx, 1),
-            "soil_temp_18cm":   safe(hourly.get("soil_temperature_18cm",      []), idx, 1),
-            "solar_radiation":  safe(hourly.get("shortwave_radiation",        []), idx, 1),
-            "vpd":              safe(hourly.get("vapour_pressure_deficit",    []), idx, 3),
-            "cold_hours_24h":   cold_hours,
-            "et0_today":        safe(daily.get("et0_fao_evapotranspiration",  []), 0, 2),
-            "uv_max_today":     safe(daily.get("uv_index_max",                []), 0, 1),
-            "rain_today":       safe(daily.get("rain_sum",                    []), 0, 1),
-            "temp_max_today":   safe(daily.get("temperature_2m_max",         []), 0, 1),
-            "temp_min_today":   safe(daily.get("temperature_2m_min",         []), 0, 1),
+            "et0_current":       safe(hourly.get("et0_fao_evapotranspiration", []), idx, 3),
+            "uv_index":          safe(hourly.get("uv_index",                   []), idx, 1),
+            "pressure":          safe(hourly.get("surface_pressure",           []), idx, 1),
+            "soil_moisture_0":   safe(hourly.get("soil_moisture_0_1cm",        []), idx, 3),
+            "soil_moisture_1":   safe(hourly.get("soil_moisture_1_3cm",        []), idx, 3),
+            "soil_moisture_3":   safe(hourly.get("soil_moisture_3_9cm",        []), idx, 3),
+            "soil_temp_surface": safe(hourly.get("soil_temperature_0cm",       []), idx, 1),
+            "soil_temp_6cm":     safe(hourly.get("soil_temperature_6cm",       []), idx, 1),
+            "soil_temp_18cm":    safe(hourly.get("soil_temperature_18cm",      []), idx, 1),
+            "solar_radiation":   safe(hourly.get("shortwave_radiation",        []), idx, 1),
+            "vpd":               safe(hourly.get("vapour_pressure_deficit",    []), idx, 3),
+            "cold_hours_24h":    cold_hours,
+            "heat_hours_24h":    heat_hours,
+            "et0_today":         et0_today_val,
+            "et0_7d":            et0_7d,
+            "et0_30d":           et0_30d,
+            "rain_24h":          rain_24h,
+            "rain_7d":           rain_7d,
+            "water_balance_7d":  water_balance_7d,
+            "fungus_risk":       fungus_risk,
+            "fungus_hours":      fungus_hours,
+            "traffic_lights":    traffic_lights,
+            "uv_max_today":      safe(daily.get("uv_index_max",                []), 0, 1),
+            "rain_today":        safe(daily.get("rain_sum",                    []), 0, 1),
+            "temp_max_today":    safe(daily.get("temperature_2m_max",         []), 0, 1),
+            "temp_min_today":    safe(daily.get("temperature_2m_min",         []), 0, 1),
             "et0_forecast": [
                 {
                     "date":  daily.get("time", [])[i] if i < len(daily.get("time", [])) else None,

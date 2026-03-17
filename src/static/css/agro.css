@@ -203,6 +203,32 @@
     animation: pulse-alert 1.4s ease-in-out infinite;
 }
 
+/* ── Fondo del bloque completo de alertas según nivel máximo ── */
+.agro-alerts-block.bloque-amarillo {
+    background: rgba(245, 185, 50, 0.14) !important;
+    border-color: rgba(212, 168, 83, 0.60) !important;
+    box-shadow: 0 0 0 3px rgba(245,185,50,0.18);
+    transition: background 0.5s, border-color 0.5s;
+}
+.agro-alerts-block.bloque-naranja {
+    background: rgba(232, 112, 64, 0.14) !important;
+    border-color: rgba(232, 112, 64, 0.60) !important;
+    box-shadow: 0 0 0 3px rgba(232,112,64,0.20);
+    transition: background 0.5s, border-color 0.5s;
+}
+.agro-alerts-block.bloque-rojo {
+    background: rgba(192, 57, 43, 0.13) !important;
+    border-color: rgba(192, 57, 43, 0.65) !important;
+    box-shadow: 0 0 0 4px rgba(192,57,43,0.18);
+    animation: pulse-bloque-rojo 1.8s ease-in-out infinite;
+    transition: background 0.5s, border-color 0.5s;
+}
+
+@keyframes pulse-bloque-rojo {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(192,57,43,0.18); }
+    50%       { box-shadow: 0 0 0 8px rgba(192,57,43,0.06); }
+}
+
 .agro-alert-ticker {
     font-size: 13px;
     color: var(--text-soft);
@@ -484,6 +510,57 @@
 .fdp-label { font-size: 11px; font-weight: 700; color: var(--musgo); text-transform: uppercase; letter-spacing: 0.4px; }
 .fdp-value { font-size: 20px; font-weight: 800; color: var(--t-dark); }
 .fdp-sub   { font-size: 11px; color: var(--text-soft); }
+
+/* ═══════════════════════════════════════════
+   SEMÁFORO AGRÍCOLA
+═══════════════════════════════════════════ */
+.agro-traffic-block {
+    background: var(--crema);
+    border-radius: 14px;
+    border: 1.5px solid var(--border);
+    padding: 16px 18px;
+    margin-bottom: 20px;
+}
+
+.agro-traffic-lights {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.agro-traffic-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: rgba(44,24,16,0.03);
+    border: 1px solid var(--border);
+}
+
+.agro-traffic-icon { font-size: 18px; flex-shrink: 0; }
+.agro-traffic-msg  { line-height: 1.35; }
+
+/* ═══════════════════════════════════════════
+   BALANCE HÍDRICO — DETALLE
+═══════════════════════════════════════════ */
+.agro-water-balance-detail {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    margin: 6px 0 4px;
+    font-size: 12px;
+    color: var(--text-soft);
+}
+
+.agro-water-balance-detail strong {
+    color: var(--text);
+    font-weight: 700;
+}
 
 /* ═══════════════════════════════════════════
    SCROLL SUAVE

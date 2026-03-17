@@ -75,81 +75,81 @@ function renderFieldPanel(container, summary, alerts) {
 
     const tickerMsg = alerts?.ticker?.length ? alerts.ticker.join(" · ") : "No hay alertas activas";
 
+    // Clase de fondo para el bloque según nivel máximo
+    const bloqueClass = worstNivel !== "verde" ? ` bloque-${worstNivel}` : "";
+
     container.innerHTML = `
         <!-- ALERTAS -->
-        <div class="fdp-alerts">
-            <div class="fdp-alerts-title">🚨 Alertas AEMET</div>
+        <div class="fdp-alerts agro-alerts-block${bloqueClass}">
+            <div class="fdp-alerts-title">🚨 Alertas meteorológicas</div>
             <div class="fdp-alert-icons">${alertsHTML}</div>
             <div class="fdp-ticker">${tickerMsg}</div>
         </div>
 
-        <!-- TIEMPO ACTUAL -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">🌤️</div>
-            <div class="fdp-card-label">Tiempo</div>
-            <div class="fdp-card-value" style="font-size:16px;">${weatherShort(wc)}</div>
-            <div class="fdp-card-sub">${summary.temp ?? "—"} ºC · ${summary.wind ?? "—"} km/h</div>
-        </div>
+        <!-- GRID TARJETAS -->
+        <div class="fdp-grid">
 
-        <!-- TEMP MAX/MIN -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">🌡️</div>
-            <div class="fdp-card-label">Temp. hoy</div>
-            <div class="fdp-card-value">${summary.temp ?? "—"} ºC</div>
-            <div class="fdp-card-sub">↑${summary.temp_max ?? "—"}° ↓${summary.temp_min ?? "—"}°</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">🌤️</div>
+                <div class="fdp-label">Tiempo</div>
+                <div class="fdp-value" style="font-size:15px;">${weatherShort(wc)}</div>
+                <div class="fdp-sub">${summary.temp ?? "—"} ºC · ${summary.wind ?? "—"} km/h</div>
+            </div>
 
-        <!-- ET₀ -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">💧</div>
-            <div class="fdp-card-label">ET₀ hoy</div>
-            <div class="fdp-card-value">${summary.et0_today !== null && summary.et0_today !== undefined ? summary.et0_today + " mm" : "—"}</div>
-            <div class="fdp-card-sub">${et0Tip}</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">🌡️</div>
+                <div class="fdp-label">Temp. hoy</div>
+                <div class="fdp-value">${summary.temp ?? "—"} ºC</div>
+                <div class="fdp-sub">↑${summary.temp_max ?? "—"}° ↓${summary.temp_min ?? "—"}°</div>
+            </div>
 
-        <!-- HUMEDAD SUELO -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">🌍</div>
-            <div class="fdp-card-label">Hum. suelo</div>
-            <div class="fdp-card-value">${soilPct}</div>
-            <div class="fdp-card-sub">Capa 0–1 cm</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">💧</div>
+                <div class="fdp-label">ET₀ hoy</div>
+                <div class="fdp-value">${summary.et0_today !== null && summary.et0_today !== undefined ? summary.et0_today + " mm" : "—"}</div>
+                <div class="fdp-sub">${et0Tip}</div>
+            </div>
 
-        <!-- UV -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">☀️</div>
-            <div class="fdp-card-label">Índice UV</div>
-            <div class="fdp-card-value">${uvLabel(summary.uv_index)}</div>
-            <div class="fdp-card-sub">${summary.humidity !== null ? `Hum. aire: ${summary.humidity}%` : ""}</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">🌍</div>
+                <div class="fdp-label">Hum. suelo</div>
+                <div class="fdp-value">${soilPct}</div>
+                <div class="fdp-sub">Capa 0–1 cm</div>
+            </div>
 
-        <!-- PRESIÓN -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">🌀</div>
-            <div class="fdp-card-label">Presión</div>
-            <div class="fdp-card-value">${summary.pressure !== null && summary.pressure !== undefined ? summary.pressure + " hPa" : "—"}</div>
-            <div class="fdp-card-sub">${summary.pressure < 1005 ? "⚠️ Baja — posible mal tiempo" : summary.pressure > 1020 ? "☀️ Alta — tiempo estable" : "Normal"}</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">☀️</div>
+                <div class="fdp-label">Índice UV</div>
+                <div class="fdp-value">${uvLabel(summary.uv_index)}</div>
+                <div class="fdp-sub">${summary.humidity !== null ? `Hum. aire: ${summary.humidity}%` : ""}</div>
+            </div>
 
-        <!-- GRANIZO -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">🧊</div>
-            <div class="fdp-card-label">Granizo 6h</div>
-            <div class="fdp-card-value" style="color:${hailColor};">${hailPct.toFixed(0)}%</div>
-            <div class="fdp-card-sub">Riesgo próx. 6 horas</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">🌀</div>
+                <div class="fdp-label">Presión</div>
+                <div class="fdp-value">${summary.pressure !== null && summary.pressure !== undefined ? summary.pressure + " hPa" : "—"}</div>
+                <div class="fdp-sub">${summary.pressure < 1005 ? "⚠️ Baja — posible mal tiempo" : summary.pressure > 1020 ? "☀️ Alta — tiempo estable" : "Normal"}</div>
+            </div>
 
-        <!-- HORAS FRÍO -->
-        <div class="fdp-card">
-            <div class="fdp-card-icon">❄️</div>
-            <div class="fdp-card-label">Horas frío</div>
-            <div class="fdp-card-value">${summary.cold_hours_24h ?? "—"}</div>
-            <div class="fdp-card-sub">últimas 24h (0–7°C)</div>
-        </div>
+            <div class="fdp-card">
+                <div class="fdp-card-icon">🧊</div>
+                <div class="fdp-label">Granizo 6h</div>
+                <div class="fdp-value" style="color:${hailColor};">${hailPct.toFixed(0)}%</div>
+                <div class="fdp-sub">Riesgo próx. 6 horas</div>
+            </div>
+
+            <div class="fdp-card">
+                <div class="fdp-card-icon">❄️</div>
+                <div class="fdp-label">Horas frío</div>
+                <div class="fdp-value">${summary.cold_hours_24h ?? "—"}</div>
+                <div class="fdp-sub">últimas 24h (0–7°C)</div>
+            </div>
+
+        </div><!-- /fdp-grid -->
 
         <!-- LINK AL CAMPO -->
-        <div class="fdp-card" style="grid-column:span 4; background:#e8f5e9; justify-content:center; align-items:center; flex-direction:row; gap:10px; cursor:pointer;" id="fdp-goto-${container.id}">
-            <span style="font-size:14px;font-weight:700;color:#00796b;">Ver campo completo →</span>
+        <div style="text-align:center; margin-top:4px;">
+            <button class="fdp-goto-btn" id="fdp-goto-${container.id}">Ver campo completo →</button>
         </div>
     `;
 }
@@ -178,7 +178,6 @@ async function loadFieldPanel(fieldId, lat, lon, container) {
 
         renderFieldPanel(container, summary, alerts);
 
-        // Click "Ver campo completo"
         const gotoBtn = container.querySelector(`#fdp-goto-${container.id}`);
         if (gotoBtn) {
             gotoBtn.addEventListener("click", (e) => {

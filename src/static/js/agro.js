@@ -67,6 +67,13 @@ function renderAgroAlerts(data) {
     const bar = document.getElementById("agro-alert-bar");
     if (bar) bar.className = `agro-alert-bar-inline alert-bar-${worst}`;
 
+    // Fondo del bloque completo según nivel máximo
+    const bloque = document.querySelector(".agro-alerts-block");
+    if (bloque) {
+        bloque.classList.remove("bloque-amarillo", "bloque-naranja", "bloque-rojo");
+        if (worst !== "verde") bloque.classList.add(`bloque-${worst}`);
+    }
+
     // Ticker
     const ticker = document.getElementById("agro-alert-ticker");
     if (ticker) {
@@ -227,6 +234,71 @@ function renderEt0ChartTip(hourlyData, et0Today, cropType) {
     tipEl.innerHTML = `📊 <strong>Pico${crop}:</strong> ${peakVal} mm/h a las ${peakHour}h (${activeHours}h de demanda activa). ${advice}`;
 }
 
+// ─────────────────────────────────────────────
+// RENDER BALANCE HÍDRICO
+// ─────────────────────────────────────────────
+function renderWaterBalance(agro) {
+    const bal = agro.water_balance_7d;
+    const el  = document.getElementById("agro-water-balance");
+    const tip = document.getElementById("agro-water-balance-tip");
+    if (!el) return;
+
+    const sign = bal >= 0 ? "+" : "";
+    el.textContent = `${sign}${bal} mm`;
+    el.style.color = bal < -15 ? "#e53935" : bal < -5 ? "#ff9800" : bal > 20 ? "#1565c0" : "#4caf50";
+
+    if (tip) {
+        if (bal < -15)     tip.textContent = "🔴 Déficit severo — riego urgente";
+        else if (bal < -5) tip.textContent = "🟡 Déficit leve — monitorizar";
+        else if (bal > 20) tip.textContent = "💦 Exceso hídrico — riesgo de encharcamiento";
+        else               tip.textContent = "✅ Balance hídrico óptimo";
+    }
+
+    // ET0 acumuladas
+    const et7  = document.getElementById("agro-et0-7d");
+    const et30 = document.getElementById("agro-et0-30d");
+    const rain7 = document.getElementById("agro-rain-7d");
+    if (et7)  et7.textContent  = agro.et0_7d  !== undefined ? `${agro.et0_7d} mm` : "—";
+    if (et30) et30.textContent = agro.et0_30d !== undefined ? `${agro.et0_30d} mm` : "—";
+    if (rain7) rain7.textContent = agro.rain_7d !== undefined ? `${agro.rain_7d} mm` : "—";
+}
+
+// ─────────────────────────────────────────────
+// RENDER HORAS DE CALOR
+// ─────────────────────────────────────────────
+function renderHeatHours(agro) {
+    const el  = document.getElementById("agro-heat-hours");
+    const tip = document.getElementById("agro-heat-tip");
+    if (!el) return;
+    el.textContent = agro.heat_hours_24h ?? "—";
+    if (tip) {
+        const h = agro.heat_hours_24h ?? 0;
+        if (h >= 8)      tip.textContent = "🔴 Estrés térmico severo — riego protector recomendado";
+        else if (h >= 4) tip.textContent = "🟡 Estrés térmico moderado — vigilar cultivos sensibles";
+        else             tip.textContent = "✅ Sin estrés térmico significativo";
+    }
+}
+
+// ─────────────────────────────────────────────
+// RENDER RIESGO HONGOS
+// ─────────────────────────────────────────────
+function renderFungusRisk(agro) {
+    const el  = document.getElementById("agro-fungus-risk");
+    const tip = document.getElementById("agro-fungus-tip");
+    if (!el) return;
+    const labels = ["Bajo", "Moderado", "Alto"];
+    const colors = ["#4caf50", "#ff9800", "#e53935"];
+    const r = agro.fungus_risk ?? 0;
+    el.textContent = labels[r] ?? "—";
+    el.style.color = colors[r] ?? "#4caf50";
+    if (tip) {
+        const h = agro.fungus_hours ?? 0;
+        if (r === 2)      tip.textContent = `🔴 ${h}h favorables — tratar preventivamente (mildiu/Botrytis)`;
+        else if (r === 1) tip.textContent = `🟡 ${h}h favorables — vigilar síntomas`;
+        else              tip.textContent = "✅ Condiciones poco favorables para hongos";
+    }
+}
+
 async function loadAgroData(lat, lon, cropType) {
     try {
         const [agroRes, alertRes, hailRes] = await Promise.allSettled([
@@ -364,23 +436,32 @@ async function loadAgroData(lat, lon, cropType) {
             }
         }
 
-        // ── FORECAST ET₀ ──
-        renderEt0Forecast(agro.et0_forecast);
+        // ── BALANCE HÍDRICO + ET0 ACUMULADAS ──
+        renderWaterBalance(agro);
 
-        // ── GRÁFICA ET₀ ──
-        const toggle = document.getElementById("agro-et0-chart-toggle");
+        // ── HORAS DE CALOR ──
+        renderHeatHours(agro);
+
+        // ── RIESGO HONGOS ──
+        renderFungusRisk(agro);
+
+        // ── FORECAST ET₀ — ELIMINADO (sustituido por acumuladas) ──
+        // renderEt0Forecast(agro.et0_forecast);  // ya no se usa
+
+        // ── GRÁFICA ET₀ — SIEMPRE VISIBLE ──
         const panel = document.getElementById("agro-et0-chart-panel");
-        if (toggle && panel) {
-            toggle.addEventListener("click", () => {
-                const isOpen = panel.classList.toggle("open");
+        const toggle = document.getElementById("agro-et0-chart-toggle");
+        if (panel) {
+            panel.classList.add("open");
+            if (toggle) {
                 const arrow = toggle.querySelector(".chart-arrow");
-                if (arrow) arrow.classList.toggle("rotated", isOpen);
-                if (isOpen && !window._agroChartRendered) {
-                    window._agroChartRendered = true;
-                    renderEt0Chart(agro.et0_hourly_today);
-                    renderEt0ChartTip(agro.et0_hourly_today, agro.et0_today, cropType);
-                }
-            });
+                if (arrow) arrow.classList.add("rotated");
+            }
+        }
+        if (!window._agroChartRendered) {
+            window._agroChartRendered = true;
+            renderEt0Chart(agro.et0_hourly_today);
+            renderEt0ChartTip(agro.et0_hourly_today, agro.et0_today, cropType);
         }
 
         // ── INSIGHTS POR TARJETA (agente local) ──
@@ -405,19 +486,4 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!coords) return;
     loadAgroData(coords.lat, coords.lon, cropType);
 
-    // Crop type tip inline
-    const sel = document.getElementById("crop-type-select");
-    const tipEl = document.getElementById("crop-tip");
-    if (sel && tipEl) {
-        const tips = {
-            trigo: "Cereal de invierno. Sensible a la roya y al encamado.", cebada: "Resistente a la sequía.",
-            maiz: "Requiere mucho riego en verano.", arroz: "Necesita encharcamiento.", vid: "Control de hongos clave.",
-            olivo: "Muy resistente a la sequía.", tomate: "Vigilar Botrytis y trips.", patata: "Riesgo de mildiu en humedad alta.",
-            almendro: "Sensible a heladas en floración.", girasol: "Poco exigente en agua.", alfalfa: "Alto consumo hídrico.",
-        };
-        sel.addEventListener("change", () => {
-            tipEl.textContent = tips[sel.value] || "";
-        });
-        if (tips[sel.value]) tipEl.textContent = tips[sel.value];
-    }
 });
