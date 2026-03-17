@@ -88,6 +88,7 @@
         const r       = W / 2 - 6;
         const SYNODIC = 29.530588853;
         const frac    = age / SYNODIC; // [0,1)
+        const illum   = (1 - Math.cos(2 * Math.PI * frac)) / 2;
 
         ctx.clearRect(0, 0, W, H);
 
@@ -97,15 +98,14 @@
         ctx.arc(cx, cy, r + 6, 0, Math.PI * 2);
         ctx.fill();
 
-        // Disco oscuro base (lado no iluminado)
+        // Disco oscuro base
         ctx.fillStyle = "#2a2a3e";
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
 
         // ── Zona iluminada ──
-        const illum = (1 - Math.cos(2 * Math.PI * frac)) / 2;
-        if (illum > 0.005) {
+        if (illum > 0.001) {
             ctx.save();
             ctx.beginPath();
             ctx.arc(cx, cy, r, 0, Math.PI * 2);
@@ -113,11 +113,10 @@
 
             ctx.fillStyle = "#f0e68c";
 
-            // k = cos(2π·frac): positivo = hoz/gibosa según fase; negativo = el otro caso
-            const k  = Math.cos(2 * Math.PI * frac);
-            // ex: semi-eje horizontal del terminador
-            const ex = r * Math.abs(k);
-            // Factor de control bezier para semielipse (aproximación estándar)
+            const k   = Math.cos(2 * Math.PI * frac);
+            // Asegurar que la hoz mínima sea visible (mín 2px de ancho visual)
+            const minEx = 2 / r;
+            const ex  = r * Math.max(Math.abs(k), minEx);
             const K   = 0.5523;
             const cpY = r * K;
             const cpX = ex * K;
@@ -125,35 +124,26 @@
             ctx.beginPath();
 
             if (frac < 0.5) {
-                // ── CRECIENTE: limbo por la derecha ──
+                // CRECIENTE: limbo derecho
                 ctx.moveTo(cx, cy - r);
-                // Limbo derecho: arco horario de norte a sur
                 ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2);
-                // Terminador: de sur (cx, cy+r) a norte (cx, cy-r)
                 if (k > 0) {
-                    // hoz: terminador convexo hacia la IZQUIERDA
                     ctx.bezierCurveTo(cx - cpX, cy + cpY, cx - cpX, cy - cpY, cx, cy - r);
                 } else {
-                    // gibosa: terminador convexo hacia la DERECHA (cóncavo desde el limbo)
                     ctx.bezierCurveTo(cx + cpX, cy + cpY, cx + cpX, cy - cpY, cx, cy - r);
                 }
             } else {
-                // ── MENGUANTE: limbo por la izquierda ──
-                // Usamos fracM = frac - 0.5 para recalcular k simétricamente
+                // MENGUANTE: limbo izquierdo
                 const fracM = frac - 0.5;
                 const kM    = Math.cos(2 * Math.PI * fracM);
-                const exM   = r * Math.abs(kM);
+                const exM   = r * Math.max(Math.abs(kM), minEx);
                 const cpXM  = exM * K;
 
                 ctx.moveTo(cx, cy - r);
-                // Limbo izquierdo: arco antihorario de norte a sur
                 ctx.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, true);
-                // Terminador: de sur (cx, cy+r) a norte (cx, cy-r)
                 if (kM > 0) {
-                    // gibosa menguante: terminador convexo hacia la DERECHA
                     ctx.bezierCurveTo(cx + cpXM, cy + cpY, cx + cpXM, cy - cpY, cx, cy - r);
                 } else {
-                    // hoz menguante: terminador convexo hacia la IZQUIERDA (cóncavo desde el limbo)
                     ctx.bezierCurveTo(cx - cpXM, cy + cpY, cx - cpXM, cy - cpY, cx, cy - r);
                 }
             }
@@ -178,6 +168,16 @@
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, Math.PI * 2);
         ctx.fill();
+
+        // ── Indicador de % de iluminación como arco exterior ──
+        // Arco fino alrededor del disco proporcional a la iluminación
+        if (illum > 0.01) {
+            ctx.strokeStyle = "rgba(240,230,140,0.45)";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(cx, cy, r + 4, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * illum);
+            ctx.stroke();
+        }
     }
 
     // ─────────────────────────────────────────────

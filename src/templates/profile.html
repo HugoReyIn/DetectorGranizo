@@ -108,6 +108,35 @@
             transition: color 0.18s;
         }
         .back-link:hover { color: var(--musgo); }
+        .profile-field input[type="password"] {
+            padding-right: 44px;
+        }
+        .pwd-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .pwd-wrapper input {
+            width: 100%;
+            padding-right: 44px !important;
+        }
+        .pwd-toggle {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            color: var(--text-soft);
+            display: flex;
+            align-items: center;
+            width: auto !important;
+            min-height: unset !important;
+            margin: 0 !important;
+            transition: color 0.18s;
+        }
+        .pwd-toggle:hover { color: var(--musgo); }
+        .pwd-toggle svg   { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
         .profile-hint {
             font-size: 11px;
             font-weight: 400;
@@ -193,17 +222,32 @@
 
             <div class="profile-field">
                 <label>Contraseña actual</label>
-                <input type="password" name="current_password" id="current_password" placeholder="••••••••" autocomplete="current-password">
+                <div class="pwd-wrapper">
+                    <input type="password" name="current_password" id="current_password" placeholder="Escribe tu contraseña actual..." autocomplete="current-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
 
             <div class="profile-field">
                 <label>Nueva contraseña</label>
-                <input type="password" name="new_password" id="new_password" placeholder="••••••••" autocomplete="new-password">
+                <div class="pwd-wrapper">
+                    <input type="password" name="new_password" id="new_password" placeholder="Escribe tu nueva contraseña..." autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
 
             <div class="profile-field">
                 <label>Confirmar nueva contraseña</label>
-                <input type="password" name="confirm_password" id="confirm_password" placeholder="••••••••" autocomplete="new-password">
+                <div class="pwd-wrapper">
+                    <input type="password" name="confirm_password" id="confirm_password" placeholder="Repite la nueva contraseña..." autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
             </div>
 
             <button type="submit" class="profile-save-btn">Guardar cambios</button>
@@ -221,6 +265,20 @@
         toggle.addEventListener("click", () => { sidebar.classList.toggle("open"); overlay.classList.toggle("show"); });
         overlay.addEventListener("click", () => { sidebar.classList.remove("open"); overlay.classList.remove("show"); });
     }
+
+    const EYE_OPEN   = `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    const EYE_CLOSED = `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+    document.querySelectorAll(".pwd-toggle").forEach(btn => {
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            const input = this.previousElementSibling;
+            const showing = input.type === "text";
+            input.type = showing ? "password" : "text";
+            this.innerHTML = showing ? EYE_OPEN : EYE_CLOSED;
+            this.style.color = showing ? "" : "var(--musgo)";
+        });
+    });
 
     // Validación de contraseñas en cliente antes de enviar
     document.getElementById("profile-form").addEventListener("submit", function (e) {

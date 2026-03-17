@@ -702,5 +702,25 @@
 <script src="/static/js/moon.js"></script>
 {% endif %}
 </div><!-- /main-content -->
+<!-- MODAL CONFIRMACIÓN ELIMINAR -->
+<div id="delete-modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(44,24,16,0.45); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:20px; padding:36px 32px 28px; max-width:380px; width:90%; box-shadow:0 8px 40px rgba(44,24,16,0.22); font-family:'Nunito',sans-serif; text-align:center;">
+        <div style="font-size:44px; margin-bottom:14px;">🗑️</div>
+        <h3 style="margin:0 0 10px; color:#2C1810; font-size:18px; font-weight:800;">Eliminar campo</h3>
+        <p style="margin:0 0 28px; color:#666; font-size:14px; line-height:1.55;">
+            ¿Seguro que quieres eliminar <strong id="delete-modal-fieldname"></strong>?<br>
+            Esta acción no se puede deshacer.
+        </p>
+        <div style="display:flex; gap:12px; justify-content:center;">
+            <button id="delete-modal-cancel" style="flex:1; padding:12px; border:1.5px solid #ddd; border-radius:12px; background:#f5f0e8; color:#555; font-size:14px; font-weight:700; cursor:pointer; font-family:'Nunito',sans-serif; transition:background 0.2s;">
+                Cancelar
+            </button>
+            <button id="delete-modal-confirm" style="flex:1; padding:12px; border:none; border-radius:12px; background:linear-gradient(135deg,#c0392b,#e74c3c); color:#fff; font-size:14px; font-weight:700; cursor:pointer; font-family:'Nunito',sans-serif; box-shadow:0 3px 10px rgba(192,57,43,0.30); transition:opacity 0.2s;">
+                Sí, eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

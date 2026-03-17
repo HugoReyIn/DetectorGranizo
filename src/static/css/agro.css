@@ -512,57 +512,84 @@
 .fdp-sub   { font-size: 11px; color: var(--text-soft); }
 
 /* ═══════════════════════════════════════════
-   SEMÁFORO AGRÍCOLA
-═══════════════════════════════════════════ */
-.agro-traffic-block {
-    background: var(--crema);
-    border-radius: 14px;
-    border: 1.5px solid var(--border);
-    padding: 16px 18px;
-    margin-bottom: 20px;
-}
-
-.agro-traffic-lights {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.agro-traffic-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    padding: 6px 10px;
-    border-radius: 8px;
-    background: rgba(44,24,16,0.03);
-    border: 1px solid var(--border);
-}
-
-.agro-traffic-icon { font-size: 18px; flex-shrink: 0; }
-.agro-traffic-msg  { line-height: 1.35; }
-
-/* ═══════════════════════════════════════════
-   BALANCE HÍDRICO — DETALLE
-═══════════════════════════════════════════ */
-.agro-water-balance-detail {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 20px;
-    margin: 6px 0 4px;
-    font-size: 12px;
-    color: var(--text-soft);
-}
-
-.agro-water-balance-detail strong {
-    color: var(--text);
-    font-weight: 700;
-}
-
-/* ═══════════════════════════════════════════
    SCROLL SUAVE
 ═══════════════════════════════════════════ */
 html { scroll-behavior: smooth; }
+/* ═══════════════════════════════════════════
+   RESPONSIVE MÓVIL — SECCIÓN AGRONÓMICA
+═══════════════════════════════════════════ */
+@media (max-width: 900px) {
+
+    .agro-section {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .agro-title { font-size: 17px; margin-bottom: 14px; }
+
+    /* Grid: 2 columnas en tablet/móvil */
+    .agro-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px;
+    }
+
+    /* Las wide pasan a ocupar las 2 columnas disponibles */
+    .agro-card-wide,
+    .agro-card-water-balance,
+    [style*="grid-column: span 4"] {
+        grid-column: span 2 !important;
+    }
+
+    .agro-card {
+        padding: 12px;
+    }
+
+    .agro-card-value { font-size: 22px; }
+    .agro-card-icon  { font-size: 20px; }
+    .agro-card-label { font-size: 10px; }
+    .agro-card-tip   { font-size: 11px; }
+
+    /* Alertas: 2 columnas */
+    .agro-alert-icons {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 7px;
+    }
+
+    .agro-alert-item {
+        padding: 8px 6px;
+        font-size: 11px;
+        min-width: unset;
+    }
+
+    .agro-alert-emoji { font-size: 22px; }
+
+    /* Semáforo */
+    .agro-traffic-block { padding: 12px 14px; }
+    .agro-traffic-item  { font-size: 12px; }
+
+    /* Balance hídrico detalle */
+    .agro-water-balance-detail {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* Soil temp */
+    .agro-soiltemp-grid { gap: 6px; }
+    .soiltemp-val { font-size: 15px; }
+
+    /* Gráfica ET0 */
+    .chart-canvas-wrapper { height: 150px !important; }
+
+    /* Forecast ET0 */
+    .agro-forecast-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+
+    /* Crop selector */
+    .crop-selector-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+}

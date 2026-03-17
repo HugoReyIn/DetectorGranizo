@@ -371,14 +371,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (deleteBtn && isEditing) {
         deleteBtn.addEventListener("click", () => {
-            if (!confirm("¿Seguro que quieres eliminar este campo?")) return;
+            const fieldName = document.getElementById("field-name")?.value || "este campo";
+            const overlay   = document.getElementById("delete-modal-overlay");
+            const nameEl    = document.getElementById("delete-modal-fieldname");
+            const cancelBtn = document.getElementById("delete-modal-cancel");
+            const confirmBtn= document.getElementById("delete-modal-confirm");
 
-            fetch(`/field/delete/${fieldId}`, { method: "POST" })
-                .then(res => {
-                    if (res.redirected) window.location.href = res.url;
-                    else alert("Error al eliminar el campo");
-                })
-                .catch(() => alert("Error de conexión con el servidor"));
+            if (!overlay) {
+                // Fallback por si el modal no está en el DOM
+                if (!confirm("¿Seguro que quieres eliminar este campo?")) return;
+                fetch(`/field/delete/${fieldId}`, { method: "POST" })
+                    .then(res => { if (res.redirected) window.location.href = res.url; });
+                return;
+            }
+
+            if (nameEl) nameEl.textContent = `"${fieldName}"`;
+            overlay.style.display = "flex";
+
+            const close = () => {
+                overlay.style.display = "none";
+                cancelBtn.removeEventListener("click", close);
+                confirmBtn.removeEventListener("click", doDelete);
+                overlay.removeEventListener("click", onOverlayClick);
+            };
+
+            const doDelete = () => {
+                close();
+                fetch(`/field/delete/${fieldId}`, { method: "POST" })
+                    .then(res => {
+                        if (res.redirected) window.location.href = res.url;
+                        else alert("Error al eliminar el campo");
+                    })
+                    .catch(() => alert("Error de conexión con el servidor"));
+            };
+
+            const onOverlayClick = (e) => {
+                if (e.target === overlay) close();
+            };
+
+            cancelBtn.addEventListener("click", close);
+            confirmBtn.addEventListener("click", doDelete);
+            overlay.addEventListener("click", onOverlayClick);
         });
     }
 

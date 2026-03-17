@@ -685,42 +685,128 @@ h4 {
    RESPONSIVE MÓVIL
 ═══════════════════════════════════════════ */
 @media (max-width: 768px) {
-    .time       { font-size: 42px; }
-    .date       { font-size: 14px; }
-    .dashboard  { padding: 16px; margin: 0 0 16px; }
 
-    .field-row  { grid-template-columns: 1fr 1fr; row-gap: 10px; text-align: center; }
-    .field-info { grid-column: 1 / span 2; }
-    .field-alerts { grid-column: 1 / span 2; max-width: 100%; }
+    /* ── Layout general ── */
+    .main-content {
+        margin-left: 0 !important;
+        padding: 12px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        overflow-x: hidden !important;
+    }
+
+    /* ── Reloj ── */
+    .time-container { text-align: center; margin-bottom: 16px; }
+    .time  { font-size: 48px; }
+    .date  { font-size: 13px; }
+
+    /* ── Dashboard card ── */
+    .dashboard { padding: 14px; margin: 0 0 16px; }
+    .dashboard h2 { font-size: 20px; margin-bottom: 14px; }
+
+    /* ── Filas de campo ── */
+    .field-row {
+        grid-template-columns: 1fr;
+        row-gap: 10px;
+        padding: 14px;
+    }
+
+    .field-info { text-align: center; }
+    .field-info h3 { font-size: 16px; }
+
+    .field-status {
+        width: fit-content;
+        margin: 0 auto;
+    }
+
+    .field-buttons {
+        width: 100%;
+        flex-direction: row;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .action-btn, .field-detail-btn {
+        flex: 1;
+        min-width: 0;
+        width: auto;
+        font-size: 13px;
+        height: 42px;
+    }
+
+    .add-field-btn { font-size: 14px; padding: 12px; }
+
+    /* ── Panel expandible ── */
+    .field-detail-inner { padding: 14px 12px; }
+
+    .fdp-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+
+    .fdp-card { padding: 10px 12px; }
+    .fdp-value { font-size: 17px; }
+
+    .fdp-alert-icons { grid-template-columns: repeat(2, 1fr); }
+
+    /* ── Alertas ── */
     .alert-icon-item { width: 32px; height: 32px; }
-    .alert-img  { width: 18px; height: 18px; }
-    .field-buttons { width: 100%; }
-    .action-btn { width: 100%; }
+    .alert-img { width: 18px; height: 18px; }
 
-    .weather-grid { grid-template-columns: 1fr; gap: 10px; }
-    .weather-summary, .weather-temp-block, .weather-precip, .weather-extra,
-    .weather-municipio-block, .weather-sun-block { grid-column: 1; }
-    .weather-precip-grid { margin-left: 0; flex-direction: row; justify-content: space-around; }
+    /* ── Tiempo ── */
+    .weather-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    .weather-summary,
+    .weather-temp-block,
+    .weather-precip-grid,
+    .weather-extra-grid,
+    .weather-municipio-block,
+    .weather-sun-block { grid-column: 1 !important; }
+
+    .weather-precip-grid {
+        margin-left: 0;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    #weather-icon { width: 64px; }
     .temp-actual { font-size: 52px; }
     .weather-temp-block .temp-actual { font-size: 52px; }
-    .sun-times   { flex-wrap: nowrap; gap: 8px; }
-    .sun-times img { width: 28px; }
+    #municipio { font-size: 18px; }
 
-    .forecast-grid { grid-template-columns: repeat(2,1fr); gap: 10px; }
-    .forecast-main-icon { width: 44px; }
-    .forecast-day { font-size: 13px; }
-    .forecast-data-col { font-size: 12px; }
-    .forecast-small-icon { width: 12px; }
+    .sun-times { flex-wrap: nowrap; gap: 6px; }
+    .sun-times img { width: 26px; }
+    .sunrise-sunset { font-size: 12px; }
 
-    .chart-canvas-wrapper { height: 180px; }
-    .chart-btn { padding: 7px 12px; font-size: 12px; }
+    /* ── Forecast ── */
+    .forecast-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .forecast-card { padding: 10px; }
+    .forecast-main-icon { width: 40px; }
+    .forecast-day { font-size: 12px; }
+    .forecast-data-col { font-size: 11px; }
+    .forecast-small-icon { width: 11px; }
+
+    /* ── Gráficas ── */
+    .chart-toggle-row { padding: 10px 12px; }
+    .chart-toggle-label { font-size: 13px; }
+    .chart-btn { padding: 6px 10px; font-size: 12px; }
+    .chart-canvas-wrapper { height: 160px; }
     .forecast-chart-date { font-size: 12px; }
 
-    .moon-grid { grid-template-columns: 1fr; }
-    .moon-main-card { min-width: 0; }
-    #moon-canvas { width: 130px !important; height: 130px !important; }
-    .moon-illumination { font-size: 26px; }
-    .moon-phases-list { grid-template-columns: 1fr; }
+    /* ── Luna ── */
+    .moon-grid { grid-template-columns: 1fr; gap: 14px; }
+    .moon-main-card { min-width: 0; padding: 20px; }
+    #moon-canvas { width: 120px !important; height: 120px !important; }
+    .moon-illumination { font-size: 24px; }
+    .moon-phases-list { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .moon-phase-row { padding: 10px; }
 }
 
 /* ═══════════════════════════════════════════

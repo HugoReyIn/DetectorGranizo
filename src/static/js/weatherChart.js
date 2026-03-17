@@ -59,10 +59,13 @@ function setupCharts(grouped) {
 
     const today = days[0];
     const nowHour = new Date().getHours();
+    const isMobile = window.innerWidth <= 768;
 
     const todayFiltered = grouped[today].filter(h => {
         const hour = parseInt(h.time.split(":")[0]);
-        return hour >= nowHour;
+        if (hour < nowHour) return false;
+        if (isMobile) return hour % 3 === 0;
+        return true;
     });
 
     // ── HOY ──
@@ -125,23 +128,28 @@ function setupCharts(grouped) {
                     const btnHum    = document.getElementById(`forecast-btn-humidity-${i}`);
                     if (!canvas) return;
 
+                    // En móvil filtrar a cada 3 horas
+                    const dayData = isMobile
+                        ? grouped[day].filter(h => parseInt(h.time.split(":")[0]) % 3 === 0)
+                        : grouped[day];
+
                     if (dateLabel) dateLabel.textContent = formatDateLabel(day);
                     let mode = "temp";
-                    let chartInst = drawChart(canvas, grouped[day], mode);
+                    let chartInst = drawChart(canvas, dayData, mode);
 
                     btnTemp?.addEventListener("click", (e) => {
                         e.stopPropagation();
                         mode = "temp";
                         setActiveTab(`forecast-btn-temp-${i}`, `forecast-btn-humidity-${i}`);
                         chartInst.destroy();
-                        chartInst = drawChart(canvas, grouped[day], mode);
+                        chartInst = drawChart(canvas, dayData, mode);
                     });
                     btnHum?.addEventListener("click", (e) => {
                         e.stopPropagation();
                         mode = "humidity";
                         setActiveTab(`forecast-btn-humidity-${i}`, `forecast-btn-temp-${i}`);
                         chartInst.destroy();
-                        chartInst = drawChart(canvas, grouped[day], mode);
+                        chartInst = drawChart(canvas, dayData, mode);
                     });
                 });
             }
