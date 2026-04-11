@@ -32,6 +32,8 @@ class UserDAO:
         return self.cursor.lastrowid
 
     def getUser(self, userId: int):
+        # Asegurarse de que no hay resultados pendientes
+        self.cursor.fetchall()   # vaciar si hubiera algo colgado
         self.cursor.execute(
             "SELECT id, email, password, name FROM users WHERE id=%s",
             (userId,)

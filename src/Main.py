@@ -10,10 +10,14 @@ Toda la lógica de negocio vive en services/.
 Toda la comunicación con APIs externas vive en facades/.
 """
 
-from fastapi import FastAPI, Request, Form
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 from daos.UserDAO import UserDAO
 from daos.FieldDAO import FieldDAO
@@ -27,7 +31,7 @@ from services.FieldService import FieldService
 from services.WeatherService import WeatherService
 from services.EmailService import EmailService
 from AlertMonitor import AlertMonitor
-from contextlib import asynccontextmanager
+
 
 # ──────────────────────────────────────────────
 # INYECCIÓN DE DEPENDENCIAS
@@ -52,9 +56,6 @@ alert_monitor = AlertMonitor(
     email_service   = email_service,
 )
 
-# Estado de sesión (en producción reemplazar por sesiones reales)
-current_user = None
-
 
 # ──────────────────────────────────────────────
 # LIFESPAN — arranque y parada del scheduler
@@ -67,15 +68,60 @@ async def lifespan(app):
 
 
 # ──────────────────────────────────────────────
-# APP + ESTÁTICOS
+# APP + MIDDLEWARE DE SESIÓN
 # ──────────────────────────────────────────────
 app = FastAPI(lifespan=lifespan)
+
+# La clave secreta DEBE definirse en la variable de entorno SESSION_SECRET_KEY
+# antes de desplegar en producción. El valor por defecto es solo para desarrollo.
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SESSION_SECRET_KEY", "dev-secret-cambia-en-produccion"),
+    max_age=86400,       # sesión válida 24 horas
+    https_only=False,    # cambiar a True en producción con HTTPS
+)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 
 # ──────────────────────────────────────────────
-# LOGIN / REGISTER
+# HELPERS DE SESIÓN
+# Reemplazan la variable global current_user.
+# Cada petición obtiene su propio usuario de forma aislada.
+# ──────────────────────────────────────────────
+def get_current_user(request: Request):
+    """Devuelve el User activo o None si no hay sesión iniciada."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return None
+    return user_service.get_by_id(user_id)
+
+
+def require_user(request: Request):
+    """
+    Como get_current_user pero lanza HTTP 403 si no hay sesión.
+    Usar en endpoints JSON que necesitan autenticación.
+    """
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=403, detail="No autorizado")
+    return user
+
+
+def redirect_if_not_logged(request: Request):
+    """
+    Devuelve el usuario activo o una RedirectResponse a login.
+    Usar en rutas HTML para redirigir al usuario no autenticado.
+    """
+    user = get_current_user(request)
+    if not user:
+        return None, RedirectResponse(url="/", status_code=303)
+    return user, None
+
+
+# ──────────────────────────────────────────────
+# LOGIN / REGISTER / LOGOUT
 # ──────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
@@ -83,12 +129,17 @@ def login_page(request: Request):
 
 
 @app.post("/login")
-def login(email: str = Form(...), password: str = Form(...)):
-    global current_user
+def login(request: Request, email: str = Form(...), password: str = Form(...)):
     user = user_service.authenticate(email, password)
     if user:
-        current_user = user
+        request.session["user_id"] = user.id   # solo el ID, seguro y serializable
         return RedirectResponse(url="/main", status_code=303)
+    return RedirectResponse(url="/", status_code=303)
+
+
+@app.post("/logout")
+def logout(request: Request):
+    request.session.clear()
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -110,8 +161,9 @@ def register(request: Request, name: str = Form(...), email: str = Form(...), pa
 # ──────────────────────────────────────────────
 @app.get("/main", response_class=HTMLResponse)
 def main_page(request: Request):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     fields = field_service.get_fields_for_user(current_user.id)
     return templates.TemplateResponse(
         "main.html",
@@ -124,8 +176,9 @@ def main_page(request: Request):
 # ──────────────────────────────────────────────
 @app.get("/profile", response_class=HTMLResponse)
 def profile_page(request: Request):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     return templates.TemplateResponse(
         "profile.html",
         {"request": request, "current_user": current_user, "active_page": "profile", "msg": None, "msg_type": ""},
@@ -141,17 +194,16 @@ def update_profile(
     new_password:     str = Form(default=""),
     confirm_password: str = Form(default=""),
 ):
-    global current_user
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
 
     updated_user, msg, msg_type = user_service.update_profile(
         current_user, name, email, current_password, new_password, confirm_password
     )
-    current_user = updated_user
     return templates.TemplateResponse(
         "profile.html",
-        {"request": request, "current_user": current_user, "active_page": "profile", "msg": msg, "msg_type": msg_type},
+        {"request": request, "current_user": updated_user, "active_page": "profile", "msg": msg, "msg_type": msg_type},
     )
 
 
@@ -160,8 +212,9 @@ def update_profile(
 # ──────────────────────────────────────────────
 @app.get("/field/new", response_class=HTMLResponse)
 def new_field_page(request: Request):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     return templates.TemplateResponse(
         "field.html",
         {"request": request, "field": None, "points_json": "[]", "current_user": current_user, "active_page": "new_field"},
@@ -170,22 +223,25 @@ def new_field_page(request: Request):
 
 @app.post("/field/new")
 def save_field(
-    name:       str = Form(...),
+    request: Request,
+    name:         str = Form(...),
     municipality: str = Form(...),
-    area:       str = Form(...),
-    points:     str = Form(...),
-    crop_type:  str = Form(default=""),
+    area:         str = Form(...),
+    points:       str = Form(...),
+    crop_type:    str = Form(default=""),
 ):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     field_service.create_field(current_user.id, name, municipality, area, points, crop_type)
     return RedirectResponse(url="/main", status_code=303)
 
 
 @app.get("/field/edit/{field_id}", response_class=HTMLResponse)
 def edit_field_page(request: Request, field_id: int):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     field = field_service.get_field_if_owned(field_id, current_user.id)
     if not field:
         return RedirectResponse(url="/main", status_code=303)
@@ -198,6 +254,7 @@ def edit_field_page(request: Request, field_id: int):
 
 @app.post("/field/edit/{field_id}")
 def update_field(
+    request: Request,
     field_id:     int,
     name:         str = Form(...),
     municipality: str = Form(...),
@@ -205,8 +262,9 @@ def update_field(
     points:       str = Form(...),
     crop_type:    str = Form(default=""),
 ):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     field = field_service.get_field_if_owned(field_id, current_user.id)
     if not field:
         return RedirectResponse(url="/main", status_code=303)
@@ -215,9 +273,10 @@ def update_field(
 
 
 @app.post("/field/delete/{field_id}")
-def delete_field(field_id: int):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+def delete_field(request: Request, field_id: int):
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     field = field_service.get_field_if_owned(field_id, current_user.id)
     if not field:
         return RedirectResponse(url="/main", status_code=303)
@@ -227,8 +286,7 @@ def delete_field(field_id: int):
 
 @app.post("/field/update-status/{field_id}")
 async def update_field_status(field_id: int, request: Request):
-    if not current_user:
-        return JSONResponse({"error": "No autorizado"}, status_code=403)
+    current_user = require_user(request)   # lanza 403 si no hay sesión
     data      = await request.json()
     new_state = data.get("state")
     field     = field_service.get_field_if_owned(field_id, current_user.id)
@@ -246,8 +304,9 @@ async def update_field_status(field_id: int, request: Request):
 # ──────────────────────────────────────────────
 @app.get("/weather/{field_id}", response_class=HTMLResponse)
 def hourly_weather_page(request: Request, field_id: int):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     field = field_service.get_field_if_owned(field_id, current_user.id)
     if not field:
         return RedirectResponse(url="/main", status_code=303)
@@ -256,16 +315,19 @@ def hourly_weather_page(request: Request, field_id: int):
 
 @app.get("/weather", response_class=HTMLResponse)
 def weather_page(request: Request):
-    if not current_user:
-        return RedirectResponse(url="/", status_code=303)
+    _, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
     return templates.TemplateResponse("weather.html", {"request": request})
 
 
 # ──────────────────────────────────────────────
 # API ENDPOINTS — WEATHER DATA
+# Todos protegidos: require_user lanza 403 si no hay sesión activa.
 # ──────────────────────────────────────────────
 @app.get("/get-municipio")
-def get_municipio(lat: float, lon: float):
+def get_municipio(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         municipio = weather_service.get_municipality(lat, lon)
         return JSONResponse({"municipio": municipio})
@@ -274,7 +336,8 @@ def get_municipio(lat: float, lon: float):
 
 
 @app.get("/get-weather")
-def get_weather(lat: float, lon: float):
+def get_weather(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_current_weather(lat, lon))
     except Exception as e:
@@ -283,7 +346,8 @@ def get_weather(lat: float, lon: float):
 
 
 @app.get("/get-hourly-weather")
-def get_hourly_weather(lat: float, lon: float):
+def get_hourly_weather(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_hourly_weather(lat, lon))
     except Exception as e:
@@ -291,7 +355,8 @@ def get_hourly_weather(lat: float, lon: float):
 
 
 @app.get("/get-agronomic-data")
-def get_agronomic_data(lat: float, lon: float):
+def get_agronomic_data(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_agronomic_data(lat, lon))
     except Exception as e:
@@ -300,7 +365,8 @@ def get_agronomic_data(lat: float, lon: float):
 
 
 @app.get("/get-field-summary")
-def get_field_summary(lat: float, lon: float):
+def get_field_summary(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_field_summary(lat, lon))
     except Exception as e:
@@ -309,7 +375,8 @@ def get_field_summary(lat: float, lon: float):
 
 
 @app.get("/get-aemet-alerts")
-def get_aemet_alerts(lat: float, lon: float):
+def get_aemet_alerts(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_aemet_alerts(lat, lon))
     except Exception as e:
@@ -318,7 +385,8 @@ def get_aemet_alerts(lat: float, lon: float):
 
 
 @app.get("/get-hail-prediction")
-def get_hail_prediction(lat: float, lon: float):
+def get_hail_prediction(request: Request, lat: float, lon: float):
+    require_user(request)
     try:
         return JSONResponse(weather_service.get_hail_prediction(lat, lon))
     except Exception as e:
@@ -327,7 +395,8 @@ def get_hail_prediction(lat: float, lon: float):
 
 
 @app.post("/get-card-insights")
-def get_card_insights(payload: dict):
+def get_card_insights_endpoint(request: Request, payload: dict):
+    require_user(request)
     try:
         insights = weather_service.get_agro_insights(
             data      = payload.get("data", {}),

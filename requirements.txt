@@ -8,3 +8,5 @@ mysql-connector-python
 statsmodels
 numpy
 pandas
+itsdangerous
+bcrypt
