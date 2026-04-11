@@ -2,11 +2,33 @@
 OpenMeteoFacade.py
 Remote Facade — encapsula todas las llamadas HTTP a la API Open-Meteo.
 Main.py y los servicios nunca llaman a Open-Meteo directamente.
+
+Mejoras de rendimiento:
+  - Caché TTL por endpoint: evita llamadas repetidas a la API dentro de la
+    misma hora. Usa cachetools.TTLCache con límite de entradas para no crecer
+    indefinidamente. Instalar: pip install cachetools
+  - current_hour_index en O(1): calcula el índice directamente desde el primer
+    timestamp del array, sin iterar toda la lista.
 """
 
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
+
+from cachetools import TTLCache
+from cachetools.keys import hashkey
+
 from config import OPEN_METEO_ARCHIVE_URL, OPEN_METEO_BASE_URL, OPEN_METEO_TIMEOUT
+
+
+# TTL en segundos para cada tipo de dato (los datos horarios cambian cada hora)
+_TTL_CURRENT  = 1800   # 30 min — datos actuales
+_TTL_HOURLY   = 3600   # 1 h   — forecast horario
+_TTL_AGRONOMIC = 3600  # 1 h   — datos agronómicos (incluye 30 días históricos)
+_TTL_SUMMARY  = 1800   # 30 min — resumen de campo
+_TTL_ALERTS   = 3600   # 1 h   — datos para alertas
+_TTL_HAIL     = 3600   # 1 h   — predicción de granizo
+
+_MAX_ENTRIES  = 200    # máximo de coordenadas distintas en caché
 
 
 class OpenMeteoFacade:
@@ -15,10 +37,30 @@ class OpenMeteoFacade:
     ARCHIVE_URL = OPEN_METEO_ARCHIVE_URL
     TIMEOUT     = OPEN_METEO_TIMEOUT
 
+    def __init__(self):
+        # Una caché por tipo de endpoint — cada una con su propio TTL
+        self._cache_current   = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_CURRENT)
+        self._cache_hourly    = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_HOURLY)
+        self._cache_agronomic = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_AGRONOMIC)
+        self._cache_summary   = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_SUMMARY)
+        self._cache_alerts    = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_ALERTS)
+        self._cache_hail      = TTLCache(maxsize=_MAX_ENTRIES, ttl=_TTL_HAIL)
+
+    # ──────────────────────────────────────────────
+    # HELPER INTERNO — clave de caché redondeada a 2 decimales (~1 km)
+    # ──────────────────────────────────────────────
+    @staticmethod
+    def _key(lat: float, lon: float):
+        return hashkey(round(lat, 2), round(lon, 2))
+
     # ──────────────────────────────────────────────
     # WEATHER ACTUAL + DAILY (usado en /get-weather)
     # ──────────────────────────────────────────────
     def get_current_weather(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_current:
+            return self._cache_current[key]
+
         url = (
             f"{self.BASE_URL}"
             f"?latitude={lat}&longitude={lon}"
@@ -30,12 +72,18 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_current[key] = data
+        return data
 
     # ──────────────────────────────────────────────
     # HOURLY FORECAST (usado en /get-hourly-weather)
     # ──────────────────────────────────────────────
     def get_hourly_forecast(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_hourly:
+            return self._cache_hourly[key]
+
         url = (
             f"{self.BASE_URL}"
             f"?latitude={lat}&longitude={lon}"
@@ -45,12 +93,18 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_hourly[key] = data
+        return data
 
     # ──────────────────────────────────────────────
     # AGRONOMIC DATA (usado en /get-agronomic-data)
     # ──────────────────────────────────────────────
     def get_agronomic_data(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_agronomic:
+            return self._cache_agronomic[key]
+
         url = (
             f"{self.BASE_URL}"
             f"?latitude={lat}&longitude={lon}"
@@ -65,12 +119,18 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_agronomic[key] = data
+        return data
 
     # ──────────────────────────────────────────────
     # FIELD SUMMARY (usado en /get-field-summary)
     # ──────────────────────────────────────────────
     def get_field_summary(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_summary:
+            return self._cache_summary[key]
+
         url = (
             f"{self.BASE_URL}"
             f"?latitude={lat}&longitude={lon}"
@@ -83,13 +143,18 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_summary[key] = data
+        return data
 
     # ──────────────────────────────────────────────
     # ALERTS DATA (usado por LocalAlertService)
-    # Variables: temperatura, lluvia, nieve, viento, niebla, helada, tormenta
     # ──────────────────────────────────────────────
     def get_alerts_data(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_alerts:
+            return self._cache_alerts[key]
+
         url = (
             f"{self.BASE_URL}"
             f"?latitude={lat}&longitude={lon}"
@@ -100,12 +165,18 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=self.TIMEOUT)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_alerts[key] = data
+        return data
 
     # ──────────────────────────────────────────────
-    # HAIL PREDICTOR — histórico + forecast (usado por HailPredictor)
+    # HAIL PREDICTOR — histórico + forecast
     # ──────────────────────────────────────────────
     def get_hail_forecast(self, lat: float, lon: float) -> dict:
+        key = self._key(lat, lon)
+        if key in self._cache_hail:
+            return self._cache_hail[key]
+
         vars_ = [
             "cape", "lifted_index", "freezing_level_height",
             "temperature_2m", "precipitation", "showers",
@@ -119,9 +190,12 @@ class OpenMeteoFacade:
         )
         response = requests.get(url, timeout=15)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        self._cache_hail[key] = data
+        return data
 
     def get_hail_archive(self, lat: float, lon: float, start_date: str, end_date: str) -> dict:
+        # El archivo histórico no se cachea: las fechas varían en cada llamada
         vars_ = [
             "cape", "lifted_index", "freezing_level_height",
             "temperature_2m", "precipitation", "showers",
@@ -139,15 +213,29 @@ class OpenMeteoFacade:
         return response.json()
 
     # ──────────────────────────────────────────────
-    # HELPER — índice de la hora actual en un array hourly
+    # HELPER — índice de la hora actual en O(1)
     # ──────────────────────────────────────────────
     @staticmethod
     def current_hour_index(times: list) -> int:
-        now = datetime.now().replace(minute=0, second=0, microsecond=0)
-        for i, t in enumerate(times):
-            if datetime.fromisoformat(t) == now:
-                return i
-        return 0
+        """
+        Calcula el índice de la hora actual en el array hourly sin iterar.
+
+        Open-Meteo devuelve timestamps en formato ISO con intervalos exactos
+        de 1 hora. Dado el primer timestamp, el índice es simplemente la
+        diferencia en horas entre ahora y ese primer timestamp.
+        """
+        if not times:
+            return 0
+        try:
+            first = datetime.fromisoformat(times[0])
+            now   = datetime.now().replace(minute=0, second=0, microsecond=0)
+            # Normalizar timezone: si first tiene tzinfo, añadirla a now
+            if first.tzinfo is not None:
+                now = now.replace(tzinfo=first.tzinfo)
+            idx = int((now - first).total_seconds() // 3600)
+            return max(0, min(idx, len(times) - 1))
+        except Exception:
+            return 0
 
     @staticmethod
     def safe(lst: list, idx: int, decimals: int = 2):

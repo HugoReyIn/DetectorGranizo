@@ -2,6 +2,13 @@
 WeatherService.py
 Application Service — orquesta toda la lógica meteorológica y agronómica.
 Usa los facades como única vía de acceso a APIs externas.
+
+Mejoras de rendimiento:
+  - Eliminadas _aemet_cache y _hail_cache: la OpenMeteoFacade ya cachea
+    todas las respuestas de red con TTLCache. Mantener una segunda capa de
+    caché aquí era redundante y consumía memoria extra sin beneficio.
+  - predict_hail y calculate_alerts siguen siendo síncronos (dependen de
+    la facade, que ya tiene su propia caché).
 """
 
 import xml.etree.ElementTree as ET
@@ -44,9 +51,6 @@ _CAP_SEVERITY_MAP = {
 _LEVEL_ORDER = {"verde": 0, "amarillo": 1, "naranja": 2, "rojo": 3}
 _CAP_NS      = {"cap": "urn:oasis:names:tc:emergency:cap:1.2"}
 
-_AEMET_TTL  = 3600   # segundos
-_HAIL_TTL   = 3600
-
 
 def _default_alert_result() -> dict:
     return {
@@ -62,8 +66,6 @@ def _default_alert_result() -> dict:
     }
 
 
-
-
 # ──────────────────────────────────────────────────────────────────────────────
 # SERVICIO
 # ──────────────────────────────────────────────────────────────────────────────
@@ -76,9 +78,8 @@ class WeatherService:
     ):
         self._meteo     = meteo_facade
         self._nominatim = nominatim_facade
-
-        self._aemet_cache: dict = {}
-        self._hail_cache:  dict = {}
+        # Las cachés se han eliminado: OpenMeteoFacade ya tiene TTLCache
+        # por endpoint, por lo que una segunda capa aquí es redundante.
 
     # ──────────────────────────────────────────────
     # MUNICIPIO
@@ -100,28 +101,28 @@ class WeatherService:
         safe        = OpenMeteoFacade.safe
         weathercode = current.get("weathercode", 0)
 
-        precipitation     = hourly.get("precipitation",         [0])[idx] or 0
-        snowfall          = hourly.get("snowfall",              [0])[idx] or 0
+        precipitation     = hourly.get("precipitation",             [0])[idx] or 0
+        snowfall          = hourly.get("snowfall",                  [0])[idx] or 0
         precip_prob       = hourly.get("precipitation_probability", [0])[idx] or 0
         soil_moisture_raw = hourly.get("soil_moisture_0_1cm",   [None])[idx]
 
         hail_probability = precip_prob if weathercode in (96, 99) else 0
 
         return {
-            "temp_actual":  current.get("temperature_2m"),
-            "humidity":     hourly.get("relativehumidity_2m",  [None])[idx],
-            "dew_point":    hourly.get("dewpoint_2m",          [None])[idx],
-            "wind_speed":   current.get("windspeed_10m"),
-            "wind_deg":     current.get("winddirection_10m"),
-            "rain":         round(float(precipitation), 1),
-            "snow":         round(float(snowfall), 1),
-            "hail":         int(hail_probability),
+            "temp_actual":   current.get("temperature_2m"),
+            "humidity":      hourly.get("relativehumidity_2m",  [None])[idx],
+            "dew_point":     hourly.get("dewpoint_2m",          [None])[idx],
+            "wind_speed":    current.get("windspeed_10m"),
+            "wind_deg":      current.get("winddirection_10m"),
+            "rain":          round(float(precipitation), 1),
+            "snow":          round(float(snowfall), 1),
+            "hail":          int(hail_probability),
             "soil_moisture": round(soil_moisture_raw, 3) if soil_moisture_raw is not None else None,
-            "weathercode":  weathercode,
-            "temp_max":     daily.get("temperature_2m_max",  [None])[0],
-            "temp_min":     daily.get("temperature_2m_min",  [None])[0],
-            "sunrise":      daily.get("sunrise",             [None])[0],
-            "sunset":       daily.get("sunset",              [None])[0],
+            "weathercode":   weathercode,
+            "temp_max":      daily.get("temperature_2m_max",  [None])[0],
+            "temp_min":      daily.get("temperature_2m_min",  [None])[0],
+            "sunrise":       daily.get("sunrise",             [None])[0],
+            "sunset":        daily.get("sunset",              [None])[0],
             "daily": {
                 "time":               daily.get("time"),
                 "weathercode":        daily.get("weathercode"),
@@ -173,52 +174,40 @@ class WeatherService:
             if t is not None and 0 < t <= 7
         )
 
-        # ── ET₀ acumulada: 7 días y 30 días (usando daily forecast disponible) ──
-        et0_daily_list = daily.get("et0_fao_evapotranspiration", [])
+        et0_daily_list  = daily.get("et0_fao_evapotranspiration", [])
         rain_daily_list = daily.get("rain_sum", [])
-        # Sumamos todos los días disponibles (hasta 5 de forecast)
-        # Para 7d y mes usamos la media del periodo * días — usando historical via hourly
-        et0_all_hourly = hourly.get("et0_fao_evapotranspiration", [])
-        # Suma de ET0 las últimas 168h (7 días) disponibles en el array hourly
-        past_7d_start  = max(0, idx - 168)
-        past_30d_start = max(0, idx - 720)
+        et0_all_hourly  = hourly.get("et0_fao_evapotranspiration", [])
+        past_7d_start   = max(0, idx - 168)
+        past_30d_start  = max(0, idx - 720)
         et0_7d  = round(sum(v for v in et0_all_hourly[past_7d_start:idx+1]  if v is not None), 2)
         et0_30d = round(sum(v for v in et0_all_hourly[past_30d_start:idx+1] if v is not None), 2)
 
-        # ── Lluvia acumulada últimas 24h (desde hourly) ──
-        precip_hourly = hourly.get("precipitation", [])
-        rain_24h  = round(sum(v for v in precip_hourly[max(0,idx-24):idx+1] if v is not None), 2)
-        rain_7d   = round(sum(v for v in precip_hourly[past_7d_start:idx+1] if v is not None), 2)
-
-        # ── Balance hídrico ──
+        precip_hourly    = hourly.get("precipitation", [])
+        rain_24h         = round(sum(v for v in precip_hourly[max(0,idx-24):idx+1] if v is not None), 2)
+        rain_7d          = round(sum(v for v in precip_hourly[past_7d_start:idx+1] if v is not None), 2)
         water_balance_7d = round(rain_7d - et0_7d, 2)
 
-        # ── Horas de calor (T > 30°C) últimas 24h ──
         heat_hours = sum(
             1 for t in temps_24h[start_idx: idx + 1]
             if t is not None and t > 30
         )
 
-        # ── Riesgo de hongos ──
-        temps_12h    = hourly.get("temperature_2m",      [])
+        temps_12h    = hourly.get("temperature_2m", [])
         humidity_12h = hourly.get("relative_humidity_2m", []) or hourly.get("relativehumidity_2m", [])
         fungus_hours = sum(
             1 for i in range(idx, min(idx+12, len(temps_12h)))
             if (i < len(temps_12h) and temps_12h[i] is not None and 15 <= temps_12h[i] <= 25
                 and i < len(humidity_12h) and humidity_12h[i] is not None and humidity_12h[i] >= 80)
         )
-        # Nivel de riesgo: 0=bajo, 1=medio, 2=alto
         fungus_risk = 0
         if fungus_hours >= 8:
             fungus_risk = 2
         elif fungus_hours >= 4:
             fungus_risk = 1
 
-        # ── Semáforo agrícola del día ──
         et0_today_val = safe(et0_daily_list, 0, 2)
         temp_min_val  = safe(daily.get("temperature_2m_min", []), 0, 1)
         traffic_lights = []
-        # Riego
         if et0_today_val is not None:
             if et0_today_val >= 5:
                 traffic_lights.append({"icon": "🔴", "msg": "Riego urgente — alta demanda hídrica"})
@@ -226,17 +215,14 @@ class WeatherService:
                 traffic_lights.append({"icon": "🟡", "msg": "Monitorizar riego — demanda moderada"})
             else:
                 traffic_lights.append({"icon": "🟢", "msg": "Buen día para riego o sin necesidad"})
-        # Helada
         if temp_min_val is not None and temp_min_val < 3:
             traffic_lights.append({"icon": "🔴", "msg": "Riesgo de helada esta noche"})
-        # Hongos
         if fungus_risk == 2:
             traffic_lights.append({"icon": "🔴", "msg": "Alto riesgo de hongos (mildiu/botrytis)"})
         elif fungus_risk == 1:
             traffic_lights.append({"icon": "🟡", "msg": "Riesgo moderado de hongos"})
         else:
             traffic_lights.append({"icon": "🟢", "msg": "Condiciones poco favorables para hongos"})
-        # Balance hídrico
         if water_balance_7d < -15:
             traffic_lights.append({"icon": "🔴", "msg": f"Déficit hídrico severo ({water_balance_7d} mm/7d)"})
         elif water_balance_7d < -5:
@@ -269,18 +255,18 @@ class WeatherService:
             "fungus_risk":       fungus_risk,
             "fungus_hours":      fungus_hours,
             "traffic_lights":    traffic_lights,
-            "uv_max_today":      safe(daily.get("uv_index_max",                []), 0, 1),
-            "rain_today":        safe(daily.get("rain_sum",                    []), 0, 1),
-            "temp_max_today":    safe(daily.get("temperature_2m_max",         []), 0, 1),
-            "temp_min_today":    safe(daily.get("temperature_2m_min",         []), 0, 1),
+            "uv_max_today":      safe(daily.get("uv_index_max",            []), 0, 1),
+            "rain_today":        safe(daily.get("rain_sum",                []), 0, 1),
+            "temp_max_today":    safe(daily.get("temperature_2m_max",      []), 0, 1),
+            "temp_min_today":    safe(daily.get("temperature_2m_min",      []), 0, 1),
             "et0_forecast": [
                 {
-                    "date":  daily.get("time", [])[i] if i < len(daily.get("time", [])) else None,
-                    "et0":   safe(daily.get("et0_fao_evapotranspiration", []), i, 2),
-                    "uv_max":safe(daily.get("uv_index_max",               []), i, 1),
-                    "rain":  safe(daily.get("rain_sum",                   []), i, 1),
-                    "tmax":  safe(daily.get("temperature_2m_max",        []), i, 1),
-                    "tmin":  safe(daily.get("temperature_2m_min",        []), i, 1),
+                    "date":   daily.get("time", [])[i] if i < len(daily.get("time", [])) else None,
+                    "et0":    safe(daily.get("et0_fao_evapotranspiration", []), i, 2),
+                    "uv_max": safe(daily.get("uv_index_max",               []), i, 1),
+                    "rain":   safe(daily.get("rain_sum",                   []), i, 1),
+                    "tmax":   safe(daily.get("temperature_2m_max",         []), i, 1),
+                    "tmin":   safe(daily.get("temperature_2m_min",         []), i, 1),
                 }
                 for i in range(1, min(5, len(daily.get("time", []))))
             ],
@@ -333,43 +319,26 @@ class WeatherService:
         }
 
     # ──────────────────────────────────────────────
-    # ALERTAS LOCALES (sin AEMET, basadas en Open-Meteo)
+    # ALERTAS — calculadas con Open-Meteo + IA de granizo
+    # La caché está en OpenMeteoFacade (get_alerts_data y get_hail_forecast).
     # ──────────────────────────────────────────────
     def get_aemet_alerts(self, lat: float, lon: float) -> dict:
-        """Calcula alertas meteorológicas propias usando Open-Meteo + IA de granizo."""
-        cache_key = f"alerts_{round(lat, 2)}_{round(lon, 2)}"
-        now       = datetime.now()
-
-        cached = self._aemet_cache.get(cache_key)
-        if cached and (now - cached["ts"]).total_seconds() < _AEMET_TTL:
-            return cached["data"]
-
+        """Calcula alertas meteorológicas usando Open-Meteo + IA de granizo."""
         try:
-            meteo_data       = self._meteo.get_alerts_data(lat, lon)
-            hail_prediction  = self.get_hail_prediction(lat, lon)
-            result           = calculate_alerts(meteo_data, lat=lat, lon=lon,
-                                                hail_prediction=hail_prediction)
+            meteo_data      = self._meteo.get_alerts_data(lat, lon)
+            hail_prediction = self.get_hail_prediction(lat, lon)
+            return calculate_alerts(meteo_data, lat=lat, lon=lon,
+                                    hail_prediction=hail_prediction)
         except Exception as e:
             print(f"[Alertas] Error calculando alertas: {e}")
-            result = _default_alert_result()
-
-        self._aemet_cache[cache_key] = {"ts": now, "data": result}
-        return result
+            return _default_alert_result()
 
     # ──────────────────────────────────────────────
-    # HAIL PREDICTION (con caché)
+    # HAIL PREDICTION
+    # La caché del forecast está en OpenMeteoFacade (get_hail_forecast).
     # ──────────────────────────────────────────────
     def get_hail_prediction(self, lat: float, lon: float) -> list[dict]:
-        cache_key = f"{round(lat, 3)}_{round(lon, 3)}"
-        now       = datetime.now()
-
-        cached = self._hail_cache.get(cache_key)
-        if cached and (now - cached["timestamp"]).total_seconds() < _HAIL_TTL:
-            return cached["data"]
-
-        prediction = predict_hail(lat, lon)
-        self._hail_cache[cache_key] = {"timestamp": now, "data": prediction}
-        return prediction
+        return predict_hail(lat, lon)
 
     # ──────────────────────────────────────────────
     # AGRO INSIGHTS

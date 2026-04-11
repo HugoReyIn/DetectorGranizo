@@ -1,57 +1,5 @@
 {
-  "45": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
-  },
   "46": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
-  },
-  "49": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde"
-  },
-  "50": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "rojo",
-    "niebla": "verde"
-  },
-  "51": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
-  },
-  "53": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde"
-  },
-  "54": {
     "calor": "verde",
     "lluvia": "verde",
     "nieve": "verde",
@@ -67,6 +15,36 @@
     "nieve": "verde",
     "granizo": "verde",
     "viento": "amarillo",
+    "tormenta": "verde",
+    "helada": "verde",
+    "niebla": "verde"
+  },
+  "51": {
+    "calor": "verde",
+    "lluvia": "verde",
+    "nieve": "verde",
+    "granizo": "verde",
+    "viento": "amarillo",
+    "tormenta": "verde",
+    "helada": "verde",
+    "niebla": "verde"
+  },
+  "50": {
+    "calor": "verde",
+    "lluvia": "verde",
+    "nieve": "verde",
+    "granizo": "verde",
+    "viento": "verde",
+    "tormenta": "verde",
+    "helada": "rojo",
+    "niebla": "verde"
+  },
+  "45": {
+    "calor": "verde",
+    "lluvia": "verde",
+    "nieve": "verde",
+    "granizo": "verde",
+    "viento": "verde",
     "tormenta": "verde",
     "helada": "verde",
     "niebla": "verde"
