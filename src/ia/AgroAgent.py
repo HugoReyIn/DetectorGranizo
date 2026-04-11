@@ -4,8 +4,6 @@ Genera interpretaciones específicas por cultivo para los 8 indicadores del dash
 Sin API externa, sin coste, respuesta instantánea.
 """
 
-from datetime import datetime
-
 # ─────────────────────────────────────────────────────────────────────────────
 # BASE DE CONOCIMIENTO POR CULTIVO
 # Cada cultivo define umbrales y mensajes para los 8 indicadores

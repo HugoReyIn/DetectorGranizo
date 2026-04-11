@@ -11,7 +11,11 @@ Toda la comunicación con APIs externas vive en facades/.
 """
 
 import os
+import logging
 from contextlib import asynccontextmanager
+
+from settings.LoggingConfig import setup_logging
+setup_logging()   # configura logging antes de importar cualquier otro módulo
 
 from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
@@ -30,7 +34,7 @@ from services.UserService import UserService
 from services.FieldService import FieldService
 from services.WeatherService import WeatherService
 from services.EmailService import EmailService
-from AlertMonitor import AlertMonitor
+from settings.AlertMonitor import AlertMonitor
 
 
 # ──────────────────────────────────────────────

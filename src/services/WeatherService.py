@@ -11,9 +11,6 @@ Mejoras de rendimiento:
     la facade, que ya tiene su propia caché).
 """
 
-import xml.etree.ElementTree as ET
-from datetime import datetime
-
 from facades.OpenMeteoFacade import OpenMeteoFacade
 from facades.NominatimFacade import NominatimFacade
 from ia.HailPredictor import predict_hail

@@ -12,7 +12,7 @@ Mejoras de rendimiento:
 """
 
 import requests
-from datetime import datetime, timezone
+from datetime import datetime
 
 from cachetools import TTLCache
 from cachetools.keys import hashkey

@@ -19,7 +19,6 @@ Instalar dependencia (ya incluida con mysql-connector-python):
 
 from contextlib import contextmanager
 
-import mysql.connector
 from mysql.connector import pooling
 
 from config import DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
