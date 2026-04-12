@@ -4,7 +4,7 @@
     "lluvia": "verde",
     "nieve": "verde",
     "granizo": "verde",
-    "viento": "verde",
+    "viento": "amarillo",
     "tormenta": "verde",
     "helada": "verde",
     "niebla": "verde"
@@ -36,7 +36,7 @@
     "granizo": "verde",
     "viento": "verde",
     "tormenta": "verde",
-    "helada": "naranja",
+    "helada": "verde",
     "niebla": "verde"
   },
   "45": {
@@ -44,7 +44,7 @@
     "lluvia": "verde",
     "nieve": "verde",
     "granizo": "verde",
-    "viento": "verde",
+    "viento": "amarillo",
     "tormenta": "verde",
     "helada": "verde",
     "niebla": "verde"

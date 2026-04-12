@@ -35,7 +35,7 @@
 
         <div class="sidebar-section-label">Principal</div>
 
-        <a href="/main" class="sidebar-link {% if active_page == 'main' or active_page == 'field' %}active{% endif %}">
+        <a href="/main" class="sidebar-link">
             <span class="nav-icon">🏡</span>
             <span class="nav-label">Mis terrenos</span>
         </a>
@@ -47,30 +47,27 @@
 
         <div class="sidebar-section-label">Tiempo</div>
 
-        <a href="#section-agro"
-           class="sidebar-link" id="nav-agro" data-section="section-agro" onclick="scrollToSection(this)">
+        <a href="#section-agro" class="sidebar-link sidebar-scroll-link" data-section="section-agro">
             <span class="nav-icon">📊</span>
             <span class="nav-label">Info. agronómica</span>
         </a>
 
-        <a href="#section-tiempo"
-           class="sidebar-link" id="nav-tiempo" data-section="section-tiempo" onclick="scrollToSection(this)">
+        <a href="#section-tiempo" class="sidebar-link sidebar-scroll-link" data-section="section-tiempo">
             <span class="nav-icon">🌤️</span>
             <span class="nav-label">Tiempo</span>
         </a>
 
-        <a href="#section-luna"
-           class="sidebar-link" id="nav-luna" data-section="section-luna" onclick="scrollToSection(this)">
+        <a href="#section-luna" class="sidebar-link sidebar-scroll-link" data-section="section-luna">
             <span class="nav-icon">🌙</span>
             <span class="nav-label">Fase lunar</span>
         </a>
 
         <div class="sidebar-section-label">Alertas</div>
 
-        <div class="sidebar-link" id="sidebar-aemet-status">
+        <a href="/alerts" class="sidebar-link">
             <span class="nav-icon">⚠️</span>
-            <span class="nav-label">Alertas AEMET — <span id="sidebar-aemet-level">—</span></span>
-        </div>
+            <span class="nav-label">Alertas activas</span>
+        </a>
 
     </div>
 
@@ -112,14 +109,16 @@
 </script>
 
 <script>
-function scrollToSection(el) {
-    el.preventDefault && el.preventDefault();
-    const href = el.getAttribute ? el.getAttribute("href") : el;
-    const id   = href.replace("#", "");
-    const target = document.getElementById(id);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-    return false;
-}
+// Scroll suave para los enlaces de sección — sin clase active
+(function() {
+    document.querySelectorAll(".sidebar-scroll-link").forEach(link => {
+        link.addEventListener("click", function(e) {
+            e.preventDefault();
+            const el = document.getElementById(this.dataset.section);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+    });
+})();
 </script>
 
 <div class="main-content">

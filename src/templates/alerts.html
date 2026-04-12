@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detector Granizo — Alertas</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/sidebar.css">
+    <style>
+        /* ═══════════════════════════════════════════
+           ALERTAS — estilos específicos
+        ═══════════════════════════════════════════ */
+
+        .alerts-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .alerts-header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--musgo-dark);
+            margin: 0;
+        }
+
+        .alerts-last-update {
+            font-size: 12px;
+            color: var(--text-soft);
+            background: var(--crema-dark);
+            padding: 5px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+        }
+
+        /* Resumen global */
+        .alerts-summary-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+        }
+
+        .summary-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+            border: 1.5px solid;
+        }
+
+        .summary-pill .pill-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%; flex-shrink: 0;
+        }
+
+        .summary-pill.rojo     { background:#fff0f0; border-color:#e53935; color:#c62828; }
+        .summary-pill.naranja  { background:#fff8f0; border-color:#ef6c00; color:#bf360c; }
+        .summary-pill.amarillo { background:#fffde7; border-color:#f9a825; color:#f57f17; }
+        .summary-pill.verde    { background:#f1f8f1; border-color:#4caf50; color:#2e7d32; }
+        .summary-pill.rojo     .pill-dot { background:#e53935; }
+        .summary-pill.naranja  .pill-dot { background:#ef6c00; }
+        .summary-pill.amarillo .pill-dot { background:#f9a825; }
+        .summary-pill.verde    .pill-dot { background:#4caf50; }
+
+        /* Card de campo */
+        .field-alert-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            border: 1.5px solid var(--border);
+            box-shadow: 0 2px 10px rgba(44,24,16,0.06);
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
+        }
+
+        .field-alert-card:hover {
+            box-shadow: 0 4px 18px rgba(44,24,16,0.12);
+        }
+
+        /* Cabecera de la card */
+        .fac-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .fac-field-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .fac-field-icon {
+            font-size: 22px;
+            width: 42px; height: 42px;
+            background: var(--crema-dark);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .fac-field-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--t-dark);
+        }
+
+        .fac-field-meta {
+            font-size: 12px;
+            color: var(--text-soft);
+            margin-top: 2px;
+        }
+
+        /* Badge nivel máximo */
+        .fac-max-badge {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border: 1.5px solid;
+            flex-shrink: 0;
+        }
+
+        .fac-max-badge .badge-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%; flex-shrink: 0;
+        }
+
+        .fac-max-badge.verde    { background:#f1f8f1; border-color:#4caf50; color:#2e7d32; }
+        .fac-max-badge.amarillo { background:#fffde7; border-color:#f9a825; color:#f57f17; }
+        .fac-max-badge.naranja  { background:#fff8f0; border-color:#ef6c00; color:#bf360c; }
+        .fac-max-badge.rojo     { background:#fff0f0; border-color:#e53935; color:#c62828; }
+        .fac-max-badge.verde    .badge-dot { background:#4caf50; }
+        .fac-max-badge.amarillo .badge-dot { background:#f9a825; box-shadow:0 0 5px rgba(249,168,37,.5); }
+        .fac-max-badge.naranja  .badge-dot { background:#ef6c00; box-shadow:0 0 5px rgba(239,108,0,.5); }
+        .fac-max-badge.rojo     .badge-dot { background:#e53935; box-shadow:0 0 7px rgba(229,57,53,.6); }
+
+        /* ── Grid de alertas: 4 columnas, filas horizontales ── */
+        .fac-alerts-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        /* Cada celda es una fila: dot · icono · nombre · chip */
+        .fac-alert-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 13px 16px;
+            border-right: 1px solid var(--border);
+            transition: background 0.15s;
+            min-width: 0;
+        }
+
+        .fac-alert-item:nth-child(4n)  { border-right: none; }
+        .fac-alert-item:nth-child(n+5) { border-top: 1px solid var(--border); }
+
+        .fac-alert-item:hover { background: var(--crema); }
+
+        /* Fondo sutil en celdas con alerta activa */
+        .level-amarillo { background: rgba(249,168,37,.05); }
+        .level-naranja  { background: rgba(239,108,0,.06); }
+        .level-rojo     { background: rgba(229,57,53,.06); }
+
+        /* Punto de nivel — a la izquierda */
+        .fac-dot {
+            width: 11px; height: 11px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .level-verde    .fac-dot { background:#4caf50; }
+        .level-amarillo .fac-dot { background:#f9a825; box-shadow:0 0 5px rgba(249,168,37,.55); }
+        .level-naranja  .fac-dot { background:#ef6c00; box-shadow:0 0 5px rgba(239,108,0,.55); }
+        .level-rojo     .fac-dot { background:#e53935; box-shadow:0 0 7px rgba(229,57,53,.65); }
+
+        /* Icono del tipo */
+        .fac-alert-icon {
+            font-size: 18px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        /* Nombre del tipo */
+        .fac-alert-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Chip de nivel — a la derecha */
+        .fac-alert-chip {
+            font-size: 11px;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 2px 9px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .level-verde    .fac-alert-chip { color:#2e7d32; background:#e8f5e9; }
+        .level-amarillo .fac-alert-chip { color:#f57f17; background:#fff8e1; }
+        .level-naranja  .fac-alert-chip { color:#bf360c; background:#fff3e0; }
+        .level-rojo     .fac-alert-chip { color:#c62828; background:#ffebee; }
+
+        /* Sin campos */
+        .alerts-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-soft);
+        }
+        .alerts-empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .alerts-empty-text { font-size: 15px; }
+
+        /* Leyenda */
+        .alerts-legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 12px 20px;
+            background: var(--crema);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .legend-label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--t-mid);
+        }
+
+        .legend-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+        }
+
+        .legend-dot.verde    { background:#4caf50; }
+        .legend-dot.amarillo { background:#f9a825; }
+        .legend-dot.naranja  { background:#ef6c00; }
+        .legend-dot.rojo     { background:#e53935; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 900px) {
+            .fac-alerts-grid { grid-template-columns: repeat(2, 1fr); }
+            .fac-alert-item:nth-child(4n)  { border-right: 1px solid var(--border); }
+            .fac-alert-item:nth-child(2n)  { border-right: none; }
+            .fac-alert-item:nth-child(n+3) { border-top: 1px solid var(--border); }
+            .fac-alert-item:nth-child(1),
+            .fac-alert-item:nth-child(2)   { border-top: none; }
+        }
+
+        @media (max-width: 560px) {
+            .fac-alert-item { padding: 11px 12px; gap: 6px; }
+            .fac-alert-name { font-size: 11px; }
+            .alerts-header h1 { font-size: 22px; }
+            .fac-header { padding: 14px 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menú">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<nav class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="/main">
+        <div class="sidebar-logo-icon">🌾</div>
+        <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">DetectorGranizo</span>
+            <span class="sidebar-logo-subtitle">Gestión agrícola</span>
+        </div>
+    </a>
+
+    <div class="sidebar-nav">
+        <div class="sidebar-section-label">Principal</div>
+        <a href="/main" class="sidebar-link">
+            <span class="nav-icon">🏡</span>
+            <span class="nav-label">Mis terrenos</span>
+        </a>
+        <a href="/field/new" class="sidebar-link">
+            <span class="nav-icon">➕</span>
+            <span class="nav-label">Añadir terreno</span>
+        </a>
+
+        <div class="sidebar-section-label">Tiempo</div>
+        <a href="/main#weather-container" class="sidebar-link">
+            <span class="nav-icon">🌤️</span>
+            <span class="nav-label">Tiempo</span>
+        </a>
+        <a href="/main#moon-container" class="sidebar-link">
+            <span class="nav-icon">🌙</span>
+            <span class="nav-label">Fase lunar</span>
+        </a>
+
+        <div class="sidebar-section-label">Alertas</div>
+        <a href="/alerts" class="sidebar-link active">
+            <span class="nav-icon">⚠️</span>
+            <span class="nav-label">Alertas activas</span>
+        </a>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-footer">
+        <a href="/profile" class="sidebar-user" style="text-decoration:none;">
+            <div class="sidebar-avatar" title="Editar perfil">👤</div>
+            <div>
+                <div class="sidebar-username">{{ current_user.name or current_user.email }}</div>
+                <div class="sidebar-role">Agricultor</div>
+            </div>
+        </a>
+        <a href="/" class="sidebar-logout">
+            <span class="nav-icon">🚪</span>
+            <span class="nav-label">Cerrar sesión</span>
+        </a>
+    </div>
+</nav>
+
+<script>
+(function() {
+    const toggle  = document.getElementById("sidebar-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    if (!toggle) return;
+    toggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        overlay.classList.toggle("show");
+    });
+    overlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("show");
+    });
+})();
+</script>
+
+<div class="main-content">
+
+    <div class="alerts-header">
+        <h1>⚠️ Alertas activas</h1>
+        <span class="alerts-last-update">Actualizado: {{ last_update }}</span>
+    </div>
+
+    <div class="alerts-legend">
+        <span class="legend-label">Niveles:</span>
+        <div class="legend-item"><div class="legend-dot verde"></div> Sin alerta</div>
+        <div class="legend-item"><div class="legend-dot amarillo"></div> Amarillo</div>
+        <div class="legend-item"><div class="legend-dot naranja"></div> Naranja</div>
+        <div class="legend-item"><div class="legend-dot rojo"></div> Rojo</div>
+    </div>
+
+    {% if summary %}
+    <div class="alerts-summary-bar">
+        {% if summary.rojo > 0 %}
+        <div class="summary-pill rojo">
+            <div class="pill-dot"></div>
+            {{ summary.rojo }} alerta{{ 's' if summary.rojo != 1 }} roja{{ 's' if summary.rojo != 1 }}
+        </div>
+        {% endif %}
+        {% if summary.naranja > 0 %}
+        <div class="summary-pill naranja">
+            <div class="pill-dot"></div>
+            {{ summary.naranja }} alerta{{ 's' if summary.naranja != 1 }} naranja{{ 's' if summary.naranja != 1 }}
+        </div>
+        {% endif %}
+        {% if summary.amarillo > 0 %}
+        <div class="summary-pill amarillo">
+            <div class="pill-dot"></div>
+            {{ summary.amarillo }} alerta{{ 's' if summary.amarillo != 1 }} amarilla{{ 's' if summary.amarillo != 1 }}
+        </div>
+        {% endif %}
+        <div class="summary-pill verde">
+            <div class="pill-dot"></div>
+            {{ summary.verde }} campo{{ 's' if summary.verde != 1 }} sin incidencias
+        </div>
+    </div>
+    {% endif %}
+
+    {% if field_alerts %}
+
+    {% set icons = {
+        'calor':    '🌡️',
+        'lluvia':   '🌧️',
+        'nieve':    '❄️',
+        'granizo':  '🧊',
+        'viento':   '💨',
+        'tormenta': '⛈️',
+        'helada':   '🥶',
+        'niebla':   '🌫️'
+    } %}
+
+    {% set level_order = {'rojo': 3, 'naranja': 2, 'amarillo': 1, 'verde': 0} %}
+
+        {% for fa in field_alerts %}
+        <div class="field-alert-card">
+
+            <div class="fac-header">
+                <div class="fac-field-info">
+                    <div class="fac-field-icon">🌾</div>
+                    <div>
+                        <div class="fac-field-name">{{ fa.field_name }}</div>
+                        <div class="fac-field-meta">
+                            {{ fa.municipality }}{% if fa.crop_type and fa.crop_type != 'barbecho' %} · {{ fa.crop_type | capitalize }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="fac-max-badge {{ fa.max_level }}">
+                    <div class="badge-dot"></div>
+                    {% if fa.max_level == 'verde' %}Sin alertas
+                    {% elif fa.max_level == 'amarillo' %}Nivel amarillo
+                    {% elif fa.max_level == 'naranja' %}Nivel naranja
+                    {% else %}Nivel rojo{% endif %}
+                </div>
+            </div>
+
+            <!-- Tipos ordenados de mayor a menor severidad -->
+            <div class="fac-alerts-grid">
+                {% for tipo, nivel in fa.alerts_sorted %}
+                <div class="fac-alert-item level-{{ nivel }}">
+                    <div class="fac-dot"></div>
+                    <div class="fac-alert-icon">{{ icons.get(tipo, '⚠️') }}</div>
+                    <div class="fac-alert-name">{{ tipo | capitalize }}</div>
+                    <div class="fac-alert-chip">{{ nivel | capitalize }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+        {% endfor %}
+
+    {% else %}
+        <div class="dashboard alerts-empty">
+            <div class="alerts-empty-icon">✅</div>
+            <div class="alerts-empty-text">No hay campos registrados o no se han calculado alertas todavía.</div>
+        </div>
+    {% endif %}
+
+    <a href="/main" class="link" style="display:block; text-align:center; margin-top:8px; font-size:13px; color:var(--text-soft);">Volver</a>
+
+</div><!-- /main-content -->
+</body>
+</html>

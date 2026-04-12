@@ -12,7 +12,7 @@
 <body>
 
 <!-- ═══════════════════════════════════════
-     SIDEBAR — incluir en cada template
+     SIDEBAR
 ═══════════════════════════════════════ -->
 <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menú">☰</button>
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
@@ -33,36 +33,34 @@
 
         <div class="sidebar-section-label">Principal</div>
 
-        <a href="/main" class="sidebar-link {% if active_page == 'main' %}active{% endif %}">
+        <a href="/main" class="sidebar-link active">
             <span class="nav-icon">🏡</span>
             <span class="nav-label">Mis terrenos</span>
         </a>
 
-        <a href="/field/new" class="sidebar-link {% if active_page == 'new_field' %}active{% endif %}">
+        <a href="/field/new" class="sidebar-link">
             <span class="nav-icon">➕</span>
             <span class="nav-label">Añadir terreno</span>
         </a>
 
         <div class="sidebar-section-label">Tiempo</div>
 
-        <a href="#weather-container"
-           class="sidebar-link" id="nav-tiempo" data-section="weather-container" onclick="scrollToSection(this)">
+        <a href="#weather-container" class="sidebar-link sidebar-scroll-link" data-section="weather-container">
             <span class="nav-icon">🌤️</span>
             <span class="nav-label">Tiempo</span>
         </a>
 
-        <a href="#moon-container"
-           class="sidebar-link" id="nav-luna" data-section="moon-container" onclick="scrollToSection(this)">
+        <a href="#moon-container" class="sidebar-link sidebar-scroll-link" data-section="moon-container">
             <span class="nav-icon">🌙</span>
             <span class="nav-label">Fase lunar</span>
         </a>
 
         <div class="sidebar-section-label">Alertas</div>
 
-        <div class="sidebar-link" id="sidebar-aemet-status">
+        <a href="/alerts" class="sidebar-link">
             <span class="nav-icon">⚠️</span>
-            <span class="nav-label">Alertas activas<span id="sidebar-aemet-level"></span></span>
-        </div>
+            <span class="nav-label">Alertas activas</span>
+        </a>
 
     </div>
 
@@ -88,9 +86,9 @@
 <script>
 // Toggle sidebar en móvil
 (function() {
-    const toggle   = document.getElementById("sidebar-toggle");
-    const sidebar  = document.getElementById("sidebar");
-    const overlay  = document.getElementById("sidebar-overlay");
+    const toggle  = document.getElementById("sidebar-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
     if (!toggle) return;
     toggle.addEventListener("click", () => {
         sidebar.classList.toggle("open");
@@ -101,50 +99,16 @@
         overlay.classList.remove("show");
     });
 })();
-</script>
 
-<script>
-// Iluminar enlace del sidebar según la sección visible
+// Scroll suave para los enlaces de sección (Tiempo / Fase lunar)
+// NO añaden la clase active — esa solo la tiene "Mis terrenos" en esta página
 (function() {
-    const SECTION_NAV = {
-        "weather-container": "nav-tiempo",
-        "moon-container":    "nav-luna",
-    };
-
-    const sectionLinks = ["nav-tiempo", "nav-luna"]
-        .map(id => document.getElementById(id))
-        .filter(Boolean);
-
-    function setActive(navId) {
-        sectionLinks.forEach(el => el.classList.remove("active"));
-        const target = document.getElementById(navId);
-        if (target) target.classList.add("active");
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const navId = SECTION_NAV[entry.target.id];
-                if (navId) setActive(navId);
-            }
-        });
-    }, {
-        root: null,                        // observa respecto al viewport
-        rootMargin: "-10% 0px -55% 0px",  // activa cuando la sección entra en el tercio superior
-        threshold: 0
-    });
-
-    Object.keys(SECTION_NAV).forEach(sectionId => {
-        const el = document.getElementById(sectionId);
-        if (el) observer.observe(el);
-    });
-
-    // Click inmediato sin esperar al observer
-    sectionLinks.forEach(link => {
-        link.addEventListener("click", () => {
-            const sectionId = link.dataset.section;
-            const navId = SECTION_NAV[sectionId];
-            if (navId) setActive(navId);
+    document.querySelectorAll(".sidebar-scroll-link").forEach(link => {
+        link.addEventListener("click", function(e) {
+            e.preventDefault();
+            const sectionId = this.dataset.section;
+            const el = document.getElementById(sectionId);
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
         });
     });
 })();

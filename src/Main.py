@@ -4,7 +4,10 @@ Punto de entrada de la aplicación FastAPI.
 """
 
 import os
+import json
 import logging
+from pathlib import Path
+from datetime import datetime
 
 from settings.LoggingConfig import setup_logging
 setup_logging()
@@ -29,6 +32,7 @@ from services.FieldService import FieldService
 from services.WeatherService import WeatherService
 from services.EmailService import EmailService
 from settings.AlertMonitor import AlertMonitor
+from config import ALERT_STATE_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +58,9 @@ alert_monitor = AlertMonitor(
     weather_service = weather_service,
     email_service   = email_service,
 )
+
+# Orden de severidad de niveles de alerta
+_LEVEL_ORDER = {"verde": 0, "amarillo": 1, "naranja": 2, "rojo": 3}
 
 
 # ──────────────────────────────────────────────
@@ -167,7 +174,7 @@ def profile_page(request: Request):
         return redirect
     return templates.TemplateResponse(
         "profile.html",
-        {"request": request, "current_user": current_user, "active_page": "profile", "msg": None, "msg_type": ""},
+        {"request": request, "current_user": current_user, "active_page": "profile", "msg": None, "msg_type": "", "mode": "profile"},
     )
 
 
@@ -188,7 +195,114 @@ def update_profile(
     )
     return templates.TemplateResponse(
         "profile.html",
-        {"request": request, "current_user": updated_user, "active_page": "profile", "msg": msg, "msg_type": msg_type},
+        {"request": request, "current_user": updated_user, "active_page": "profile", "msg": msg, "msg_type": msg_type, "mode": "profile"},
+    )
+
+
+# ──────────────────────────────────────────────
+# RESET CONTRASEÑA (requiere login, solo muestra cambio de contraseña)
+# ──────────────────────────────────────────────
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(request: Request):
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "current_user": current_user, "msg": None, "msg_type": "", "mode": "reset"},
+    )
+
+
+@app.post("/reset-password", response_class=HTMLResponse)
+def reset_password(
+    request:          Request,
+    new_password:     str = Form(...),
+    confirm_password: str = Form(...),
+):
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
+
+    def render(msg, msg_type="error"):
+        return templates.TemplateResponse(
+            "profile.html",
+            {"request": request, "current_user": current_user, "msg": msg, "msg_type": msg_type, "mode": "reset"},
+        )
+
+    if new_password != confirm_password:
+        return render("Las contraseñas no coinciden.")
+
+    user_service.update_profile(
+        current_user,
+        name             = current_user.name or "",
+        email            = current_user.email,
+        current_password = "",
+        new_password     = new_password,
+        confirm_password = confirm_password,
+    )
+
+    return render("Contraseña actualizada correctamente.", "ok")
+
+
+# ──────────────────────────────────────────────
+# ALERTAS — Vista consolidada por campo
+# ──────────────────────────────────────────────
+@app.get("/alerts", response_class=HTMLResponse)
+def alerts_page(request: Request):
+    current_user, redirect = redirect_if_not_logged(request)
+    if redirect:
+        return redirect
+
+    # Leer el estado de alertas persistido por AlertMonitor
+    state_path = Path(ALERT_STATE_FILE)
+    raw_state: dict = {}
+    if state_path.exists():
+        try:
+            raw_state = json.loads(state_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # Obtener los campos del usuario actual
+    fields = field_service.get_fields_for_user(current_user.id)
+
+    alert_types = ("calor", "lluvia", "nieve", "granizo", "viento", "tormenta", "helada", "niebla")
+    field_alerts = []
+    summary = {"verde": 0, "amarillo": 0, "naranja": 0, "rojo": 0}
+
+    for field in fields:
+        field_state = raw_state.get(str(field.id), {})
+        alerts = {t: field_state.get(t, "verde") for t in alert_types}
+        max_level = max(alerts.values(), key=lambda lvl: _LEVEL_ORDER.get(lvl, 0))
+        summary[max_level] += 1
+        # Lista ordenada de (tipo, nivel) de mayor a menor severidad — usada en el template
+        alerts_sorted = sorted(alerts.items(), key=lambda kv: _LEVEL_ORDER.get(kv[1], 0), reverse=True)
+        field_alerts.append({
+            "field_name":    field.name,
+            "municipality":  field.municipality,
+            "crop_type":     field.crop_type or "",
+            "max_level":     max_level,
+            "alerts":        alerts,
+            "alerts_sorted": alerts_sorted,
+        })
+
+    # Ordenar de mayor a menor nivel de alerta
+    field_alerts.sort(key=lambda fa: _LEVEL_ORDER.get(fa["max_level"], 0), reverse=True)
+
+    last_update = (
+        datetime.fromtimestamp(state_path.stat().st_mtime).strftime("%d/%m/%Y %H:%M")
+        if state_path.exists() else "—"
+    )
+
+    return templates.TemplateResponse(
+        "alerts.html",
+        {
+            "request":      request,
+            "current_user": current_user,
+            "active_page":  "alerts",
+            "field_alerts": field_alerts,
+            "summary":      summary,
+            "last_update":  last_update,
+        },
     )
 
 
