@@ -32,7 +32,10 @@ from services.FieldService import FieldService
 from services.WeatherService import WeatherService
 from services.EmailService import EmailService
 from settings.AlertMonitor import AlertMonitor
+from ia.HailPredictor import warmup_models
 from config import ALERT_STATE_FILE
+
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +72,33 @@ _LEVEL_ORDER = {"verde": 0, "amarillo": 1, "naranja": 2, "rojo": 3}
 @asynccontextmanager
 async def lifespan(app):
     alert_monitor.start()
+
+    # Precalentar modelos de granizo en segundo plano (mejora 2)
+    # Recoge las coordenadas de todos los campos registrados
+    try:
+        all_fields = _field_dao.getAllFields()
+        coords = []
+        for field in all_fields:
+            points = _point_dao.getPointsByField(field.id)
+            if points:
+                lat = sum(p.latitude  for p in points) / len(points)
+                lon = sum(p.longitude for p in points) / len(points)
+                coords.append((lat, lon))
+
+        if coords:
+            warmup_thread = threading.Thread(
+                target=warmup_models,
+                args=(coords,),
+                daemon=True,
+                name="HailPredictor-Warmup",
+            )
+            warmup_thread.start()
+            logger.info("[Lifespan] Precalentamiento de modelos iniciado (%d campos)", len(coords))
+        else:
+            logger.info("[Lifespan] Sin campos registrados, precalentamiento omitido")
+    except Exception as e:
+        logger.warning("[Lifespan] Error al iniciar precalentamiento: %s", e)
+
     yield
     alert_monitor.stop()
 
