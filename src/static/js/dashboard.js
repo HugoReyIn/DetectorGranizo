@@ -344,4 +344,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 3000);
     }
+
+    // ── EXPONER toggleRoof GLOBALMENTE ──
+    // Permite que agro.js lo llame para el cierre/apertura automática,
+    // usando exactamente la misma lógica que el botón manual.
+    window.toggleRoofForField = function(fieldId) {
+        const row    = document.querySelector(`.field-row[data-id="${fieldId}"]`);
+        const button = row?.querySelector(".action-btn");
+        if (row && button) toggleRoof(row, button, fieldId);
+    };
 });

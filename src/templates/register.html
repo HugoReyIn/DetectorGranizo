@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro</title>
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .register-error {
+            background: rgba(192,57,43,0.10);
+            color: #7a0000;
+            border: 1px solid rgba(192,57,43,0.25);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <div class="container-center">
@@ -12,7 +25,7 @@
             <h2>Registro</h2>
 
             {% if error %}
-                <p style="color: red;">{{ error }}</p>
+                <div class="register-error">{{ error }}</div>
             {% endif %}
 
             <form action="/register" method="post">

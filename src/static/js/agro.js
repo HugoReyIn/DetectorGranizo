@@ -405,31 +405,54 @@ async function loadAgroData(lat, lon, cropType) {
         }
 
         // ── CIERRE AUTOMÁTICO si riesgo >= 35% ──
+        // Llama a toggleRoofForField (definida en dashboard.js) para que
+        // ejecute exactamente la misma lógica que el botón manual:
+        // muestra "Cerrando...", espera 3s y llama al endpoint.
         if (hailMax >= 35) {
             const fieldId = document.getElementById("field-id-hidden")?.value;
-            const statusEl = document.querySelector(".field-status");
-            const currentState = statusEl?.dataset?.state || statusEl?.className;
-            const alreadyClosed = currentState?.includes("closed") || currentState?.includes("closing");
+            const row = fieldId ? document.querySelector(`.field-row[data-id="${fieldId}"]`) : null;
+            const currentState = row?.dataset?.state;
+            const alreadyClosed = currentState === "closed" || currentState === "closing";
 
-            if (fieldId && !alreadyClosed) {
-                console.warn(`[AgroAgent] Granizo ${hailMax.toFixed(0)}% — cerrando techo`);
-                fetch(`/field/update-status/${fieldId}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ state: "closed" })
-                }).then(() => {
-                    if (statusEl) {
-                        statusEl.className = "field-status status-closed";
-                        statusEl.textContent = "Cerrado";
-                    }
-                });
+            if (fieldId && !alreadyClosed && typeof window.toggleRoofForField === "function") {
+                console.warn(`[IA Granizo] Riesgo ${hailMax.toFixed(0)}% — ordenando cierre del techo`);
+
+                // Marcar como cierre automático para poder reabrirlo después
+                if (row) row.dataset.autoClosed = "true";
+
+                window.toggleRoofForField(fieldId);
 
                 // Banner de aviso
                 if (!document.getElementById("hail-auto-close-banner")) {
                     const banner = document.createElement("div");
                     banner.id = "hail-auto-close-banner";
-                    banner.innerHTML = `🧊 <strong>Riesgo de granizo ${hailMax.toFixed(0)}%</strong> — Techo cerrado automáticamente`;
+                    banner.innerHTML = `🧊 <strong>Riesgo de granizo ${hailMax.toFixed(0)}%</strong> — Orden de cierre enviada automáticamente`;
                     banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#e53935;color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);";
+                    document.body.prepend(banner);
+                    setTimeout(() => banner.remove(), 10000);
+                }
+            }
+
+        // ── APERTURA AUTOMÁTICA si riesgo baja del 35% y fue cerrado automáticamente ──
+        } else {
+            const fieldId = document.getElementById("field-id-hidden")?.value;
+            const row = fieldId ? document.querySelector(`.field-row[data-id="${fieldId}"]`) : null;
+            const currentState = row?.dataset?.state;
+            const wasAutoClosed = row?.dataset?.autoClosed === "true";
+
+            // Solo reabre si fue el sistema quien lo cerró (no el agricultor manualmente)
+            if (fieldId && wasAutoClosed && (currentState === "closed") && typeof window.toggleRoofForField === "function") {
+                console.info(`[IA Granizo] Riesgo ${hailMax.toFixed(0)}% — riesgo reducido, ordenando apertura`);
+
+                row.dataset.autoClosed = "false";
+                window.toggleRoofForField(fieldId);
+
+                // Banner de aviso
+                if (!document.getElementById("hail-auto-open-banner")) {
+                    const banner = document.createElement("div");
+                    banner.id = "hail-auto-open-banner";
+                    banner.innerHTML = `✅ <strong>Riesgo de granizo reducido (${hailMax.toFixed(0)}%)</strong> — Orden de apertura enviada automáticamente`;
+                    banner.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:9999;background:#4caf50;color:#fff;text-align:center;padding:12px 20px;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.3);";
                     document.body.prepend(banner);
                     setTimeout(() => banner.remove(), 10000);
                 }
