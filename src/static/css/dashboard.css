@@ -573,6 +573,11 @@ h4 {
     font-family: 'Nunito', sans-serif;
 }
 
+.chart-btn:hover {
+    background: transparent;
+    color: var(--text-soft);
+}
+
 .chart-btn.active[id$="btn-temp"],
 .chart-btn.active[id*="btn-temp-"]     { color: #7a5000; border-bottom-color: var(--trigo); }
 .chart-btn.active[id$="btn-humidity"],

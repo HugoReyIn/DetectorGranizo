@@ -35,7 +35,7 @@
 
         <div class="sidebar-section-label">Principal</div>
 
-        <a href="/main" class="sidebar-link {% if active_page == 'main' %}active{% endif %}">
+        <a href="/main" class="sidebar-link {% if active_page == 'main' or active_page == 'field' %}active{% endif %}">
             <span class="nav-icon">🏡</span>
             <span class="nav-label">Mis terrenos</span>
         </a>
@@ -47,24 +47,25 @@
 
         <div class="sidebar-section-label">Tiempo</div>
 
-        <a href="#{% if active_page == 'main' %}weather-container{% elif active_page == 'field' %}section-tiempo{% else %}section-tiempo{% endif %}"
-           class="sidebar-link" onclick="scrollToSection(this)">
+        <a href="#section-agro"
+           class="sidebar-link" id="nav-agro" data-section="section-agro" onclick="scrollToSection(this)">
+            <span class="nav-icon">📊</span>
+            <span class="nav-label">Info. agronómica</span>
+        </a>
+
+        <a href="#section-tiempo"
+           class="sidebar-link" id="nav-tiempo" data-section="section-tiempo" onclick="scrollToSection(this)">
             <span class="nav-icon">🌤️</span>
             <span class="nav-label">Tiempo</span>
         </a>
 
-        <a href="#{% if active_page == 'main' %}moon-container{% elif active_page == 'field' %}section-luna{% else %}section-luna{% endif %}"
-           class="sidebar-link" onclick="scrollToSection(this)">
+        <a href="#section-luna"
+           class="sidebar-link" id="nav-luna" data-section="section-luna" onclick="scrollToSection(this)">
             <span class="nav-icon">🌙</span>
             <span class="nav-label">Fase lunar</span>
         </a>
 
         <div class="sidebar-section-label">Alertas</div>
-
-        <div class="sidebar-link" id="sidebar-hail-status">
-            <span class="nav-icon">🧊</span>
-            <span class="nav-label">Granizo — <span id="sidebar-hail-pct">—</span></span>
-        </div>
 
         <div class="sidebar-link" id="sidebar-aemet-status">
             <span class="nav-icon">⚠️</span>
@@ -77,13 +78,13 @@
 
     <!-- Footer usuario -->
     <div class="sidebar-footer">
-        <div class="sidebar-user">
-            <div class="sidebar-avatar">👤</div>
+        <a href="/profile" class="sidebar-user" style="text-decoration:none;">
+            <div class="sidebar-avatar" title="Editar perfil">👤</div>
             <div>
                 <div class="sidebar-username">{{ current_user.name or current_user.email }}</div>
                 <div class="sidebar-role">Agricultor</div>
             </div>
-        </div>
+        </a>
         <a href="/" class="sidebar-logout">
             <span class="nav-icon">🚪</span>
             <span class="nav-label">Cerrar sesión</span>
@@ -110,6 +111,16 @@
 })();
 </script>
 
+<script>
+function scrollToSection(el) {
+    el.preventDefault && el.preventDefault();
+    const href = el.getAttribute ? el.getAttribute("href") : el;
+    const id   = href.replace("#", "");
+    const target = document.getElementById(id);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    return false;
+}
+</script>
 
 <div class="main-content">
 
@@ -248,8 +259,8 @@
         <!-- ══════════════════════════════════════════
              SECCIÓN: INFORMACIÓN AGRONÓMICA
         ══════════════════════════════════════════ -->
-        <div class="agro-section">
-            <h2 class="agro-title">📊 Información agronómica</h2>
+        <div class="dashboard" id="section-agro">
+            <h2>Información agronómica</h2>
 
             <!-- ALERTAS integradas -->
             <div class="agro-block agro-alerts-block" id="agro-alerts-block">
@@ -467,12 +478,13 @@
 
 
 
-        </div><!-- /agro-section -->
+        </div><!-- /section-agro -->
 
         <!-- ══════════════════════════════════════════
              SECCIÓN: TIEMPO (la existente)
         ══════════════════════════════════════════ -->
-        <h2 id="section-tiempo">🌤️ Tiempo</h2>
+        <div id="section-tiempo" class="dashboard">
+        <h2>Tiempo</h2>
         <h4>Hoy</h4>
         <div id="weather-actual-info" class="weather-grid">
             <div class="weather-summary">
@@ -571,8 +583,8 @@
         <div class="chart-panel" id="today-chart-panel">
             <div class="chart-panel-inner">
                 <div class="chart-controls">
-                    <button class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
-                    <button class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
+                    <button type="button" class="chart-btn active" id="today-btn-temp">🌡 Temperatura</button>
+                    <button type="button" class="chart-btn" id="today-btn-humidity">💧 Prob. lluvia</button>
                 </div>
                 <div class="chart-canvas-wrapper">
                     <canvas id="today-chart-canvas"></canvas>
@@ -619,8 +631,8 @@
                 <div class="forecast-chart-block">
                     <div class="forecast-chart-date" id="forecast-chart-date-{{ i }}">—</div>
                     <div class="chart-controls">
-                        <button class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
-                        <button class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
+                        <button type="button" class="chart-btn active" id="forecast-btn-temp-{{ i }}">🌡 Temperatura</button>
+                        <button type="button" class="chart-btn" id="forecast-btn-humidity-{{ i }}">💧 Prob. lluvia</button>
                     </div>
                     <div class="chart-canvas-wrapper">
                         <canvas id="forecast-canvas-{{ i }}"></canvas>
@@ -630,11 +642,11 @@
             </div>
         </div>
 
-
+        </div><!-- /section-tiempo -->
 
         <!-- LUNA -->
-        <div class="agro-moon-block" id="section-luna">
-            <h4 class="agro-subtitle">🌙 Fase lunar</h4>
+        <div class="dashboard" id="section-luna">
+            <h2>Luna</h2>
             <div class="moon-grid">
                 <div class="moon-main-card">
                     <div class="moon-visual-wrapper">
@@ -721,6 +733,7 @@
         </div>
     </div>
 </div>
+
 
 </body>
 </html>

@@ -284,3 +284,11 @@ button {
         display: block;
     }
 }
+/* ── Títulos dentro de tarjetas dashboard — alineados a la izquierda ── */
+.dashboard h2 {
+    text-align: left;
+    color: var(--musgo-dark);
+    font-family: 'Playfair Display', serif;
+    margin-top: 0;
+    margin-bottom: 20px;
+}

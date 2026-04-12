@@ -45,28 +45,23 @@
 
         <div class="sidebar-section-label">Tiempo</div>
 
-        <a href="#{% if active_page == 'main' %}weather-container{% elif active_page == 'field' %}section-tiempo{% else %}section-tiempo{% endif %}"
-           class="sidebar-link" onclick="scrollToSection(this)">
+        <a href="#weather-container"
+           class="sidebar-link" id="nav-tiempo" data-section="weather-container" onclick="scrollToSection(this)">
             <span class="nav-icon">🌤️</span>
             <span class="nav-label">Tiempo</span>
         </a>
 
-        <a href="#{% if active_page == 'main' %}moon-container{% elif active_page == 'field' %}section-luna{% else %}section-luna{% endif %}"
-           class="sidebar-link" onclick="scrollToSection(this)">
+        <a href="#moon-container"
+           class="sidebar-link" id="nav-luna" data-section="moon-container" onclick="scrollToSection(this)">
             <span class="nav-icon">🌙</span>
             <span class="nav-label">Fase lunar</span>
         </a>
 
         <div class="sidebar-section-label">Alertas</div>
 
-        <div class="sidebar-link" id="sidebar-hail-status">
-            <span class="nav-icon">🧊</span>
-            <span class="nav-label">Granizo — <span id="sidebar-hail-pct">—</span></span>
-        </div>
-
         <div class="sidebar-link" id="sidebar-aemet-status">
             <span class="nav-icon">⚠️</span>
-            <span class="nav-label">Alertas AEMET — <span id="sidebar-aemet-level">—</span></span>
+            <span class="nav-label">Alertas activas<span id="sidebar-aemet-level"></span></span>
         </div>
 
     </div>
@@ -104,6 +99,53 @@
     overlay.addEventListener("click", () => {
         sidebar.classList.remove("open");
         overlay.classList.remove("show");
+    });
+})();
+</script>
+
+<script>
+// Iluminar enlace del sidebar según la sección visible
+(function() {
+    const SECTION_NAV = {
+        "weather-container": "nav-tiempo",
+        "moon-container":    "nav-luna",
+    };
+
+    const sectionLinks = ["nav-tiempo", "nav-luna"]
+        .map(id => document.getElementById(id))
+        .filter(Boolean);
+
+    function setActive(navId) {
+        sectionLinks.forEach(el => el.classList.remove("active"));
+        const target = document.getElementById(navId);
+        if (target) target.classList.add("active");
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const navId = SECTION_NAV[entry.target.id];
+                if (navId) setActive(navId);
+            }
+        });
+    }, {
+        root: null,                        // observa respecto al viewport
+        rootMargin: "-10% 0px -55% 0px",  // activa cuando la sección entra en el tercio superior
+        threshold: 0
+    });
+
+    Object.keys(SECTION_NAV).forEach(sectionId => {
+        const el = document.getElementById(sectionId);
+        if (el) observer.observe(el);
+    });
+
+    // Click inmediato sin esperar al observer
+    sectionLinks.forEach(link => {
+        link.addEventListener("click", () => {
+            const sectionId = link.dataset.section;
+            const navId = SECTION_NAV[sectionId];
+            if (navId) setActive(navId);
+        });
     });
 })();
 </script>

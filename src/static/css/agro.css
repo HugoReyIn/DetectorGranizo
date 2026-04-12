@@ -593,3 +593,40 @@ html { scroll-behavior: smooth; }
         gap: 8px;
     }
 }
+/* ═══════════════════════════════════════════
+   TIPS CON MARKDOWN (generados por LLM)
+═══════════════════════════════════════════ */
+.agro-tip-md {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-soft);
+}
+
+.agro-tip-md strong {
+    font-weight: 700;
+    color: var(--t-dark);
+}
+
+.agro-tip-md br + br {
+    display: block;
+    margin-top: 4px;
+}
+
+/* ── Botón descarga informe .md ── */
+.btn-download-md {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: var(--musgo-dark);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    transition: opacity 0.18s;
+    white-space: nowrap;
+}
+.btn-download-md:hover { opacity: 0.85; background: var(--musgo-dark); }

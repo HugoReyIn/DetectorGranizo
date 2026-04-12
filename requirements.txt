@@ -11,3 +11,4 @@ pandas
 itsdangerous
 bcrypt
 cachetools
+openai
