@@ -351,6 +351,13 @@ class WeatherService:
 
     # ──────────────────────────────────────────────
     # AGRO INSIGHTS
+    # Ollama (LLM) → fallback AgroAgent (reglas)
     # ──────────────────────────────────────────────
     def get_agro_insights(self, data: dict, crop_type: str) -> dict:
+        from ia.OllamaAgent import get_card_insights_llm
+        llm_result = get_card_insights_llm(data, crop_type)
+        if llm_result:
+            # Ollama disponible — devolver textos del LLM con level inferido
+            return {k: {"text": v, "level": "ok"} for k, v in llm_result.items()}
+        # Fallback: AgroAgent con reglas hardcodeadas
         return get_card_insights(data, crop_type)

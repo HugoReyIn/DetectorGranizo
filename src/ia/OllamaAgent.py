@@ -1,114 +1,118 @@
 """
 OllamaAgent.py
-Genera un resumen agronómico general usando un LLM local vía Ollama.
+Genera los 8 textos interpretativos de las tarjetas agronómicas usando un LLM
+local vía Ollama, sustituyendo los textos hardcodeados del AgroAgent.
 
-Estrategia híbrida:
-  - AgroAgent (reglas if/else) → 8 textos de tarjeta, instantáneo
-  - OllamaAgent (LLM local)   → 1 resumen global, asíncrono, sin coste
+Estrategia:
+  - Una sola llamada al LLM con todos los datos → JSON con las 8 claves
+  - Si Ollama no está disponible → fallback transparente al AgroAgent (reglas)
+  - Temperatura 0.2 para respuestas consistentes y concretas
 
-Modelos recomendados (instalar con `ollama pull <modelo>`):
-  - llama3.2        → 3B params, ~2 GB RAM, muy bueno para español
-  - gemma2:2b       → más ligero, buena calidad
-  - mistral         → mejor razonamiento, ~4 GB RAM
+Modelos recomendados:
+  - llama3.2      → 3B, ~2 GB RAM, muy bueno en español
+  - gemma2:2b     → más ligero
+  - mistral       → mejor razonamiento, ~4 GB RAM
 
 Instalación:
-  1. Descargar Ollama: https://ollama.com
+  1. https://ollama.com/download
   2. ollama pull llama3.2
-  3. Asegurarse de que el servidor corre: ollama serve
-
-El agente usa fallback silencioso si Ollama no está disponible.
+  3. ollama serve
 """
 
-import requests
+import json
 import logging
+import requests
 
 logger = logging.getLogger(__name__)
 
+OLLAMA_URL     = "http://localhost:11434/api/generate"
+OLLAMA_MODEL   = "llama3.2"
+OLLAMA_TIMEOUT = 60
+
+
 # ──────────────────────────────────────────
-# CONFIGURACIÓN
+# PROMPT
 # ──────────────────────────────────────────
-OLLAMA_URL    = "http://localhost:11434/api/generate"
-OLLAMA_MODEL  = "llama3.2"   # cambiar según el modelo instalado
-OLLAMA_TIMEOUT = 45           # segundos — los LLMs pequeños pueden tardar
+def _build_cards_prompt(data: dict, crop_type: str) -> str:
+    crop = crop_type or "cultivo genérico"
 
+    def _fmt(val, unit="", decimals=1):
+        if val is None:
+            return "no disponible"
+        return f"{round(float(val), decimals)}{unit}"
 
-def _build_prompt(data: dict, crop_type: str, card_insights: dict) -> str:
-    """
-    Construye el prompt con todos los datos disponibles.
-    Los card_insights del AgroAgent se incluyen como contexto
-    para que el LLM pueda hacer referencia a ellos sin repetirlos.
-    """
-    crop_name = crop_type or "cultivo genérico"
-
-    # Formatear datos numéricos con unidades legibles
-    et0      = f"{data.get('et0_today')} mm/día"       if data.get('et0_today')       is not None else "no disponible"
-    uv       = f"{data.get('uv_max_today')}"            if data.get('uv_max_today')    is not None else "no disponible"
-    pressure = f"{data.get('pressure')} hPa"            if data.get('pressure')        is not None else "no disponible"
-    rad      = f"{data.get('solar_radiation')} W/m²"    if data.get('solar_radiation') is not None else "no disponible"
-    soil_m   = f"{round(data.get('soil_moisture_0', 0) * 100, 1)}%" if data.get('soil_moisture_0') is not None else "no disponible"
-    soil_t   = f"{data.get('soil_temp_surface')} °C"    if data.get('soil_temp_surface') is not None else "no disponible"
-    cold_h   = f"{data.get('cold_hours_24h')}h"         if data.get('cold_hours_24h')  is not None else "no disponible"
-    hail_r   = f"{data.get('hail_risk_6h', 0):.0f}%"
-    rain_24h = f"{data.get('rain_24h', 0)} mm"
-    rain_7d  = f"{data.get('rain_7d', 0)} mm"
-    et0_7d   = f"{data.get('et0_7d', 0)} mm"
-    balance  = f"{data.get('water_balance_7d', 0)} mm"
-    fungus   = ["bajo", "moderado", "alto"][min(data.get('fungus_risk', 0), 2)]
-    tmax     = f"{data.get('temp_max_today')} °C"       if data.get('temp_max_today')  is not None else "no disponible"
-    tmin     = f"{data.get('temp_min_today')} °C"       if data.get('temp_min_today')  is not None else "no disponible"
-    vpd      = f"{data.get('vpd')} kPa"                 if data.get('vpd')             is not None else "no disponible"
-
-    # Resumen de alertas de los cards para dar contexto al LLM
-    cards_ctx = "\n".join(
-        f"  - {k}: {v}"
-        for k, v in (card_insights or {}).items()
-        if v and "no disponible" not in v.lower()
+    soil_pct = (
+        f"{round(data.get('soil_moisture_0', 0) * 100, 0):.0f}%"
+        if data.get("soil_moisture_0") is not None else "no disponible"
     )
 
-    return f"""Eres un agrónomo experto y conciso. Analiza los siguientes datos meteorológicos y agronómicos para una parcela de {crop_name} y genera un resumen ejecutivo práctico.
+    return f"""Eres un agrónomo experto. Analiza estos datos para una parcela de {crop} y genera exactamente 8 textos cortos de interpretación agronómica, uno por indicador.
 
-DATOS ACTUALES:
-- ET₀ hoy: {et0}
-- Lluvia 24h: {rain_24h} | Lluvia 7 días: {rain_7d}
-- Balance hídrico 7d (lluvia - ET₀): {balance}
-- Temperatura: {tmin} / {tmax}
-- UV máx: {uv}
-- Presión atmosférica: {pressure}
-- Radiación solar: {rad}
-- VPD: {vpd}
-- Humedad suelo (0-1cm): {soil_m}
-- Temperatura suelo: {soil_t}
-- Horas de frío últimas 24h: {cold_h}
-- Riesgo granizo próximas 6h: {hail_r}
-- Riesgo de hongos (mildiu/botrytis): {fungus}
-- ET₀ acumulada 7 días: {et0_7d}
-
-DIAGNÓSTICO PREVIO POR INDICADOR:
-{cards_ctx if cards_ctx else "  (no disponible)"}
+DATOS:
+- ET0 hoy: {_fmt(data.get("et0_today"), " mm/dia")}
+- UV maximo hoy: {_fmt(data.get("uv_max_today"))}
+- Presion atmosferica: {_fmt(data.get("pressure"), " hPa")}
+- Radiacion solar: {_fmt(data.get("solar_radiation"), " W/m2")}
+- Humedad suelo 0-1cm: {soil_pct}
+- Temperatura suelo superficie: {_fmt(data.get("soil_temp_surface"), " C")}
+- Horas de frio ultimas 24h: {_fmt(data.get("cold_hours_24h"), "h", 0)}
+- Riesgo granizo proximas 6h: {_fmt(data.get("hail_risk_6h", 0), "%", 0)}
+- Lluvia 24h: {_fmt(data.get("rain_24h"), " mm")}
+- Balance hidrico 7d: {_fmt(data.get("water_balance_7d"), " mm")}
+- Riesgo hongos: {["bajo", "moderado", "alto"][min(int(data.get("fungus_risk", 0)), 2)]}
+- Temperatura max/min hoy: {_fmt(data.get("temp_max_today"), "C")} / {_fmt(data.get("temp_min_today"), "C")}
 
 INSTRUCCIONES:
-1. Identifica el factor más crítico para este cultivo HOY.
-2. Da 2-3 recomendaciones concretas y accionables (riego, tratamientos, labores).
-3. Menciona si hay algún riesgo inminente que requiera atención urgente.
-4. Usa lenguaje directo, sin tecnicismos innecesarios. Sin listas con guiones, escribe en prosa fluida.
-5. Máximo 4 frases. No repitas los datos numéricos ya listados.
-6. Responde en español."""
+- Cada texto debe ser una frase corta y directa (maximo 12 palabras)
+- Incluye siempre una recomendacion concreta o advertencia especifica para {crop}
+- Usa un emoji al inicio de cada texto
+- Responde UNICAMENTE con un objeto JSON valido, sin texto adicional, sin markdown
+- Las claves deben ser exactamente estas 8: et0, uv, pressure, radiation, soil, soiltemp, coldhours, hail
+
+Responde solo con el JSON, sin nada mas:"""
 
 
-def get_agro_summary(data: dict, crop_type: str,
-                     card_insights: dict | None = None) -> dict:
+# ──────────────────────────────────────────
+# PARSEO SEGURO
+# ──────────────────────────────────────────
+_REQUIRED_KEYS = {"et0", "uv", "pressure", "radiation", "soil", "soiltemp", "coldhours", "hail"}
+
+
+def _parse_cards(raw: str) -> dict | None:
+    raw = raw.strip()
+
+    # Intento directo
+    try:
+        parsed = json.loads(raw)
+        if _REQUIRED_KEYS.issubset(parsed.keys()):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    # Extraer primer bloque {...}
+    start = raw.find("{")
+    end   = raw.rfind("}") + 1
+    if start != -1 and end > start:
+        try:
+            parsed = json.loads(raw[start:end])
+            if _REQUIRED_KEYS.issubset(parsed.keys()):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+    logger.warning("[OllamaAgent] JSON no parseable: %s", raw[:300])
+    return None
+
+
+# ──────────────────────────────────────────
+# TEXTOS DE TARJETA — función principal
+# ──────────────────────────────────────────
+def get_card_insights_llm(data: dict, crop_type: str) -> dict:
     """
-    Genera un resumen agronómico usando el LLM local (Ollama).
-
-    Returns:
-        {
-            "summary":   str   — resumen generado por el LLM,
-            "model":     str   — modelo usado,
-            "available": bool  — False si Ollama no está disponible,
-            "error":     str   — mensaje de error si falla (opcional)
-        }
+    Genera los 8 textos de tarjeta con el LLM.
+    Devuelve {} si Ollama no está disponible → el llamador usa AgroAgent como fallback.
     """
-    prompt = _build_prompt(data, crop_type, card_insights or {})
+    prompt = _build_cards_prompt(data, crop_type)
 
     try:
         response = requests.post(
@@ -117,60 +121,84 @@ def get_agro_summary(data: dict, crop_type: str,
                 "model":  OLLAMA_MODEL,
                 "prompt": prompt,
                 "stream": False,
-                "options": {
-                    "temperature": 0.3,   # respuestas más consistentes y precisas
-                    "num_predict": 250,   # máximo ~250 tokens de salida
-                }
+                "options": {"temperature": 0.2, "num_predict": 350},
             },
             timeout=OLLAMA_TIMEOUT,
         )
         response.raise_for_status()
-        result = response.json()
-        summary_text = result.get("response", "").strip()
+        raw    = response.json().get("response", "")
+        parsed = _parse_cards(raw)
 
-        if not summary_text:
-            return {"summary": None, "model": OLLAMA_MODEL,
-                    "available": True, "error": "Respuesta vacía del modelo"}
+        if parsed:
+            logger.info("[OllamaAgent] Cards OK con %s para '%s'", OLLAMA_MODEL, crop_type)
+            return parsed
 
-        logger.info("[OllamaAgent] Resumen generado (%d chars) con %s",
-                    len(summary_text), OLLAMA_MODEL)
-
-        return {
-            "summary":   summary_text,
-            "model":     OLLAMA_MODEL,
-            "available": True,
-        }
+        logger.warning("[OllamaAgent] JSON inválido — fallback AgroAgent")
+        return {}
 
     except requests.exceptions.ConnectionError:
-        logger.warning("[OllamaAgent] Ollama no está disponible en %s", OLLAMA_URL)
-        return {
-            "summary":   None,
-            "model":     OLLAMA_MODEL,
-            "available": False,
-            "error":     "Ollama no está en ejecución. Inicia el servidor con: ollama serve",
-        }
-
+        logger.info("[OllamaAgent] No disponible — fallback AgroAgent")
+        return {}
     except requests.exceptions.Timeout:
-        logger.warning("[OllamaAgent] Timeout tras %ds", OLLAMA_TIMEOUT)
-        return {
-            "summary":   None,
-            "model":     OLLAMA_MODEL,
-            "available": True,
-            "error":     f"El modelo tardó más de {OLLAMA_TIMEOUT}s. Prueba con un modelo más ligero (gemma2:2b).",
-        }
-
+        logger.warning("[OllamaAgent] Timeout %ds — fallback AgroAgent", OLLAMA_TIMEOUT)
+        return {}
     except Exception as e:
-        logger.error("[OllamaAgent] Error inesperado: %s", e)
-        return {
-            "summary":   None,
-            "model":     OLLAMA_MODEL,
-            "available": False,
-            "error":     str(e),
-        }
+        logger.error("[OllamaAgent] Error: %s — fallback AgroAgent", e)
+        return {}
 
 
+# ──────────────────────────────────────────
+# RESUMEN GENERAL (bloque aparte en la UI)
+# ──────────────────────────────────────────
+def get_agro_summary(data: dict, crop_type: str, card_insights: dict | None = None) -> dict:
+    """Genera un resumen en prosa de 2-3 frases para el bloque de resumen global."""
+    crop = crop_type or "cultivo genérico"
+
+    def _fmt(val, unit="", decimals=1):
+        if val is None:
+            return "no disponible"
+        return f"{round(float(val), decimals)}{unit}"
+
+    cards_ctx = ""
+    if card_insights:
+        cards_ctx = "\n".join(
+            f"  - {k}: {v.get('text', v) if isinstance(v, dict) else v}"
+            for k, v in card_insights.items()
+        )
+
+    prompt = f"""Eres un agrónomo experto. Genera un resumen ejecutivo en 2-3 frases sobre el estado de una parcela de {crop}.
+
+Datos: ET0={_fmt(data.get('et0_today'), ' mm/dia')}, lluvia 7d={_fmt(data.get('rain_7d'), ' mm')}, balance hidrico={_fmt(data.get('water_balance_7d'), ' mm')}, granizo={_fmt(data.get('hail_risk_6h', 0), '%', 0)}, hongos={["bajo","moderado","alto"][min(int(data.get('fungus_risk',0)),2)]}.
+{f'Diagnostico por indicador:{chr(10)}{cards_ctx}' if cards_ctx else ''}
+
+Escribe en espanol, en prosa directa, sin listas. Maximo 3 frases."""
+
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model":  OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {"temperature": 0.3, "num_predict": 200},
+            },
+            timeout=OLLAMA_TIMEOUT,
+        )
+        response.raise_for_status()
+        summary = response.json().get("response", "").strip()
+        return {"summary": summary, "model": OLLAMA_MODEL, "available": True}
+
+    except requests.exceptions.ConnectionError:
+        return {"summary": None, "model": OLLAMA_MODEL, "available": False,
+                "error": "Ollama no está en ejecución."}
+    except Exception as e:
+        return {"summary": None, "model": OLLAMA_MODEL, "available": False, "error": str(e)}
+
+
+# ──────────────────────────────────────────
+# STATUS
+# ──────────────────────────────────────────
 def check_ollama_status() -> dict:
-    """Comprueba si Ollama está disponible y qué modelos hay instalados."""
     try:
         r = requests.get("http://localhost:11434/api/tags", timeout=5)
         r.raise_for_status()
