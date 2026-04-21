@@ -1,242 +1,160 @@
-"""
-HailPredictor.py — v3
-Predictor de granizo en dos capas con todas las mejoras:
-
-  MEJORA 1 — Más histórico (ERA5 multi-año)
-    Usa la Archive API de Open-Meteo con hasta 3 años de reanálisis ERA5
-    en lugar de solo 60 días. El granizo es estacional; con 3 años el
-    modelo aprende los patrones de mayo-septiembre (pico en España).
-
-  MEJORA 2 — Entrenamiento asíncrono al arranque
-    Al iniciar la app, se precalientan los modelos de todos los campos
-    registrados en segundo plano. La primera petición de un usuario
-    no espera el entrenamiento.
-
-  MEJORA 3 — Nuevas variables predictoras
-    Añadidas: Convective Inhibition (CIN), updraft, precipitable water
-    y wind shear (diferencia de viento entre 10m y 850hPa).
-    Son los mejores indicadores físicos de granizo severo junto al CAPE.
-
-  MEJORA 4 — Modelo por región climática
-    En lugar de cachear por coordenada exacta, se agrupa por celda de
-    0.5° (~55 km), que corresponde aproximadamente a una comarca.
-    Un modelo entrenado con datos de toda una comarca es más robusto
-    que uno de un punto con poca historia de granizo.
-"""
-
+import os
 import requests
 import numpy as np
 import pandas as pd
-import threading
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 import warnings
 warnings.filterwarnings("ignore")
 
-
-# ──────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────
 # CONFIGURACIÓN
-# ──────────────────────────────────────────────────────────────────────
-_HISTORY_YEARS   = 3        # años de histórico ERA5
-_MODEL_TTL_HOURS = 12       # reentrenar máximo cada 12 horas
-_REGION_GRID     = 0.5      # grados para agrupar por región climática (~55 km)
-_MIN_HISTORY_H   = 168      # mínimo de horas para entrenar (1 semana)
-
-# Variables exógenas — base + nuevas de mejora 3
-_EXOG_VARS = [
-    # Variables originales
-    "cape", "lifted_index", "freezing_level_height",
-    "temperature_2m", "precipitation", "showers",
-    "wind_speed_10m", "cloud_cover", "relative_humidity_2m",
-    # Nuevas variables (mejora 3)
-    "convective_inhibition",          # CIN — barrera energética
-    "total_column_integrated_water_vapour",  # agua precipitable
-    "wind_gusts_10m",                 # wind shear aproximado (proxy)
-]
-
-# Caché de modelos: clave = región (lat_05, lon_05)
-_model_cache: dict = {}
-_cache_lock = threading.Lock()
+# ──────────────────────────────────────────
+HISTORICAL_YEARS = 2          # años hacia atrás que se descargan
+CHUNK_MONTHS     = 6          # tamaño de cada petición al archivo
+CACHE_DIR        = ".hail_cache"   # carpeta local para caché en disco
+CACHE_TTL_HOURS  = 24         # horas antes de refrescar el archivo histórico
 
 
-# ──────────────────────────────────────────────────────────────────────
-# MEJORA 4 — REGIÓN CLIMÁTICA
-# ──────────────────────────────────────────────────────────────────────
-def _region_key(lat: float, lon: float) -> tuple:
-    """
-    Redondea coordenadas a la celda de 0.5° más cercana.
-    Coordenadas dentro de ~55 km comparten el mismo modelo.
-    """
-    return (round(round(lat / _REGION_GRID) * _REGION_GRID, 1),
-            round(round(lon / _REGION_GRID) * _REGION_GRID, 1))
-
-
-def _region_center(lat: float, lon: float) -> tuple:
-    """Devuelve las coordenadas del centro de la celda regional."""
-    key = _region_key(lat, lon)
-    return key  # ya son las coordenadas del centro
-
-
-# ──────────────────────────────────────────────────────────────────────
-# HELPERS
-# ──────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────
+# WEATHERCODE → HAIL SCORE (variable objetivo)
+# 0   = sin granizo
+# 0.5 = granizo fino (código 77)
+# 0.7 = tormenta con granizo leve (96)
+# 1.0 = tormenta con granizo fuerte (99)
+# ──────────────────────────────────────────
 def weathercode_to_hail_score(code: int) -> float:
     return {77: 0.5, 96: 0.7, 99: 1.0}.get(int(code), 0.0)
 
 
-def cape_to_hail_prob(cape: float, lifted_index: float | None = None,
-                      cin: float | None = None) -> float:
+def compute_hail_score(weathercode: int, cape: float, lifted_index: float,
+                       cin: float = 0.0) -> float:
     """
-    Probabilidad de granizo desde CAPE + Lifted Index + CIN.
-    CIN alto (>100 J/kg en valor absoluto) puede suprimir la convección
-    incluso con CAPE elevado.
-    """
-    if cape <= 0:
-        return 0.0
+    Construye el hail_score combinando tres fuentes independientes:
 
-    if cape >= 2500:
-        prob = 0.85
+    1. Weathercode verificado (fuente más fiable, pero incompleta)
+    2. CAPE independiente — permite detectar eventos que Open-Meteo
+       no codifica como granizo pero tienen condiciones severas reales
+    3. Lifted Index negativo — refuerza la señal convectiva
+
+    La CIN actúa como moderador: si hay mucha inhibición, reduce el score
+    aunque el CAPE sea alto (la energía está "tapada").
+
+    El resultado se recorta a [0, 1].
+    """
+    score = weathercode_to_hail_score(weathercode)
+
+    # ── Contribución CAPE — independiente del weathercode ──
+    # A diferencia del cape_bonus anterior, aquí el CAPE puede subir el score
+    # incluso cuando weathercode = 0 (Open-Meteo no detectó granizo pero
+    # las condiciones físicas lo indican).
+    if cape >= 2000:
+        cape_contrib = 0.50
     elif cape >= 1500:
-        prob = 0.60
-    elif cape >= 800:
-        prob = 0.35
-    elif cape >= 400:
-        prob = 0.15
-    elif cape >= 200:
-        prob = 0.05
+        cape_contrib = 0.35
+    elif cape >= 1000:
+        cape_contrib = 0.20
+    elif cape >= 600:
+        cape_contrib = 0.10
+    elif cape >= 300:
+        cape_contrib = 0.04
     else:
-        return 0.0
+        cape_contrib = 0.0
 
-    # Refuerzo por Lifted Index negativo
-    if lifted_index is not None:
-        if lifted_index <= -6:
-            prob = min(1.0, prob + 0.20)
-        elif lifted_index <= -4:
-            prob = min(1.0, prob + 0.12)
-        elif lifted_index <= -2:
-            prob = min(1.0, prob + 0.06)
+    # ── Contribución Lifted Index ──
+    # LI < 0 = atmósfera inestable. Cuanto más negativo, más inestable.
+    if lifted_index <= -6:
+        li_contrib = 0.20
+    elif lifted_index <= -4:
+        li_contrib = 0.12
+    elif lifted_index <= -2:
+        li_contrib = 0.06
+    elif lifted_index <= 0:
+        li_contrib = 0.02
+    else:
+        li_contrib = 0.0
 
-    # Penalización por CIN alto (inhibe la convección)
-    # CIN viene en J/kg negativo — cuanto más negativo, más inhibición
-    if cin is not None and cin < -150:
-        prob *= 0.4   # inhibición fuerte
-    elif cin is not None and cin < -80:
-        prob *= 0.7   # inhibición moderada
+    # ── Moderador CIN ──
+    # CIN > 100 J/kg: la "tapa" es fuerte, reduce contribuciones físicas
+    # CIN > 200 J/kg: la "tapa" es muy fuerte, casi anula la señal convectiva
+    if cin >= 200:
+        cin_factor = 0.10
+    elif cin >= 100:
+        cin_factor = 0.40
+    elif cin >= 50:
+        cin_factor = 0.75
+    else:
+        cin_factor = 1.0
 
-    return round(prob * 100, 1)
+    # El weathercode ya verificado no se modera por CIN (es observación real)
+    score += (cape_contrib + li_contrib) * cin_factor
+
+    return min(1.0, score)
 
 
-# ──────────────────────────────────────────────────────────────────────
-# CAPA 1 — NOWCASTING (primeras 6 horas, resolución 15 min)
-# ──────────────────────────────────────────────────────────────────────
-def _fetch_nowcast(lat: float, lon: float) -> list[dict]:
-    """
-    Datos de 15 minutos para las próximas 6 horas.
-    Incluye CIN y agua precipitable para máxima precisión.
-    """
-    vars_15m = [
-        "cape", "lifted_index", "convective_inhibition",
-        "precipitation", "weather_code", "freezing_level_height",
-        "total_column_integrated_water_vapour",
-    ]
-    url = (
-        "https://api.open-meteo.com/v1/forecast"
-        f"?latitude={lat}&longitude={lon}"
-        "&minutely_15=" + ",".join(vars_15m) +
-        "&forecast_minutely_15=24"
-        "&timezone=auto"
-    )
+# ──────────────────────────────────────────
+# CACHÉ EN DISCO
+# Guarda cada chunk como Parquet para evitar
+# repetir descargas en cada llamada al predictor.
+# ──────────────────────────────────────────
+def _cache_path(lat: float, lon: float) -> str:
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    key = f"{round(lat, 2)}_{round(lon, 2)}".replace("-", "n")
+    return os.path.join(CACHE_DIR, f"hail_{key}.parquet")
 
+
+def _cache_is_fresh(path: str) -> bool:
+    """Devuelve True si el archivo existe y fue escrito hace menos de CACHE_TTL_HOURS."""
+    if not os.path.exists(path):
+        return False
+    age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(path))
+    return age.total_seconds() < CACHE_TTL_HOURS * 3600
+
+
+def _load_cache(path: str) -> pd.DataFrame:
     try:
-        r = requests.get(url, timeout=10)
-        r.raise_for_status()
-        data = r.json().get("minutely_15", {})
-        if not data or "time" not in data:
-            return []
-
-        df = pd.DataFrame(data)
-        df["time"] = pd.to_datetime(df["time"])
-        df = df.ffill().fillna(0)
-        df["hour"] = df["time"].dt.floor("h")
-
-        agg = {
-            "cape":                                  "max",
-            "lifted_index":                          "min",
-            "convective_inhibition":                 "mean",
-            "precipitation":                         "sum",
-            "weather_code":                          "max",
-            "freezing_level_height":                 "mean",
-            "total_column_integrated_water_vapour":  "max",
-        }
-        # Solo agregar columnas que existan
-        agg = {k: v for k, v in agg.items() if k in df.columns}
-        hourly = df.groupby("hour").agg(agg).reset_index()
-
-        results = []
-        for _, row in hourly.iterrows():
-            prob_cape = cape_to_hail_prob(
-                float(row.get("cape", 0)),
-                float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-                float(row.get("convective_inhibition", 0)) if "convective_inhibition" in row else None,
-            )
-            wcode = int(row.get("weather_code", 0))
-            prob_wcode = weathercode_to_hail_score(wcode) * 100
-
-            # Bonus por agua precipitable alta (>30 kg/m² favorece granizo)
-            pwat = float(row.get("total_column_integrated_water_vapour", 0))
-            pwat_bonus = min(8.0, max(0.0, (pwat - 30) * 0.4)) if pwat > 30 else 0.0
-
-            precip_bonus = min(10.0, float(row.get("precipitation", 0)) * 2)
-            prob = min(100.0, max(prob_cape, prob_wcode) + precip_bonus + pwat_bonus)
-
-            results.append({
-                "time":             row["hour"].strftime("%Y-%m-%dT%H:%M"),
-                "hail_probability": round(prob, 1),
-                "cape":             float(row.get("cape", 0)),
-                "lifted_index":     float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-                "cin":              float(row.get("convective_inhibition", 0)) if "convective_inhibition" in row else None,
-                "source":           "nowcast",
-            })
-
-        return results
-
+        return pd.read_parquet(path)
     except Exception as e:
-        print(f"[HailPredictor] Nowcast falló: {e}")
-        return []
+        print(f"[HailPredictor] Caché corrupta, regenerando: {e}")
+        return pd.DataFrame()
 
 
-# ──────────────────────────────────────────────────────────────────────
-# MEJORA 1 — HISTÓRICO ERA5 MULTI-AÑO
-# ──────────────────────────────────────────────────────────────────────
-def _fetch_history_era5(lat: float, lon: float) -> pd.DataFrame:
-    """
-    Descarga hasta 3 años de histórico ERA5 desde Open-Meteo Archive.
-    Usa el centro de la región climática para datos representativos.
-    """
-    rlat, rlon = _region_center(lat, lon)
-    end_date   = datetime.now().date() - timedelta(days=1)
-    start_date = end_date - timedelta(days=365 * _HISTORY_YEARS)
+def _save_cache(path: str, df: pd.DataFrame) -> None:
+    try:
+        df.to_parquet(path)
+    except Exception as e:
+        print(f"[HailPredictor] No se pudo guardar caché: {e}")
 
-    # Variables disponibles en ERA5 Archive
-    archive_vars = [
-        "cape", "lifted_index", "freezing_level_height",
-        "temperature_2m", "precipitation", "showers",
-        "wind_speed_10m", "cloud_cover", "relative_humidity_2m",
-        "convective_inhibition", "total_column_integrated_water_vapour",
-        "wind_gusts_10m", "weather_code",
-    ]
 
+# ──────────────────────────────────────────
+# DESCARGA DE UN CHUNK DEL ARCHIVO
+# ──────────────────────────────────────────
+ARCHIVE_VARS = [
+    # Inestabilidad convectiva — los más importantes para granizo
+    "cape", "lifted_index", "convective_inhibition", "freezing_level_height",
+    # Termodinámica
+    "temperature_2m", "dew_point_2m", "relative_humidity_2m",
+    # Presión y viento
+    "surface_pressure", "wind_speed_10m", "wind_gusts_10m",
+    # Precipitación
+    "precipitation", "showers", "cloud_cover",
+    # Código de tiempo verificado
+    "weather_code",
+]
+
+def _fetch_archive_chunk(lat: float, lon: float,
+                          start: str, end: str) -> pd.DataFrame:
+    """Descarga un tramo del archivo Open-Meteo y devuelve un DataFrame procesado."""
     url = (
         "https://archive-api.open-meteo.com/v1/archive"
-        f"?latitude={rlat}&longitude={rlon}"
-        f"&start_date={start_date}&end_date={end_date}"
-        "&hourly=" + ",".join(archive_vars) +
+        f"?latitude={lat}&longitude={lon}"
+        f"&start_date={start}&end_date={end}"
+        "&hourly=" + ",".join(ARCHIVE_VARS) +
         "&timezone=auto"
     )
-
     try:
-        print(f"[HailPredictor] Descargando ERA5 {_HISTORY_YEARS}a para región ({rlat},{rlon})...")
-        r = requests.get(url, timeout=60)
+        r = requests.get(url, timeout=30)
         r.raise_for_status()
         data = r.json().get("hourly", {})
         if not data or "time" not in data:
@@ -249,33 +167,102 @@ def _fetch_history_era5(lat: float, lon: float) -> pd.DataFrame:
             df.rename(columns={"weather_code": "weathercode"}, inplace=True)
         df = df.ffill().fillna(0)
 
-        # Variable objetivo: hail_score ponderado por CAPE + señal continua
-        df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
-        if "cape" in df.columns:
-            # Señal continua de CAPE para que el modelo aprenda
-            # el patrón atmosférico aunque no haya weathercode de granizo
-            cape_signal = df["cape"].apply(lambda c: min(0.25, c / 6000))
-            df["hail_score"] = (df["hail_score"] + cape_signal).clip(upper=1.0)
+        # hail_score con la nueva función que combina weathercode + CAPE + LI + CIN
+        df["hail_score"] = df.apply(
+            lambda row: compute_hail_score(
+                weathercode  = int(row.get("weathercode", 0)),
+                cape         = float(row.get("cape", 0)),
+                lifted_index = float(row.get("lifted_index", 0)),
+                cin          = float(row.get("convective_inhibition", 0)),
+            ),
+            axis=1,
+        )
 
-        print(f"[HailPredictor] ERA5 cargado: {len(df)}h ({len(df)//24//30}m aprox)")
+        # Feature de hora del día: el granizo es más probable entre las 14-19h.
+        # Se codifica como seno/coseno para que el SARIMAX capture la periodicidad.
+        hour = df.index.hour
+        df["hour_sin"] = np.sin(2 * np.pi * hour / 24)
+        df["hour_cos"] = np.cos(2 * np.pi * hour / 24)
+
         return df
 
     except Exception as e:
-        print(f"[HailPredictor] Error ERA5: {e}")
+        print(f"[HailPredictor] Error chunk {start}→{end}: {e}")
         return pd.DataFrame()
 
 
-# ──────────────────────────────────────────────────────────────────────
-# FORECAST 7–24h
-# ──────────────────────────────────────────────────────────────────────
-def _fetch_forecast(lat: float, lon: float) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Devuelve (history_recent_7d, future_h7_to_h24)."""
-    vars_ = [v for v in _EXOG_VARS if v != "wind_shear"] + ["weathercode"]
+# ──────────────────────────────────────────
+# HISTÓRICO VERIFICADO — 2 AÑOS EN CHUNKS
+# ──────────────────────────────────────────
+def fetch_historical_data(lat: float, lon: float) -> pd.DataFrame:
+    """
+    Descarga hasta HISTORICAL_YEARS años de datos del archivo Open-Meteo.
+    Las descargas se dividen en tramos de CHUNK_MONTHS meses para evitar
+    timeouts. El resultado se guarda en disco (Parquet) y se reutiliza
+    durante CACHE_TTL_HOURS horas.
+    """
+    cache_file = _cache_path(lat, lon)
+
+    if _cache_is_fresh(cache_file):
+        df = _load_cache(cache_file)
+        if not df.empty:
+            print(f"[HailPredictor] Caché OK — {len(df)}h ({len(df)//24}d) desde disco")
+            return df
+
+    end_date   = datetime.now().date() - timedelta(days=1)
+    start_date = end_date - relativedelta(years=HISTORICAL_YEARS)
+
+    # Generar lista de tramos
+    chunks = []
+    cursor = start_date
+    while cursor < end_date:
+        chunk_end = min(cursor + relativedelta(months=CHUNK_MONTHS) - timedelta(days=1),
+                        end_date)
+        chunks.append((str(cursor), str(chunk_end)))
+        cursor += relativedelta(months=CHUNK_MONTHS)
+
+    print(f"[HailPredictor] Descargando {len(chunks)} chunks "
+          f"({start_date} → {end_date})…")
+
+    frames = []
+    for i, (s, e) in enumerate(chunks, 1):
+        print(f"[HailPredictor]   chunk {i}/{len(chunks)}: {s} → {e}")
+        chunk_df = _fetch_archive_chunk(lat, lon, s, e)
+        if not chunk_df.empty:
+            frames.append(chunk_df)
+
+    if not frames:
+        print("[HailPredictor] Sin datos históricos.")
+        return pd.DataFrame()
+
+    df = pd.concat(frames)
+    df = df[~df.index.duplicated(keep="last")].sort_index()
+    _save_cache(cache_file, df)
+    print(f"[HailPredictor] Histórico total: {len(df)}h ({len(df)//24}d) — guardado en caché")
+    return df
+
+
+# ──────────────────────────────────────────
+# FORECAST + ÚLTIMOS 7 DÍAS (Open-Meteo)
+# ──────────────────────────────────────────
+def fetch_recent_and_forecast(lat: float, lon: float) -> tuple[pd.DataFrame, pd.DataFrame]:
+    VARS = [
+        # Inestabilidad convectiva
+        "cape", "lifted_index", "convective_inhibition", "freezing_level_height",
+        # Termodinámica
+        "temperature_2m", "dew_point_2m", "relative_humidity_2m",
+        # Presión y viento
+        "surface_pressure", "wind_speed_10m", "wind_gusts_10m",
+        # Precipitación
+        "precipitation", "showers", "precipitation_probability", "cloud_cover",
+        # Código de tiempo
+        "weathercode",
+    ]
 
     url = (
         "https://api.open-meteo.com/v1/forecast"
         f"?latitude={lat}&longitude={lon}"
-        "&hourly=" + ",".join(vars_) +
+        "&hourly=" + ",".join(VARS) +
         "&past_days=7&forecast_days=2"
         "&timezone=auto&models=icon_eu"
     )
@@ -289,209 +276,162 @@ def _fetch_forecast(lat: float, lon: float) -> tuple[pd.DataFrame, pd.DataFrame]
     df = df.set_index("time")
     df = df.ffill().fillna(0)
 
-    df["hail_score"] = df["weathercode"].apply(weathercode_to_hail_score)
-    if "cape" in df.columns:
-        cape_signal = df["cape"].apply(lambda c: min(0.25, c / 6000))
-        df["hail_score"] = (df["hail_score"] + cape_signal).clip(upper=1.0)
+    df["hail_score"] = df.apply(
+        lambda row: compute_hail_score(
+            weathercode  = int(row.get("weathercode", 0)),
+            cape         = float(row.get("cape", 0)),
+            lifted_index = float(row.get("lifted_index", 0)),
+            cin          = float(row.get("convective_inhibition", 0)),
+        ),
+        axis=1,
+    )
+
+    hour = df.index.hour
+    df["hour_sin"] = np.sin(2 * np.pi * hour / 24)
+    df["hour_cos"] = np.cos(2 * np.pi * hour / 24)
 
     now = pd.Timestamp.now().floor("h")
     history_recent = df[df.index <= now].copy()
-
-    # Horas 7-24 (nowcast cubre 0-6)
-    future_start = now + pd.Timedelta(hours=7)
-    future_end   = now + pd.Timedelta(hours=24)
-    future = df[(df.index >= future_start) & (df.index <= future_end)].copy()
+    future = df[df.index > now].head(24).copy()
 
     return history_recent, future
 
 
-# ──────────────────────────────────────────────────────────────────────
-# MEJORA 2 — ENTRENAMIENTO ASÍNCRONO + CACHÉ POR REGIÓN
-# ──────────────────────────────────────────────────────────────────────
-def _get_or_train_model(lat: float, lon: float,
-                        history: pd.DataFrame, exog_cols: list):
-    """
-    Recupera el modelo de caché si es reciente, o entrena uno nuevo.
-    Caché por región climática de 0.5° (mejora 4).
-    """
-    key = _region_key(lat, lon)
+# ──────────────────────────────────────────
+# COMBINAR DATOS Y PREDECIR
+# ──────────────────────────────────────────
+def fetch_meteo_data(lat: float, lon: float) -> dict:
+    exog_cols = [
+        # Inestabilidad — máximo peso predictivo
+        "cape", "lifted_index", "convective_inhibition", "freezing_level_height",
+        # Termodinámica
+        "temperature_2m", "dew_point_2m", "relative_humidity_2m",
+        # Presión y viento
+        "surface_pressure", "wind_speed_10m", "wind_gusts_10m",
+        # Precipitación
+        "precipitation", "showers", "precipitation_probability", "cloud_cover",
+        # Ciclo diario — el granizo ocurre principalmente entre las 14-19h
+        "hour_sin", "hour_cos",
+    ]
 
-    with _cache_lock:
-        cached = _model_cache.get(key)
-        if cached:
-            age_h = (datetime.now() - cached["trained_at"]).total_seconds() / 3600
-            if age_h < _MODEL_TTL_HOURS:
-                print(f"[HailPredictor] Modelo región {key} en caché ({age_h:.1f}h)")
-                return cached["fit"], cached["exog_cols"]
+    # Datos históricos verificados (2 años, con caché en disco)
+    history_archive = fetch_historical_data(lat, lon)
 
-    return _train_and_cache(key, history, exog_cols)
+    # Datos recientes + forecast
+    history_recent, future = fetch_recent_and_forecast(lat, lon)
 
+    # Combinar: archivo (2 años) + últimos 7 días, sin duplicados
+    if not history_archive.empty:
+        common_cols = [c for c in history_archive.columns if c in history_recent.columns]
+        combined = pd.concat([
+            history_archive[common_cols],
+            history_recent[[c for c in common_cols if c in history_recent.columns]],
+        ])
+        combined = combined[~combined.index.duplicated(keep="last")]
+        history = combined.sort_index()
+    else:
+        history = history_recent
 
-def _train_and_cache(key: tuple, history: pd.DataFrame, exog_cols: list):
-    """Entrena el SARIMAX y lo guarda en caché."""
-    print(f"[HailPredictor] Entrenando región {key} con {len(history)}h "
-          f"({len(history)//24}d) histórico y {len(exog_cols)} variables...")
+    print(f"[HailPredictor] Series para SARIMAX: {len(history)}h ({len(history)//24}d) | "
+          f"Forecast: {len(future)}h")
 
-    endog      = history["hail_score"].values.astype(float)
-    exog_train = history[exog_cols].values.astype(float)
+    # Filtrar exog_cols disponibles en ambos dataframes
+    exog_cols = [c for c in exog_cols if c in history.columns and c in future.columns]
 
-    model = SARIMAX(
-        endog,
-        exog=exog_train,
-        order=(2, 0, 1),
-        seasonal_order=(1, 0, 0, 24),   # estacionalidad diaria
-        enforce_stationarity=False,
-        enforce_invertibility=False,
-    )
-    fit = model.fit(disp=False, maxiter=300)
-    print(f"[HailPredictor] Región {key} entrenada — AIC={fit.aic:.1f}")
-
-    with _cache_lock:
-        _model_cache[key] = {
-            "fit":        fit,
-            "trained_at": datetime.now(),
-            "exog_cols":  exog_cols,
-        }
-
-    return fit, exog_cols
+    return {"history": history, "future": future, "exog_cols": exog_cols}
 
 
-def warmup_models(field_coords: list[tuple[float, float]]) -> None:
-    """
-    MEJORA 2 — Precalienta modelos al arrancar la app.
-    Recibe lista de (lat, lon) de los campos registrados.
-    Se ejecuta en un hilo separado para no bloquear el arranque.
+# ──────────────────────────────────────────
+# PREDICT (SARIMAX)
+# Con 2 años de datos se añade componente estacional anual (s=8760h).
+# Para series largas se usa un subconjunto de los últimos 6 meses
+# para el ajuste del modelo, preservando el contexto estacional.
+# ──────────────────────────────────────────
+def predict_hail(lat: float, lon: float) -> list[dict]:
+    meteo    = fetch_meteo_data(lat, lon)
+    history  = meteo["history"]
+    future   = meteo["future"]
+    exog_cols = meteo["exog_cols"]
 
-    Uso en Main.py (lifespan):
-        coords = [(p.lat, p.lon) for p in all_points]
-        thread = threading.Thread(target=warmup_models, args=(coords,), daemon=True)
-        thread.start()
-    """
-    regions_done = set()
-    for lat, lon in field_coords:
-        key = _region_key(lat, lon)
-        if key in regions_done:
-            continue
-        regions_done.add(key)
-        try:
-            print(f"[HailPredictor] Precalentando región {key}...")
-            history = _fetch_history_era5(lat, lon)
-            _, future = _fetch_forecast(lat, lon)
-            if history.empty or len(history) < _MIN_HISTORY_H:
-                print(f"[HailPredictor] Región {key}: histórico insuficiente, omitiendo")
-                continue
-            exog_cols = [c for c in _EXOG_VARS if c in history.columns and c in future.columns]
-            if exog_cols:
-                _train_and_cache(key, history, exog_cols)
-        except Exception as e:
-            print(f"[HailPredictor] Error precalentando región {key}: {e}")
+    if len(history) < 48 or len(future) == 0:
+        print("[HailPredictor] Datos insuficientes, usando fallback.")
+        return _fallback_from_weathercode(future)
 
-    print(f"[HailPredictor] Precalentamiento completado ({len(regions_done)} regiones)")
+    # Añadir ciclo diario al future si no viene ya calculado
+    if "hour_sin" not in future.columns:
+        future = future.copy()
+        future["hour_sin"] = np.sin(2 * np.pi * future.index.hour / 24)
+        future["hour_cos"] = np.cos(2 * np.pi * future.index.hour / 24)
 
+    # Para el ajuste SARIMAX usamos los últimos 6 meses (4380h) como máximo.
+    MAX_FIT_HOURS = 24 * 180
+    fit_history = history.iloc[-MAX_FIT_HOURS:] if len(history) > MAX_FIT_HOURS else history
 
-# ──────────────────────────────────────────────────────────────────────
-# FALLBACK
-# ──────────────────────────────────────────────────────────────────────
-def _fallback(future: pd.DataFrame) -> list[dict]:
-    results = []
-    for ts, row in future.iterrows():
-        prob_wcode = weathercode_to_hail_score(int(row.get("weathercode", 0))) * 100
-        prob_cape  = cape_to_hail_prob(
-            float(row.get("cape", 0)),
-            float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-            float(row.get("convective_inhibition", 0)) if "convective_inhibition" in row else None,
+    n_eventos = int((fit_history["hail_score"] > 0).sum())
+    score_medio = float(fit_history["hail_score"].mean())
+
+    endog      = fit_history["hail_score"].values.astype(float)
+    exog_train = fit_history[exog_cols].values.astype(float)
+    exog_pred  = future[exog_cols].values.astype(float)
+
+    # Componente estacional diaria (s=24) si hay eventos de granizo detectados.
+    # Con señal enriquecida por CAPE+LI ahora hay muchos más puntos > 0.
+    has_hail_signal = n_eventos >= 5
+
+    try:
+        model = SARIMAX(
+            endog,
+            exog=exog_train,
+            order=(2, 0, 1),
+            seasonal_order=(1, 0, 1, 24) if has_hail_signal else (0, 0, 0, 0),
+            enforce_stationarity=False,
+            enforce_invertibility=False,
         )
-        prob = min(100.0, max(prob_wcode, prob_cape))
+        fit = model.fit(disp=False, maxiter=300)
+        forecast = fit.forecast(steps=len(future), exog=exog_pred)
+
+        probabilities = np.clip(forecast, 0, 1) * 100
+        probabilities = probabilities.round(1)
+
+        print(
+            f"[HailPredictor] OK — AIC={fit.aic:.1f} | "
+            f"Horas con señal: {n_eventos} | "
+            f"Score medio: {score_medio:.4f} | "
+            f"Estacional: {'sí (s=24)' if has_hail_signal else 'no'}"
+        )
+
+    except Exception as e:
+        print(f"[HailPredictor] SARIMAX falló ({e}), fallback.")
+        return _fallback_from_weathercode(future)
+
+    results = []
+    for i, (ts, prob) in enumerate(zip(future.index, probabilities)):
         results.append({
-            "time":             ts.strftime("%Y-%m-%dT%H:%M"),
-            "hail_probability": round(prob, 1),
-            "cape":             float(row.get("cape", 0)),
-            "lifted_index":     float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-            "source":           "fallback",
+            "time":               ts.strftime("%Y-%m-%dT%H:%M"),
+            "hail_probability":   float(prob),
+            "cape":               float(future["cape"].iloc[i])               if "cape"               in future.columns else 0,
+            "lifted_index":       float(future["lifted_index"].iloc[i])       if "lifted_index"       in future.columns else None,
+            "cin":                float(future["convective_inhibition"].iloc[i]) if "convective_inhibition" in future.columns else None,
+            "surface_pressure":   float(future["surface_pressure"].iloc[i])   if "surface_pressure"   in future.columns else None,
+            "dew_point":          float(future["dew_point_2m"].iloc[i])       if "dew_point_2m"       in future.columns else None,
+            "wind_gusts":         float(future["wind_gusts_10m"].iloc[i])     if "wind_gusts_10m"     in future.columns else None,
+            "precip_probability": float(future["precipitation_probability"].iloc[i]) if "precipitation_probability" in future.columns else None,
         })
+
     return results
 
 
-# ──────────────────────────────────────────────────────────────────────
-# FUNCIÓN PRINCIPAL
-# ──────────────────────────────────────────────────────────────────────
-def predict_hail(lat: float, lon: float) -> list[dict]:
-    """
-    Predicción hora a hora para las próximas 24h:
-      - H0–H6:  nowcasting 15 min (CAPE + CIN + agua precipitable)
-      - H7–H24: SARIMAX entrenado con ERA5 multi-año por región climática
-
-    Cada dict: time, hail_probability, cape, lifted_index, [cin], source
-    """
+# ──────────────────────────────────────────
+# FALLBACK
+# ──────────────────────────────────────────
+def _fallback_from_weathercode(future: pd.DataFrame) -> list[dict]:
     results = []
-
-    # ── CAPA 1: Nowcasting ──
-    nowcast = _fetch_nowcast(lat, lon)
-    if nowcast:
-        results.extend(nowcast)
-        print(f"[HailPredictor] Nowcast: {len(nowcast)}h OK")
-
-    # ── Datos para CAPA 2 ──
-    try:
-        history_era5   = _fetch_history_era5(lat, lon)
-        history_recent, future = _fetch_forecast(lat, lon)
-
-        # Combinar ERA5 + últimos 7 días recientes sin duplicados
-        if not history_era5.empty:
-            common = [c for c in history_era5.columns if c in history_recent.columns]
-            combined = pd.concat([
-                history_era5[common],
-                history_recent[[c for c in common if c in history_recent.columns]],
-            ])
-            combined = combined[~combined.index.duplicated(keep="last")]
-            history = combined.sort_index()
-        else:
-            history = history_recent
-
-        exog_cols = [c for c in _EXOG_VARS if c in history.columns and c in future.columns]
-
-        # Si el nowcast falló, usar SARIMAX para todo el rango 0-24h
-        if not nowcast:
-            now = pd.Timestamp.now().floor("h")
-            future_all = history_recent[history_recent.index > now].head(24)
-        else:
-            future_all = future   # ya son horas 7-24
-
-        if len(history) < _MIN_HISTORY_H or len(future_all) == 0 or not exog_cols:
-            print("[HailPredictor] Datos insuficientes, usando fallback")
-            fallback_data = _fallback(future_all if len(future_all) > 0 else future)
-            return sorted((nowcast or []) + fallback_data, key=lambda x: x["time"])
-
-        # ── CAPA 2: SARIMAX con modelo regional ──
-        fit, used_cols = _get_or_train_model(lat, lon, history, exog_cols)
-        exog_pred = future_all[used_cols].values.astype(float)
-        forecast  = fit.forecast(steps=len(future_all), exog=exog_pred)
-        probs     = np.clip(forecast, 0, 1) * 100
-
-        for i, (ts, row) in enumerate(future_all.iterrows()):
-            # Refuerzo final con CAPE + CIN del forecast
-            cape_prob = cape_to_hail_prob(
-                float(row.get("cape", 0)),
-                float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-                float(row.get("convective_inhibition", 0)) if "convective_inhibition" in row else None,
-            )
-            final_prob = min(100.0, max(float(probs[i]), cape_prob))
-
-            # Bonus por agua precipitable alta
-            pwat = float(row.get("total_column_integrated_water_vapour", 0))
-            if pwat > 35:
-                final_prob = min(100.0, final_prob + min(5.0, (pwat - 35) * 0.3))
-
-            results.append({
-                "time":             ts.strftime("%Y-%m-%dT%H:%M"),
-                "hail_probability": round(final_prob, 1),
-                "cape":             float(row.get("cape", 0)),
-                "lifted_index":     float(row.get("lifted_index", 0)) if "lifted_index" in row else None,
-                "cin":              float(row.get("convective_inhibition", 0)) if "convective_inhibition" in row else None,
-                "source":           "sarimax",
-            })
-
-    except Exception as e:
-        print(f"[HailPredictor] Error CAPA 2: {e}")
-
-    return sorted(results, key=lambda x: x["time"])
+    for ts, row in future.iterrows():
+        score = weathercode_to_hail_score(int(row.get("weathercode", 0)))
+        results.append({
+            "time":             ts.strftime("%Y-%m-%dT%H:%M"),
+            "hail_probability": round(score * 100, 1),
+            "cape":             float(row.get("cape", 0)),
+            "lifted_index":     None,
+        })
+    return results

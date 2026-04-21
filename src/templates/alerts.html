@@ -202,17 +202,38 @@
         }
 
         /* Nombre del tipo */
+        .fac-alert-name-wrap {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+
         .fac-alert-name {
             font-size: 12px;
             font-weight: 600;
             color: var(--text-soft);
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            flex: 1;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* Valor de la alerta — línea pequeña debajo del nombre */
+        .fac-alert-valor {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--t-mid);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .level-amarillo .fac-alert-valor { color: #b45e00; }
+        .level-naranja  .fac-alert-valor { color: #a04000; }
+        .level-rojo     .fac-alert-valor { color: #b71c1c; }
 
         /* Chip de nivel — a la derecha */
         .fac-alert-chip {
@@ -454,10 +475,16 @@
             <!-- Tipos ordenados de mayor a menor severidad -->
             <div class="fac-alerts-grid">
                 {% for tipo, nivel in fa.alerts_sorted %}
+                {% set info = fa.alerts_detail.get(tipo, {}) %}
                 <div class="fac-alert-item level-{{ nivel }}">
                     <div class="fac-dot"></div>
                     <div class="fac-alert-icon">{{ icons.get(tipo, '⚠️') }}</div>
-                    <div class="fac-alert-name">{{ tipo | capitalize }}</div>
+                    <div class="fac-alert-name-wrap">
+                        <div class="fac-alert-name">{{ tipo | capitalize }}</div>
+                        {% if info.valor and nivel != 'verde' %}
+                        <div class="fac-alert-valor">{{ info.valor }}</div>
+                        {% endif %}
+                    </div>
                     <div class="fac-alert-chip">{{ nivel | capitalize }}</div>
                 </div>
                 {% endfor %}

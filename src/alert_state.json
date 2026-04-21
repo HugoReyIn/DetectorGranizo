@@ -3,50 +3,154 @@
     "calor": "verde",
     "lluvia": "verde",
     "nieve": "verde",
-    "granizo": "verde",
+    "granizo": "naranja",
     "viento": "verde",
     "tormenta": "verde",
     "helada": "verde",
-    "niebla": "verde"
+    "niebla": "naranja"
   },
   "55": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
+    "calor": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "lluvia": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "nieve": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "granizo": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "viento": {
+      "nivel": "amarillo",
+      "valor": "67 km/h"
+    },
+    "tormenta": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "helada": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "niebla": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "auto_closed": false,
+    "hail_max_6h": 2.0
   },
   "51": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
+    "calor": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "lluvia": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "nieve": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "granizo": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "viento": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "tormenta": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "helada": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "niebla": {
+      "nivel": "amarillo",
+      "valor": "860 m visibilidad"
+    },
+    "auto_closed": false,
+    "hail_max_6h": 2.1
   },
   "50": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "verde",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
+    "calor": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "lluvia": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "nieve": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "granizo": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "viento": {
+      "nivel": "amarillo",
+      "valor": "60 km/h"
+    },
+    "tormenta": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "helada": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "niebla": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "auto_closed": true,
+    "hail_max_6h": 100.0
   },
   "45": {
-    "calor": "verde",
-    "lluvia": "verde",
-    "nieve": "verde",
-    "granizo": "verde",
-    "viento": "amarillo",
-    "tormenta": "verde",
-    "helada": "verde",
-    "niebla": "verde"
+    "calor": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "lluvia": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "nieve": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "granizo": {
+      "nivel": "rojo",
+      "valor": "100% prob. granizo · CAPE 920 J/kg"
+    },
+    "viento": {
+      "nivel": "amarillo",
+      "valor": "53 km/h"
+    },
+    "tormenta": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "helada": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "niebla": {
+      "nivel": "verde",
+      "valor": null
+    },
+    "auto_closed": true,
+    "hail_max_6h": 78.1
   }
 }

@@ -216,11 +216,28 @@ def calculate_alerts(
         logger.debug("Alerta tormenta: %s", nivel_tormenta)
 
     # ──────────────────────────────────────────────
-    # 7. GRANIZO — IA preferente, CAPE como fallback/refuerzo
+    # 7. GRANIZO — IA preferente, CAPE como contexto adicional
     # ──────────────────────────────────────────────
     nivel_granizo = "verde"
     valor_granizo = None
 
+    # ── 7a. Señal CAPE/weathercode para saber si hay actividad convectiva real ──
+    max_cape = 0.0
+    max_wcode_granizo = 0
+    if cape_h:
+        max_cape = max((v for v in cape_h[idx:end_idx] if v is not None), default=0.0)
+    if wcodes:
+        max_wcode_granizo = max(
+            (wcodes[i] for i in range(idx, end_idx)
+             if i < len(wcodes) and wcodes[i] in {77, 96, 99}),
+            default=0,
+        )
+
+    # Detalle CAPE que se añade siempre cuando es relevante (>= 400 J/kg)
+    cape_detail = f" · CAPE {max_cape:.0f} J/kg" if max_cape >= 400 else ""
+
+    # ── 7b. IA (HailPredictor) — fuente principal ──
+    ia_prob = None
     if hail_prediction:
         now_dt   = datetime.now()
         relevant = [
@@ -228,36 +245,38 @@ def calculate_alerts(
             if (datetime.fromisoformat(p["time"]) - now_dt).total_seconds() <= 86400
         ]
         if relevant:
-            max_prob = max(p["hail_probability"] for p in relevant)
-            if max_prob >= 60:
-                nivel_granizo = "rojo"
-                valor_granizo = f"IA: {max_prob:.0f}% prob. granizo"
-            elif max_prob >= 35:
-                nivel_granizo = "naranja"
-                valor_granizo = f"IA: {max_prob:.0f}% prob. granizo"
-            elif max_prob >= 15:
-                nivel_granizo = "amarillo"
-                valor_granizo = f"IA: {max_prob:.0f}% prob. granizo"
+            ia_prob = max(p["hail_probability"] for p in relevant)
 
-    if cape_h and LEVEL_ORDER[nivel_granizo] < LEVEL_ORDER["naranja"]:
-        max_cape = max((v for v in cape_h[idx:end_idx] if v is not None), default=0.0)
-        max_wcode_granizo = max(
-            (wcodes[i] for i in range(idx, end_idx)
-             if i < len(wcodes) and wcodes[i] in {77, 96, 99}),
-            default=0
-        )
+    # Solo activamos alerta IA si hay también señal convectiva real (CAPE o weathercode).
+    # Esto evita falsas alarmas cuando el SARIMAX extrapola sin actividad real.
+    hay_actividad_convectiva = max_cape >= 400 or max_wcode_granizo > 0
+
+    if ia_prob is not None and hay_actividad_convectiva:
+        if ia_prob >= 60:
+            nivel_granizo = "rojo"
+            valor_granizo = f"{ia_prob:.0f}% prob. granizo{cape_detail}"
+        elif ia_prob >= 35:
+            nivel_granizo = "naranja"
+            valor_granizo = f"{ia_prob:.0f}% prob. granizo{cape_detail}"
+        elif ia_prob >= 15:
+            nivel_granizo = "amarillo"
+            valor_granizo = f"{ia_prob:.0f}% prob. granizo{cape_detail}"
+
+    # ── 7c. Fallback físico: CAPE + weathercode sin IA ──
+    # Solo se aplica si la IA no ha dado señal o no está disponible
+    if nivel_granizo == "verde":
         if max_cape >= 1500 and max_wcode_granizo in {96, 99}:
-            if LEVEL_ORDER["rojo"] > LEVEL_ORDER[nivel_granizo]:
-                nivel_granizo = "rojo"
-                valor_granizo = f"CAPE {max_cape:.0f} J/kg + tormenta severa"
-        elif max_cape >= 800 or max_wcode_granizo in {96, 99}:
-            if LEVEL_ORDER["naranja"] > LEVEL_ORDER[nivel_granizo]:
-                nivel_granizo = "naranja"
-                valor_granizo = f"CAPE {max_cape:.0f} J/kg" if max_cape >= 800 else "Tormenta convectiva"
+            nivel_granizo = "rojo"
+            valor_granizo = f"CAPE {max_cape:.0f} J/kg + tormenta severa"
+        elif max_cape >= 800 and max_wcode_granizo in {96, 99}:
+            nivel_granizo = "naranja"
+            valor_granizo = f"CAPE {max_cape:.0f} J/kg + tormenta convectiva"
+        elif max_wcode_granizo in {96, 99}:
+            nivel_granizo = "naranja"
+            valor_granizo = f"Tormenta convectiva{cape_detail}"
         elif max_wcode_granizo == 77:
-            if LEVEL_ORDER["amarillo"] > LEVEL_ORDER[nivel_granizo]:
-                nivel_granizo = "amarillo"
-                valor_granizo = "Granizo fino posible"
+            nivel_granizo = "amarillo"
+            valor_granizo = f"Granizo fino posible{cape_detail}"
 
     if nivel_granizo != "verde":
         result["granizo"] = {"nivel": nivel_granizo, "valor": valor_granizo}

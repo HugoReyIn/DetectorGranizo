@@ -12,3 +12,6 @@ itsdangerous
 bcrypt
 cachetools
 openai
+joblib
+python-dateutil
+pyarrow

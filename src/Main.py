@@ -32,10 +32,7 @@ from services.FieldService import FieldService
 from services.WeatherService import WeatherService
 from services.EmailService import EmailService
 from settings.AlertMonitor import AlertMonitor
-from ia.HailPredictor import warmup_models
 from config import ALERT_STATE_FILE
-
-import threading
 
 logger = logging.getLogger(__name__)
 
@@ -72,33 +69,6 @@ _LEVEL_ORDER = {"verde": 0, "amarillo": 1, "naranja": 2, "rojo": 3}
 @asynccontextmanager
 async def lifespan(app):
     alert_monitor.start()
-
-    # Precalentar modelos de granizo en segundo plano (mejora 2)
-    # Recoge las coordenadas de todos los campos registrados
-    try:
-        all_fields = _field_dao.getAllFields()
-        coords = []
-        for field in all_fields:
-            points = _point_dao.getPointsByField(field.id)
-            if points:
-                lat = sum(p.latitude  for p in points) / len(points)
-                lon = sum(p.longitude for p in points) / len(points)
-                coords.append((lat, lon))
-
-        if coords:
-            warmup_thread = threading.Thread(
-                target=warmup_models,
-                args=(coords,),
-                daemon=True,
-                name="HailPredictor-Warmup",
-            )
-            warmup_thread.start()
-            logger.info("[Lifespan] Precalentamiento de modelos iniciado (%d campos)", len(coords))
-        else:
-            logger.info("[Lifespan] Sin campos registrados, precalentamiento omitido")
-    except Exception as e:
-        logger.warning("[Lifespan] Error al iniciar precalentamiento: %s", e)
-
     yield
     alert_monitor.stop()
 
@@ -301,18 +271,31 @@ def alerts_page(request: Request):
 
     for field in fields:
         field_state = raw_state.get(str(field.id), {})
-        alerts = {t: field_state.get(t, "verde") for t in alert_types}
+        # El estado puede ser dict {nivel, valor} (nuevo) o string plano (legado)
+        def _nivel(v):
+            if isinstance(v, dict):
+                return v.get("nivel", "verde")
+            return v if isinstance(v, str) else "verde"
+        def _valor(v):
+            if isinstance(v, dict):
+                return v.get("valor")
+            return None
+
+        alerts        = {t: _nivel(field_state.get(t)) for t in alert_types}
+        alerts_detail = {t: {"nivel": _nivel(field_state.get(t)),
+                             "valor": _valor(field_state.get(t))} for t in alert_types}
         max_level = max(alerts.values(), key=lambda lvl: _LEVEL_ORDER.get(lvl, 0))
         summary[max_level] += 1
         # Lista ordenada de (tipo, nivel) de mayor a menor severidad — usada en el template
         alerts_sorted = sorted(alerts.items(), key=lambda kv: _LEVEL_ORDER.get(kv[1], 0), reverse=True)
         field_alerts.append({
-            "field_name":    field.name,
-            "municipality":  field.municipality,
-            "crop_type":     field.crop_type or "",
-            "max_level":     max_level,
-            "alerts":        alerts,
-            "alerts_sorted": alerts_sorted,
+            "field_name":     field.name,
+            "municipality":   field.municipality,
+            "crop_type":      field.crop_type or "",
+            "max_level":      max_level,
+            "alerts":         alerts,
+            "alerts_detail":  alerts_detail,
+            "alerts_sorted":  alerts_sorted,
         })
 
     # Ordenar de mayor a menor nivel de alerta
@@ -535,3 +518,10 @@ async def get_card_insights_endpoint(request: Request):
     except Exception as e:
         logger.error("[AgroAgent] Error: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# Guard necesario en Windows para multiprocessing.
+# Sin esto el proceso hijo reimportaría Main.py infinitamente.
+if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
