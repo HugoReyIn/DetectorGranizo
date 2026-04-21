@@ -300,3 +300,60 @@ class EmailService:
 
         subject = f"✅ Mejora de alertas AEMET — {field_name}"
         return self.send(to, subject, body_html)
+
+    def send_password_reset(self, to: str, reset_url: str) -> bool:
+        """Envía el email de recuperación de contraseña con el enlace tokenizado."""
+        body_html = f"""
+        <!DOCTYPE html>
+        <html lang="es">
+        <body style="margin:0;padding:0;background:#F2ECD8;font-family:'Segoe UI',Arial,sans-serif;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#F2ECD8;padding:32px 0;">
+                <tr><td align="center">
+                    <table width="480" cellpadding="0" cellspacing="0"
+                           style="background:#fff;border-radius:16px;overflow:hidden;
+                                  box-shadow:0 4px 20px rgba(0,0,0,0.10);">
+                        <tr>
+                            <td style="background:#4A7C3F;padding:28px 32px;text-align:center;">
+                                <div style="font-size:36px;margin-bottom:8px;">🔑</div>
+                                <h1 style="margin:0;color:#fff;font-size:20px;font-weight:700;">
+                                    Recuperación de contraseña
+                                </h1>
+                                <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">
+                                    DetectorGranizo
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:32px;">
+                                <p style="margin:0 0 16px;color:#444;font-size:15px;line-height:1.6;">
+                                    Hemos recibido una solicitud para restablecer la contraseña
+                                    de tu cuenta. Pulsa el botón para crear una nueva:
+                                </p>
+                                <div style="text-align:center;margin:28px 0;">
+                                    <a href="{reset_url}"
+                                       style="background:#4A7C3F;color:#fff;text-decoration:none;
+                                              padding:14px 32px;border-radius:10px;font-size:15px;
+                                              font-weight:700;display:inline-block;">
+                                        Restablecer contraseña
+                                    </a>
+                                </div>
+                                <p style="margin:0;color:#999;font-size:12px;line-height:1.6;text-align:center;">
+                                    Este enlace caduca en <strong>30 minutos</strong>.<br>
+                                    Si no solicitaste este cambio, ignora este email.
+                                </p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:0 32px 24px;text-align:center;">
+                                <p style="margin:0;color:#bbb;font-size:11px;">
+                                    DetectorGranizo · Gestión agrícola inteligente
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td></tr>
+            </table>
+        </body>
+        </html>
+        """
+        return self.send(to, "🔑 Recupera tu contraseña — DetectorGranizo", body_html)

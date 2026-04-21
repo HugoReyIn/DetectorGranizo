@@ -856,9 +856,12 @@ def get_card_insights(data: dict, crop_type: str) -> dict:
 
     Returns:
         dict con claves: et0, uv, pressure, radiation, soil, soiltemp, coldhours, hail
+        Cada valor es un dict {"text": str, "level": str} donde level es
+        "ok" | "warning" | "danger" | "info".
+        El frontend sigue funcionando igual porque applyCardInsights ya leía
+        solo el texto — ahora puede leer también el nivel para Ollama.
     """
     crop_key = (crop_type or "").lower().strip()
-    # Normalización de aliases
     aliases = {
         "maíz": "maiz", "vid": "vid", "uva": "vid", "viña": "vid",
         "almendra": "almendro", "oliva": "olivo", "alfalfa": "alfalfa",
@@ -868,7 +871,6 @@ def get_card_insights(data: dict, crop_type: str) -> dict:
     crop_key = aliases.get(crop_key, crop_key)
     profile = CROP_PROFILES.get(crop_key, GENERIC_PROFILE)
 
-    # Extraer valores del payload
     et0      = data.get("et0_today")
     uv       = data.get("uv_index") or data.get("uv_max_today")
     pressure = data.get("pressure")
@@ -878,26 +880,25 @@ def get_card_insights(data: dict, crop_type: str) -> dict:
     cold_h   = data.get("cold_hours_24h")
     hail_r   = data.get("hail_risk_6h", 0)
 
-    # Humedad suelo de 0-1 a porcentaje
-    if soil_m is not None and soil_m <= 1.0:
-        soil_m_pct = soil_m  # ya la evaluamos en escala 0-1
+    et0_lvl,   et0_text   = _evaluate(et0,       profile["et0"]["umbrales"])
+    uv_lvl,    uv_text    = _evaluate(uv,        profile["uv"]["umbrales"])
+    press_lvl, press_text = _evaluate(pressure,  profile["pressure"]["umbrales"])
+    rad_lvl,   rad_text   = _evaluate(radiation, profile["radiation"]["umbrales"])
+    soil_lvl,  soil_text  = _evaluate(soil_m,    profile["soil_moisture"]["umbrales"])
+    stemp_lvl, stemp_text = _evaluate(soil_t,    profile["soil_temp"]["umbrales"])
+    cold_lvl,  cold_text  = _evaluate(cold_h,    profile["cold_hours"]["umbrales"])
+    hail_lvl,  hail_text  = _evaluate(hail_r,    profile["hail"]["umbrales"])
 
-    _, et0_text      = _evaluate(et0,      profile["et0"]["umbrales"])
-    _, uv_text       = _evaluate(uv,       profile["uv"]["umbrales"])
-    _, press_text    = _evaluate(pressure, profile["pressure"]["umbrales"])
-    _, rad_text      = _evaluate(radiation,profile["radiation"]["umbrales"])
-    _, soil_text     = _evaluate(soil_m,   profile["soil_moisture"]["umbrales"])
-    _, stemp_text    = _evaluate(soil_t,   profile["soil_temp"]["umbrales"])
-    _, cold_text     = _evaluate(cold_h,   profile["cold_hours"]["umbrales"])
-    _, hail_text     = _evaluate(hail_r,   profile["hail"]["umbrales"])
+    def _card(level, text):
+        return {"text": text, "level": level}
 
     return {
-        "et0":       et0_text,
-        "uv":        uv_text,
-        "pressure":  press_text,
-        "radiation": rad_text,
-        "soil":      soil_text,
-        "soiltemp":  stemp_text,
-        "coldhours": cold_text,
-        "hail":      hail_text,
+        "et0":       _card(et0_lvl,   et0_text),
+        "uv":        _card(uv_lvl,    uv_text),
+        "pressure":  _card(press_lvl, press_text),
+        "radiation": _card(rad_lvl,   rad_text),
+        "soil":      _card(soil_lvl,  soil_text),
+        "soiltemp":  _card(stemp_lvl, stemp_text),
+        "coldhours": _card(cold_lvl,  cold_text),
+        "hail":      _card(hail_lvl,  hail_text),
     }

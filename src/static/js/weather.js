@@ -287,10 +287,26 @@ export function updateGeneralWeatherDOM(data) {
     moistureEls.forEach(el => el.textContent = `Humedad de la tierra: ${(data.soil_moisture ?? 0) * 100}%`);
 }
 
+// Caché de promesas en cliente: si field.js y agro.js piden la predicción
+// al mismo tiempo, solo se hace una petición HTTP. Se limpia cada hora.
+const _hailPromiseCache = new Map();
+
 export async function getHailPrediction(lat, lon) {
-    const res = await fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`);
-    if (!res.ok) throw new Error("Error predicción granizo");
-    return await res.json();
+    const key = `${lat.toFixed(2)}_${lon.toFixed(2)}`;
+
+    if (_hailPromiseCache.has(key)) {
+        return _hailPromiseCache.get(key);
+    }
+
+    const promise = fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`)
+        .then(r => { if (!r.ok) throw new Error("Error predicción granizo"); return r.json(); })
+        .finally(() => {
+            // Limpiar caché tras 1 hora para permitir refresco
+            setTimeout(() => _hailPromiseCache.delete(key), 3600 * 1000);
+        });
+
+    _hailPromiseCache.set(key, promise);
+    return promise;
 }
 
 export function getMaxHailNext6h(prediction) {

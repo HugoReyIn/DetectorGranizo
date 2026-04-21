@@ -13,6 +13,11 @@ Mejoras de rendimiento:
 
 from facades.OpenMeteoFacade import OpenMeteoFacade
 from facades.NominatimFacade import NominatimFacade
+
+from cachetools import TTLCache
+from cachetools.keys import hashkey
+
+_hail_cache: TTLCache = TTLCache(maxsize=50, ttl=3600)  # 1h — igual que OpenMeteoFacade
 from ia.HailPredictor import predict_hail
 from services.LocalAlertService import calculate_alerts
 from ia.AgroAgent import get_card_insights
@@ -331,11 +336,18 @@ class WeatherService:
             return _default_alert_result()
 
     # ──────────────────────────────────────────────
-    # HAIL PREDICTION
-    # La caché del forecast está en OpenMeteoFacade (get_hail_forecast).
+    # HAIL PREDICTION — con caché TTL de 1h en memoria
+    # El SARIMAX tarda varios segundos; esta caché evita recalcularlo
+    # cuando el frontend hace múltiples peticiones simultáneas
+    # (field.js y agro.js llaman al mismo endpoint de forma independiente).
     # ──────────────────────────────────────────────
     def get_hail_prediction(self, lat: float, lon: float) -> list[dict]:
-        return predict_hail(lat, lon)
+        key = hashkey(round(lat, 2), round(lon, 2))
+        if key in _hail_cache:
+            return _hail_cache[key]
+        result = predict_hail(lat, lon)
+        _hail_cache[key] = result
+        return result
 
     # ──────────────────────────────────────────────
     # AGRO INSIGHTS

@@ -96,8 +96,16 @@ class UserService:
         return new_user, None
 
     # ──────────────────────────────────────────────
-    # ACTUALIZAR PERFIL
+    # RECUPERACIÓN DE CONTRASEÑA
     # ──────────────────────────────────────────────
+    def get_by_email(self, email: str) -> User | None:
+        """Devuelve el User con ese email o None."""
+        return self._dao.getUserByEmail(email)
+
+    def reset_password(self, user: User, new_password: str) -> None:
+        """Cambia la contraseña sin pedir la actual (flujo de recuperación por token)."""
+        user.password = _hash(new_password)
+        self._dao.updateUser(user)
     def update_profile(
         self,
         current_user: User,

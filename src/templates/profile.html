@@ -3,6 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        {% if mode == 'forgot' %}Recuperar contraseña
+        {% elif mode == 'reset' %}Nueva contraseña
+        {% else %}Mi perfil
+        {% endif %} — DetectorGranizo
+    </title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+    <link rel="stylesheet" href="/static/css/sidebar.css">
+    <style>
+        .profile-card {
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 40px 40px 36px;
+            box-shadow: 0 2px 16px rgba(44,24,16,0.09);
+        }
+        .profile-avatar-big {
+            width: 72px; height: 72px;
+            background: linear-gradient(135deg, #8B5E3C, #D4A853);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 34px;
+            margin: 0 auto 20px;
+            box-shadow: 0 3px 12px rgba(44,24,16,0.18);
+        }
+        .profile-card h2 { text-align: center; margin-bottom: 28px; font-size: 20px; }
+        .profile-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 18px; }
+        .profile-field label { font-size: 12px; font-weight: 700; color: var(--musgo-dark); text-transform: uppercase; letter-spacing: 0.7px; }
+        .profile-field input { padding: 11px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; font-family: 'Nunito', sans-serif; background: var(--crema); color: var(--t-dark); transition: border-color 0.18s; outline: none; }
+        .profile-field input:focus { border-color: var(--musgo); }
+        .profile-divider { height: 1px; background: var(--border); margin: 24px 0; }
+        .profile-section-title { font-size: 12px; font-weight: 700; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 16px; }
+        .profile-save-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, var(--musgo-dark), var(--musgo)); color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; font-family: 'Nunito', sans-serif; cursor: pointer; margin-top: 8px; transition: opacity 0.2s, transform 0.1s; box-shadow: 0 3px 10px rgba(45,74,34,0.22); }
+        .profile-save-btn:hover  { opacity: 0.9; }
+        .profile-save-btn:active { transform: scale(0.98); }
+        .profile-msg { text-align: center; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+        .profile-msg.ok    { background: rgba(74,124,63,0.12); color: var(--musgo-dark); border: 1px solid rgba(74,124,63,0.25); }
+        .profile-msg.error { background: rgba(192,57,43,0.10); color: #7a0000; border: 1px solid rgba(192,57,43,0.25); }
+        .pwd-wrapper { position: relative; display: flex; align-items: center; }
+        .pwd-wrapper input { width: 100%; padding-right: 44px !important; }
+        .pwd-toggle { position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; color: var(--text-soft); display: flex; align-items: center; width: auto !important; min-height: unset !important; margin: 0 !important; transition: color 0.18s; }
+        .pwd-toggle:hover { color: var(--musgo); }
+        .pwd-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+        .profile-hint { font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text-soft); }
+        .profile-back { display: block; text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-soft); }
+        .profile-subtext { font-size: 14px; color: #666; line-height: 1.55; margin-bottom: 22px; text-align: center; }
+    </style>
+</head>
+<body>
+
+{# ── Sidebar: solo si el usuario está logueado ── #}
+{% if mode not in ('forgot', 'reset') and current_user %}
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Menú">☰</button>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<nav class="sidebar" id="sidebar">
+    <a class="sidebar-logo" href="/main">
+        <div class="sidebar-logo-icon">🌾</div>
+        <div class="sidebar-logo-text">
+            <span class="sidebar-logo-title">DetectorGranizo</span>
+            <span class="sidebar-logo-subtitle">Gestión agrícola</span>
+        </div>
+    </a>
+    <div class="sidebar-nav">
+        <div class="sidebar-section-label">Principal</div>
+        <a href="/main" class="sidebar-link"><span class="nav-icon">🏡</span><span class="nav-label">Mis terrenos</span></a>
+        <a href="/field/new" class="sidebar-link"><span class="nav-icon">➕</span><span class="nav-label">Añadir terreno</span></a>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-footer">
+        <a href="/profile" class="sidebar-user" style="text-decoration:none;">
+            <div class="sidebar-avatar" title="Editar perfil">👤</div>
+            <div>
+                <div class="sidebar-username">{{ current_user.name or current_user.email }}</div>
+                <div class="sidebar-role">Agricultor</div>
+            </div>
+        </a>
+        <a href="/" class="sidebar-logout"><span class="nav-icon">🚪</span><span class="nav-label">Cerrar sesión</span></a>
+    </div>
+</nav>
+{% endif %}
+
+<div class="{% if mode in ('forgot', 'reset') %}container-center{% else %}main-content{% endif %}">
+<div {% if mode in ('forgot', 'reset') %}style="display:flex;flex-direction:column;align-items:center;"{% endif %}>
+<div class="profile-card">
+
+    <div class="profile-avatar-big">
+        {% if mode == 'forgot' %}📧
+        {% elif mode == 'reset' %}🔑
+        {% else %}👤{% endif %}
+    </div>
+
+    <h2>
+        {% if mode == 'forgot' %}Recuperar contraseña
+        {% elif mode == 'reset' %}Nueva contraseña
+        {% else %}Mi perfil{% endif %}
+    </h2>
+
+    {% if msg %}
+        <div class="profile-msg {{ msg_type }}">{{ msg }}</div>
+    {% endif %}
+
+    {# ════════════════════════════════════════
+       MODO FORGOT — solicitud de email
+       Sin login requerido
+    ════════════════════════════════════════ #}
+    {% if mode == 'forgot' %}
+        {% if msg_type != 'ok' %}
+            <p class="profile-subtext">
+                Introduce tu email y te enviaremos un enlace para restablecer la contraseña.
+            </p>
+            <form method="post" action="/forgot-password">
+                <div class="profile-field">
+                    <label>Email</label>
+                    <input type="email" name="email" placeholder="tu@email.com" required autofocus>
+                </div>
+                <button type="submit" class="profile-save-btn">Enviar enlace</button>
+            </form>
+        {% endif %}
+        <a href="/login" class="profile-back">← Volver al inicio de sesión</a>
+
+    {# ════════════════════════════════════════
+       MODO RESET — nueva contraseña con token
+       Sin login requerido
+    ════════════════════════════════════════ #}
+    {% elif mode == 'reset' %}
+        {% if valid %}
+            <form method="post" action="/reset-password/{{ token }}">
+                <div class="profile-field">
+                    <label>Nueva contraseña</label>
+                    <div class="pwd-wrapper">
+                        <input type="password" name="new_password" id="new_password"
+                               placeholder="Mínimo 6 caracteres" required minlength="6" autofocus>
+                        <button type="button" class="pwd-toggle" tabindex="-1">
+                            <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="profile-field">
+                    <label>Confirmar contraseña</label>
+                    <div class="pwd-wrapper">
+                        <input type="password" name="confirm_password" id="confirm_password"
+                               placeholder="Repite la contraseña" required minlength="6">
+                        <button type="button" class="pwd-toggle" tabindex="-1">
+                            <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="profile-save-btn">Cambiar contraseña</button>
+            </form>
+        {% endif %}
+        <a href="/forgot-password" class="profile-back">← Solicitar nuevo enlace</a>
+
+    {# ════════════════════════════════════════
+       MODO PERFIL — usuario logueado
+       Datos personales + cambio de contraseña
+    ════════════════════════════════════════ #}
+    {% else %}
+        <form method="post" action="/profile" id="profile-form">
+
+            <div class="profile-section-title">Datos personales</div>
+            <div class="profile-field">
+                <label>Nombre</label>
+                <input type="text" name="name" value="{{ current_user.name or '' }}" required>
+            </div>
+            <div class="profile-field">
+                <label>Email</label>
+                <input type="email" name="email" value="{{ current_user.email }}" required>
+            </div>
+
+            <div class="profile-divider"></div>
+
+            <div class="profile-section-title">
+                Cambiar contraseña <span class="profile-hint">(dejar en blanco para no cambiar)</span>
+            </div>
+            <div class="profile-field">
+                <label>Contraseña actual</label>
+                <div class="pwd-wrapper">
+                    <input type="password" name="current_password" id="current_password"
+                           placeholder="Tu contraseña actual" autocomplete="current-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="profile-field">
+                <label>Nueva contraseña</label>
+                <div class="pwd-wrapper">
+                    <input type="password" name="new_password" id="new_password"
+                           placeholder="Escribe tu nueva contraseña..." autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="profile-field">
+                <label>Confirmar nueva contraseña</label>
+                <div class="pwd-wrapper">
+                    <input type="password" name="confirm_password" id="confirm_password"
+                           placeholder="Repite la nueva contraseña..." autocomplete="new-password">
+                    <button type="button" class="pwd-toggle" tabindex="-1">
+                        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="profile-save-btn">Guardar cambios</button>
+        </form>
+        <a href="/main" class="profile-back">← Volver</a>
+    {% endif %}
+
+</div>
+</div>
+</div>
+
+<script>
+(function () {
+    const toggle  = document.getElementById("sidebar-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+    if (toggle) {
+        toggle.addEventListener("click", () => { sidebar.classList.toggle("open"); overlay.classList.toggle("show"); });
+        overlay.addEventListener("click", () => { sidebar.classList.remove("open"); overlay.classList.remove("show"); });
+    }
+
+    const EYE_OPEN   = `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+    const EYE_CLOSED = `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+
+    document.querySelectorAll(".pwd-toggle").forEach(btn => {
+        btn.addEventListener("click", function(e) {
+            e.preventDefault();
+            const input = this.previousElementSibling;
+            const showing = input.type === "text";
+            input.type = showing ? "password" : "text";
+            this.innerHTML = showing ? EYE_OPEN : EYE_CLOSED;
+            this.style.color = showing ? "" : "var(--musgo)";
+        });
+    });
+
+    // Validación contraseñas coinciden
+    const form = document.getElementById("profile-form");
+    if (form) {
+        form.addEventListener("submit", function(e) {
+            const np = document.getElementById("new_password")?.value;
+            const cp = document.getElementById("confirm_password")?.value;
+            if (np && np !== cp) {
+                e.preventDefault();
+                alert("La nueva contraseña y su confirmación no coinciden.");
+            }
+        });
+    }
+})();
+</script>
+</body>
+</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% if mode == 'reset' %}Restablecer contraseña{% else %}Mi perfil{% endif %} — DetectorGranizo</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="stylesheet" href="/static/css/dashboard.css">

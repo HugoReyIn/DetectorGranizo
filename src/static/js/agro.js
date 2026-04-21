@@ -1,4 +1,5 @@
 // agro.js — Datos agronómicos completos para field.html
+import { getHailPrediction } from "./weather.js";
 
 const LEVEL_ORDER = { verde: 0, amarillo: 1, naranja: 2, rojo: 3 };
 
@@ -304,7 +305,7 @@ async function loadAgroData(lat, lon, cropType) {
         const [agroRes, alertRes, hailRes] = await Promise.allSettled([
             fetch(`/get-agronomic-data?lat=${lat}&lon=${lon}`).then(r => r.json()),
             fetch(`/get-aemet-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
-            fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`).then(r => r.json()),
+            getHailPrediction(lat, lon),
         ]);
 
         const agro = agroRes.status === "fulfilled" ? agroRes.value : {};
@@ -487,17 +488,85 @@ async function loadAgroData(lat, lon, cropType) {
             renderEt0ChartTip(agro.et0_hourly_today, agro.et0_today, cropType);
         }
 
-        // ── INSIGHTS POR TARJETA (agente local) ──
+        // ── INSIGHTS POR TARJETA (AgroAgent local) ──
         const allData = { ...agro, hail_risk_6h: hailMax };
         if (cropType) {
             fetchCardInsights(allData, cropType)
-                .then(insights => applyCardInsights(insights))
+                .then(insights => {
+                    applyCardInsights(insights);
+                    // Encadenar con Ollama pasando los insights como contexto
+                    fetchOllamaSummary(allData, cropType, insights);
+                })
                 .catch(err => console.warn("[CardInsights] error:", err));
         }
 
     } catch (e) {
         console.error("[AgroData] Error:", e);
     }
+}
+
+// ─────────────────────────────────────────────
+// CARD INSIGHTS — AgroAgent (reglas por cultivo)
+// ─────────────────────────────────────────────
+
+/**
+ * Llama al endpoint /get-card-insights y devuelve los 8 insights.
+ * Cada insight es { text: string, level: "ok"|"warning"|"danger"|"info" }
+ */
+async function fetchCardInsights(agroData, cropType) {
+    const res = await fetch("/get-card-insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: agroData, crop_type: cropType }),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+}
+
+/**
+ * Aplica los insights del AgroAgent a los elementos tip de cada tarjeta.
+ * Acepta tanto el formato nuevo { text, level } como el formato antiguo string
+ * para compatibilidad si hay versiones mezcladas.
+ */
+function applyCardInsights(insights) {
+    if (!insights) return;
+
+    const MAP = {
+        et0:       "agro-et0-tip",
+        uv:        "agro-uv-tip",
+        pressure:  "agro-pressure-tip",
+        radiation: "agro-radiation-tip",
+        soil:      "agro-soil-tip",
+        soiltemp:  "agro-soiltemp-tip",
+        coldhours: "agro-cold-tip",
+        hail:      "agro-hail-tip",
+    };
+
+    const LEVEL_CLASS = {
+        ok:      "",
+        warning: "tip-warning",
+        danger:  "tip-danger",
+        info:    "",
+    };
+
+    Object.entries(MAP).forEach(([key, elId]) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+
+        const raw = insights[key];
+        if (!raw) return;
+
+        // Soportar formato nuevo {text, level} y formato antiguo string
+        const text  = typeof raw === "object" ? raw.text  : raw;
+        const level = typeof raw === "object" ? raw.level : "ok";
+
+        el.textContent = text;
+
+        // Eliminar clases de nivel previas y aplicar la nueva
+        el.classList.remove("tip-warning", "tip-danger");
+        const cls = LEVEL_CLASS[level] || "";
+        if (cls) el.classList.add(cls);
+    });
 }
 
 // ─────────────────────────────────────────────

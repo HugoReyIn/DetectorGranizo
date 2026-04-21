@@ -117,8 +117,14 @@ def redirect_if_not_logged(request: Request):
 # LOGIN / REGISTER / LOGOUT
 # ──────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
+def root_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+
+
+@app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    reset = request.query_params.get("reset")
+    return templates.TemplateResponse("login.html", {"request": request, "error": None, "reset": reset})
 
 
 @app.post("/login")
@@ -202,46 +208,89 @@ def update_profile(
 # ──────────────────────────────────────────────
 # RESET CONTRASEÑA (requiere login, solo muestra cambio de contraseña)
 # ──────────────────────────────────────────────
-@app.get("/reset-password", response_class=HTMLResponse)
-def reset_password_page(request: Request):
-    current_user, redirect = redirect_if_not_logged(request)
-    if redirect:
-        return redirect
+import secrets
+import time
+
+_reset_tokens: dict[str, dict] = {}
+_RESET_TOKEN_TTL = 30 * 60
+_APP_BASE_URL    = os.environ.get("APP_BASE_URL", "http://localhost:8000")
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_page(request: Request):
     return templates.TemplateResponse(
         "profile.html",
-        {"request": request, "current_user": current_user, "msg": None, "msg_type": "", "mode": "reset"},
+        {"request": request, "current_user": None, "mode": "forgot", "msg": None, "msg_type": ""},
     )
 
 
-@app.post("/reset-password", response_class=HTMLResponse)
-def reset_password(
-    request:          Request,
-    new_password:     str = Form(...),
-    confirm_password: str = Form(...),
-):
-    current_user, redirect = redirect_if_not_logged(request)
-    if redirect:
-        return redirect
+@app.post("/forgot-password", response_class=HTMLResponse)
+def forgot_password_submit(request: Request, email: str = Form(...)):
+    user = user_service.get_by_email(email.strip().lower())
+    if user:
+        expired = [t for t, v in _reset_tokens.items()
+                   if v["user_id"] == user.id or v["expires"] < time.time()]
+        for t in expired:
+            _reset_tokens.pop(t, None)
+        token = secrets.token_urlsafe(32)
+        _reset_tokens[token] = {"user_id": user.id, "expires": time.time() + _RESET_TOKEN_TTL}
+        reset_url = f"{_APP_BASE_URL}/reset-password/{token}"
+        email_service.send_password_reset(to=user.email, reset_url=reset_url)
+        logger.info("[ResetPassword] Token generado para user_id=%s", user.id)
 
-    def render(msg, msg_type="error"):
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "current_user": None, "mode": "forgot",
+         "msg": "Si ese email está registrado, recibirás un enlace en breve. Revisa también el spam.",
+         "msg_type": "ok"},
+    )
+
+
+@app.get("/reset-password/{token}", response_class=HTMLResponse)
+def reset_password_token_page(request: Request, token: str):
+    entry = _reset_tokens.get(token)
+    valid = entry is not None and entry["expires"] > time.time()
+    return templates.TemplateResponse(
+        "profile.html",
+        {"request": request, "current_user": None, "mode": "reset",
+         "token": token, "valid": valid,
+         "msg":      None if valid else "Este enlace no es válido o ha caducado.",
+         "msg_type": ""   if valid else "error"},
+    )
+
+
+@app.post("/reset-password/{token}", response_class=HTMLResponse)
+def reset_password_token_submit(
+    request: Request, token: str,
+    new_password: str = Form(...), confirm_password: str = Form(...),
+):
+    entry = _reset_tokens.get(token)
+
+    def _err(msg):
         return templates.TemplateResponse(
             "profile.html",
-            {"request": request, "current_user": current_user, "msg": msg, "msg_type": msg_type, "mode": "reset"},
+            {"request": request, "current_user": None, "mode": "reset",
+             "token": token, "valid": True, "msg": msg, "msg_type": "error"},
         )
 
+    if not entry or entry["expires"] < time.time():
+        return templates.TemplateResponse(
+            "profile.html",
+            {"request": request, "current_user": None, "mode": "reset",
+             "token": token, "valid": False,
+             "msg": "Este enlace ha caducado. Solicita uno nuevo.", "msg_type": "error"},
+        )
     if new_password != confirm_password:
-        return render("Las contraseñas no coinciden.")
-
-    user_service.update_profile(
-        current_user,
-        name             = current_user.name or "",
-        email            = current_user.email,
-        current_password = "",
-        new_password     = new_password,
-        confirm_password = confirm_password,
-    )
-
-    return render("Contraseña actualizada correctamente.", "ok")
+        return _err("Las contraseñas no coinciden.")
+    if len(new_password) < 6:
+        return _err("La contraseña debe tener al menos 6 caracteres.")
+    user = user_service.get_by_id(entry["user_id"])
+    if not user:
+        return _err("Usuario no encontrado.")
+    user_service.reset_password(user, new_password)
+    _reset_tokens.pop(token, None)
+    logger.info("[ResetPassword] Contraseña restablecida para user_id=%s", user.id)
+    return RedirectResponse("/login?reset=ok", status_code=303)
 
 
 # ──────────────────────────────────────────────
@@ -271,31 +320,28 @@ def alerts_page(request: Request):
 
     for field in fields:
         field_state = raw_state.get(str(field.id), {})
-        # El estado puede ser dict {nivel, valor} (nuevo) o string plano (legado)
+
         def _nivel(v):
-            if isinstance(v, dict):
-                return v.get("nivel", "verde")
+            if isinstance(v, dict): return v.get("nivel", "verde")
             return v if isinstance(v, str) else "verde"
+
         def _valor(v):
-            if isinstance(v, dict):
-                return v.get("valor")
+            if isinstance(v, dict): return v.get("valor")
             return None
 
         alerts        = {t: _nivel(field_state.get(t)) for t in alert_types}
-        alerts_detail = {t: {"nivel": _nivel(field_state.get(t)),
-                             "valor": _valor(field_state.get(t))} for t in alert_types}
-        max_level = max(alerts.values(), key=lambda lvl: _LEVEL_ORDER.get(lvl, 0))
+        alerts_detail = {t: {"nivel": _nivel(field_state.get(t)), "valor": _valor(field_state.get(t))} for t in alert_types}
+        max_level     = max(alerts.values(), key=lambda lvl: _LEVEL_ORDER.get(lvl, 0))
         summary[max_level] += 1
-        # Lista ordenada de (tipo, nivel) de mayor a menor severidad — usada en el template
         alerts_sorted = sorted(alerts.items(), key=lambda kv: _LEVEL_ORDER.get(kv[1], 0), reverse=True)
         field_alerts.append({
-            "field_name":     field.name,
-            "municipality":   field.municipality,
-            "crop_type":      field.crop_type or "",
-            "max_level":      max_level,
-            "alerts":         alerts,
-            "alerts_detail":  alerts_detail,
-            "alerts_sorted":  alerts_sorted,
+            "field_name":    field.name,
+            "municipality":  field.municipality,
+            "crop_type":     field.crop_type or "",
+            "max_level":     max_level,
+            "alerts":        alerts,
+            "alerts_detail": alerts_detail,
+            "alerts_sorted": alerts_sorted,
         })
 
     # Ordenar de mayor a menor nivel de alerta
@@ -518,6 +564,30 @@ async def get_card_insights_endpoint(request: Request):
     except Exception as e:
         logger.error("[AgroAgent] Error: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+
+
+@app.post("/get-agro-summary")
+async def get_agro_summary_endpoint(request: Request):
+    require_user(request)
+    try:
+        from ia.OllamaAgent import get_agro_summary
+        payload       = await request.json()
+        result = get_agro_summary(
+            data          = payload.get("data", {}),
+            crop_type     = payload.get("crop_type", ""),
+            card_insights = payload.get("card_insights", {}),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        logger.error("[OllamaAgent] Error: %s", e)
+        return JSONResponse({"summary": None, "available": False, "error": str(e)})
+
+
+@app.get("/ollama-status")
+def ollama_status(request: Request):
+    require_user(request)
+    from ia.OllamaAgent import check_ollama_status
+    return JSONResponse(check_ollama_status())
 
 
 # Guard necesario en Windows para multiprocessing.

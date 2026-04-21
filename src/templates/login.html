@@ -15,6 +15,10 @@
                 <p style="color: red;">{{ error }}</p>
             {% endif %}
 
+            {% if reset == 'ok' %}
+                <p style="color:green; font-size:14px;">✅ Contraseña restablecida. Ya puedes iniciar sesión.</p>
+            {% endif %}
+
             <form action="/login" method="post">
                 <input type="email" name="email" placeholder="Correo electrónico" required>
                 <input type="password" name="password" placeholder="Contraseña" required>
@@ -22,7 +26,7 @@
             </form>
 
             <a class="link" href="/register">¿No tienes cuenta? Regístrate</a>
-            <a class="link" href="/reset-password" style="font-size:13px; color:#7A6550;">¿Has olvidado tu contraseña?</a>
+            <a class="link" href="/forgot-password" style="font-size:13px; color:#7A6550;">¿Has olvidado tu contraseña?</a>
         </div>
     </div>
 </body>
