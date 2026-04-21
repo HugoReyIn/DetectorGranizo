@@ -13,11 +13,6 @@ Mejoras de rendimiento:
 
 from facades.OpenMeteoFacade import OpenMeteoFacade
 from facades.NominatimFacade import NominatimFacade
-
-from cachetools import TTLCache
-from cachetools.keys import hashkey
-
-_hail_cache: TTLCache = TTLCache(maxsize=50, ttl=3600)  # 1h — igual que OpenMeteoFacade
 from ia.HailPredictor import predict_hail
 from services.LocalAlertService import calculate_alerts
 from ia.AgroAgent import get_card_insights
@@ -141,20 +136,30 @@ class WeatherService:
     def get_hourly_weather(self, lat: float, lon: float) -> list[dict]:
         data   = self._meteo.get_hourly_forecast(lat, lon)
         hourly = data.get("hourly", {})
-        result = []
 
+        # Obtener predicción IA de granizo y construir un dict time→prob
+        # para hacer el cruce por timestamp en O(1)
+        try:
+            hail_pred = self.get_hail_prediction(lat, lon)
+            hail_by_time = {p["time"]: p["hail_probability"] for p in hail_pred}
+        except Exception:
+            hail_by_time = {}
+
+        result = []
         for i in range(len(hourly.get("time", []))):
-            code = hourly["weathercode"][i]
-            hail = {77: 50, 96: 70, 99: 100}.get(code, 0)
+            raw_time = hourly["time"][i]
+            # Normalizar timestamp al formato HH:MM que devuelve el predictor
+            norm_time = raw_time[:16]  # "2025-04-21T15:00"
+            hail = hail_by_time.get(norm_time, 0)
             result.append({
-                "time":       hourly["time"][i],
+                "time":       raw_time,
                 "temp":       hourly["temperature_2m"][i],
                 "rain":       hourly["precipitation"][i],
                 "prob_rain":  hourly["precipitation_probability"][i],
                 "humidity":   hourly["relativehumidity_2m"][i],
                 "wind_speed": hourly["windspeed_10m"][i],
                 "wind_dir":   hourly["winddirection_10m"][i],
-                "hail":       hail,
+                "hail":       round(hail, 1),
             })
         return result
 
@@ -336,28 +341,14 @@ class WeatherService:
             return _default_alert_result()
 
     # ──────────────────────────────────────────────
-    # HAIL PREDICTION — con caché TTL de 1h en memoria
-    # El SARIMAX tarda varios segundos; esta caché evita recalcularlo
-    # cuando el frontend hace múltiples peticiones simultáneas
-    # (field.js y agro.js llaman al mismo endpoint de forma independiente).
+    # HAIL PREDICTION
+    # La caché del forecast está en OpenMeteoFacade (get_hail_forecast).
     # ──────────────────────────────────────────────
     def get_hail_prediction(self, lat: float, lon: float) -> list[dict]:
-        key = hashkey(round(lat, 2), round(lon, 2))
-        if key in _hail_cache:
-            return _hail_cache[key]
-        result = predict_hail(lat, lon)
-        _hail_cache[key] = result
-        return result
+        return predict_hail(lat, lon)
 
     # ──────────────────────────────────────────────
     # AGRO INSIGHTS
-    # Ollama (LLM) → fallback AgroAgent (reglas)
     # ──────────────────────────────────────────────
     def get_agro_insights(self, data: dict, crop_type: str) -> dict:
-        from ia.OllamaAgent import get_card_insights_llm
-        llm_result = get_card_insights_llm(data, crop_type)
-        if llm_result:
-            # Ollama disponible — devolver textos del LLM con level inferido
-            return {k: {"text": v, "level": "ok"} for k, v in llm_result.items()}
-        # Fallback: AgroAgent con reglas hardcodeadas
         return get_card_insights(data, crop_type)
