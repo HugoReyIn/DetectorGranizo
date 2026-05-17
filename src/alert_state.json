@@ -28,7 +28,7 @@
     },
     "viento": {
       "nivel": "amarillo",
-      "valor": "59 km/h"
+      "valor": "46 km/h"
     },
     "tormenta": {
       "nivel": "verde",
@@ -59,12 +59,12 @@
       "valor": null
     },
     "granizo": {
-      "nivel": "verde",
-      "valor": null
+      "nivel": "amarillo",
+      "valor": "22% prob. granizo · CAPE 580 J/kg"
     },
     "viento": {
       "nivel": "amarillo",
-      "valor": "56 km/h"
+      "valor": "53 km/h"
     },
     "tormenta": {
       "nivel": "verde",
@@ -79,7 +79,7 @@
       "valor": null
     },
     "auto_closed": false,
-    "hail_max_6h": 5.0
+    "hail_max_6h": 9.0
   },
   "50": {
     "calor": {
@@ -100,7 +100,7 @@
     },
     "viento": {
       "nivel": "amarillo",
-      "valor": "54 km/h"
+      "valor": "44 km/h"
     },
     "tormenta": {
       "nivel": "verde",
@@ -135,8 +135,8 @@
       "valor": null
     },
     "viento": {
-      "nivel": "amarillo",
-      "valor": "45 km/h"
+      "nivel": "naranja",
+      "valor": "71 km/h"
     },
     "tormenta": {
       "nivel": "verde",
@@ -151,6 +151,6 @@
       "valor": null
     },
     "auto_closed": false,
-    "hail_max_6h": 14.0
+    "hail_max_6h": 2.5
   }
 }

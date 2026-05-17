@@ -1,17 +1,23 @@
+# Web framework
 fastapi
 uvicorn
-requests
-pydantic
-jinja2
 python-multipart
+starlette
+
+# Plantillas y seguridad de sesión
+jinja2
+itsdangerous
+
+# Base de datos
 mysql-connector-python
-statsmodels
+
+# HTTP y APIs externas
+requests
+
+# Predictor de granizo
 numpy
 pandas
-itsdangerous
-bcrypt
 cachetools
-openai
-joblib
-python-dateutil
-pyarrow
+
+# Autenticación
+bcrypt
