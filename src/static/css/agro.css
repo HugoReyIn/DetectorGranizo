@@ -630,3 +630,37 @@ html { scroll-behavior: smooth; }
     white-space: nowrap;
 }
 .btn-download-md:hover { opacity: 0.85; background: var(--musgo-dark); }
+/* ═══════════════════════════════════════════
+   RESUMEN IA — OLLAMA
+═══════════════════════════════════════════ */
+.ollama-hidden {
+    display: none;
+}
+
+#agro-ollama-summary {
+    background: linear-gradient(135deg, #f0f7ee 0%, #e8f4e8 100%);
+    border: 1.5px solid var(--musgo, #4A7C3F);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+}
+
+.agro-ollama-badge {
+    margin-left: auto;
+    background: var(--musgo, #4A7C3F);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 3px 9px;
+    border-radius: 20px;
+}
+
+.agro-ollama-text {
+    margin: 10px 0 0;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #2D4A22;
+    font-style: italic;
+}

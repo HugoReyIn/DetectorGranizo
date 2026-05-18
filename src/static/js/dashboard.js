@@ -161,7 +161,7 @@ async function loadFieldPanel(fieldId, lat, lon, container) {
     try {
         const [summaryRes, alertsRes, hailRes] = await Promise.allSettled([
             fetch(`/get-field-summary?lat=${lat}&lon=${lon}`).then(r => r.json()),
-            fetch(`/get-aemet-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
+            fetch(`/get-meteo-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
             fetch(`/get-hail-prediction?lat=${lat}&lon=${lon}`).then(r => r.json()),
         ]);
 
@@ -269,18 +269,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateSidebarAlerts(fieldId) {
         const hailEl = document.getElementById(`alerts-${fieldId}`);
         const sidebarHail = document.getElementById("sidebar-hail-pct");
-        const sidebarAemet = document.getElementById("sidebar-aemet-level");
+        const sidebarAlerta = document.getElementById("sidebar-aemet-level");
         if (sidebarHail) {
             const hailSpan = document.getElementById(`hail-${fieldId}`) || document.querySelector("[id^='hail-']");
             if (hailSpan) sidebarHail.textContent = hailSpan.textContent;
         }
-        if (sidebarAemet) {
+        if (sidebarAlerta) {
             const bar = document.getElementById(`alert-bar-${fieldId}`);
             if (bar) {
                 const level = [...bar.classList].find(c => c.startsWith("alert-bar-"))?.replace("alert-bar-", "") || "verde";
                 const labels = { verde: "Sin alertas", amarillo: "Amarilla", naranja: "Naranja", rojo: "Roja" };
-                sidebarAemet.textContent = labels[level] || level;
-                sidebarAemet.style.color = level === "verde" ? "#7FB069" : level === "amarillo" ? "#D4A853" : level === "naranja" ? "#E87040" : "#E53935";
+                sidebarAlerta.textContent = labels[level] || level;
+                sidebarAlerta.style.color = level === "verde" ? "#7FB069" : level === "amarillo" ? "#D4A853" : level === "naranja" ? "#E87040" : "#E53935";
             }
         }
     }

@@ -1,7 +1,7 @@
 """
 EmailService.py
 Responsabilidad única: enviar emails via Gmail SMTP.
-No conoce nada de AEMET ni de campos — solo recibe asunto y cuerpo.
+No conoce nada de alertas externas ni de campos — solo recibe asunto y cuerpo.
 """
 
 import smtplib
@@ -40,9 +40,9 @@ class EmailService:
             print(f"[EmailService] Error enviando email a {to}: {e}")
             return False
 
-    def send_aemet_alert(self, to: str, field_name: str, alerts: dict) -> bool:
+    def send_meteo_alert(self, to: str, field_name: str, alerts: dict) -> bool:
         """
-        Envía un email de alerta AEMET formateado para un campo concreto.
+        Envía un email de alerta meteorológica formateado para un campo concreto.
 
         alerts: dict con claves calor/lluvia/nieve/granizo,
                 cada una con {"nivel": "amarillo"|"naranja"|"rojo", "valor": ...}
@@ -129,7 +129,7 @@ class EmailService:
                         <tr>
                             <td style="padding:28px 32px;">
                                 <p style="margin:0 0 20px;color:#444;font-size:14px;line-height:1.6;">
-                                    AEMET ha emitido nuevas alertas para tu campo
+                                    Se han detectado nuevas alertas meteorológicas para tu campo
                                     <strong>{field_name}</strong>. Revisa los niveles de alerta
                                     activos y toma las medidas necesarias.
                                 </p>
@@ -168,7 +168,7 @@ class EmailService:
         """
 
         nivel_txt = nivel_maximo.capitalize()
-        subject   = f"{emoji_cabecera} Alerta {nivel_txt} AEMET — {field_name}"
+        subject   = f"{emoji_cabecera} Alerta meteorológica {nivel_txt} — {field_name}"
         return self.send(to, subject, body_html)
 
     def send_alert_deactivated(self, to: str, field_name: str, alerts: dict) -> bool:
@@ -298,7 +298,7 @@ class EmailService:
         </html>
         """
 
-        subject = f"✅ Mejora de alertas AEMET — {field_name}"
+        subject = f"✅ Mejora de alertas meteorológicas — {field_name}"
         return self.send(to, subject, body_html)
 
     def send_password_reset(self, to: str, reset_url: str) -> bool:

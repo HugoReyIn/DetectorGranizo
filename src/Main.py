@@ -531,13 +531,13 @@ def get_field_summary(request: Request, lat: float, lon: float):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
-@app.get("/get-aemet-alerts")
-def get_aemet_alerts(request: Request, lat: float, lon: float):
+@app.get("/get-meteo-alerts")
+def get_meteo_alerts(request: Request, lat: float, lon: float):
     require_user(request)
     try:
-        return JSONResponse(weather_service.get_aemet_alerts(lat, lon))
+        return JSONResponse(weather_service.get_meteo_alerts(lat, lon))
     except Exception as e:
-        logger.error("[AEMET] Error: %s", e)
+        logger.error("[Alertas] Error: %s", e)
         return JSONResponse({"error": str(e)}, status_code=500)
 
 

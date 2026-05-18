@@ -16,7 +16,7 @@ function uvCategory(uv) {
 }
 
 // ─────────────────────────────────────────────
-// RENDER ALERTAS AEMET EN FIELD
+// RENDER ALERTAS METEOROLÓGICAS EN FIELD
 // ─────────────────────────────────────────────
 const ALERT_EMOJI = {
     calor:    "🌡️",
@@ -304,7 +304,7 @@ async function loadAgroData(lat, lon, cropType) {
     try {
         const [agroRes, alertRes, hailRes] = await Promise.allSettled([
             fetch(`/get-agronomic-data?lat=${lat}&lon=${lon}`).then(r => r.json()),
-            fetch(`/get-aemet-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
+            fetch(`/get-meteo-alerts?lat=${lat}&lon=${lon}`).then(r => r.json()),
             getHailPrediction(lat, lon),
         ]);
 
@@ -320,7 +320,7 @@ async function loadAgroData(lat, lon, cropType) {
             : 0;
         agro.hail_risk_6h = hailMax;
 
-        // ── ALERTAS AEMET ──
+        // ── ALERTAS METEOROLÓGICAS ──
         renderAgroAlerts(alerts);
 
         // ── ET₀ ──
@@ -567,6 +567,45 @@ function applyCardInsights(insights) {
         const cls = LEVEL_CLASS[level] || "";
         if (cls) el.classList.add(cls);
     });
+}
+
+// ─────────────────────────────────────────────
+// RESUMEN OLLAMA
+// ─────────────────────────────────────────────
+
+/**
+ * Pide al backend el resumen en prosa generado por Ollama y lo muestra
+ * en el bloque #agro-ollama-summary. Si Ollama no está disponible el
+ * bloque permanece oculto, sin errores visibles al usuario.
+ */
+async function fetchOllamaSummary(agroData, cropType, cardInsights) {
+    const block = document.getElementById("agro-ollama-summary");
+    const text  = document.getElementById("agro-ollama-text");
+    const badge = document.getElementById("agro-ollama-badge");
+    if (!block || !text) return;
+
+    try {
+        const res = await fetch("/get-agro-summary", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({
+                data:          agroData,
+                crop_type:     cropType,
+                card_insights: cardInsights,
+            }),
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.available && data.summary) {
+            text.textContent = data.summary;
+            if (badge) badge.textContent = data.model || "ollama";
+            block.classList.remove("ollama-hidden");
+        }
+    } catch (err) {
+        console.info("[OllamaSummary] No disponible:", err.message);
+    }
 }
 
 // ─────────────────────────────────────────────

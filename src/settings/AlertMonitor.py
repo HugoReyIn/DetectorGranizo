@@ -102,7 +102,7 @@ class AlertMonitor:
 
         # ── 1. Alertas meteorológicas ──
         try:
-            alerts = self._weather_service.get_aemet_alerts(lat, lon)
+            alerts = self._weather_service.get_meteo_alerts(lat, lon)
         except Exception as e:
             print(f"[AlertMonitor] Error alertas campo {field.id}: {e}")
             return
@@ -150,7 +150,7 @@ class AlertMonitor:
 
         if alertas_subida:
             print(f"[AlertMonitor] Alerta SUBIDA en '{field.name}' → {user.email}")
-            self._email_service.send_aemet_alert(
+            self._email_service.send_meteo_alert(
                 to         = user.email,
                 field_name = field.name,
                 alerts     = alertas_subida,
@@ -211,7 +211,7 @@ class AlertMonitor:
                 # Notificar al usuario
                 user = self._user_dao.getUser(field.user_id)
                 if user and user.email:
-                    self._email_service.send_aemet_alert(
+                    self._email_service.send_meteo_alert(
                         to         = user.email,
                         field_name = field.name,
                         alerts     = {"granizo": {

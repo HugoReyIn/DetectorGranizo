@@ -4,7 +4,7 @@ Application Service — orquesta toda la lógica meteorológica y agronómica.
 Usa los facades como única vía de acceso a APIs externas.
 
 Mejoras de rendimiento:
-  - Eliminadas _aemet_cache y _hail_cache: la OpenMeteoFacade ya cachea
+  - Eliminadas _alert_cache y _hail_cache: la OpenMeteoFacade ya cachea
     todas las respuestas de red con TTLCache. Mantener una segunda capa de
     caché aquí era redundante y consumía memoria extra sin beneficio.
   - predict_hail y calculate_alerts siguen siendo síncronos (dependen de
@@ -19,7 +19,7 @@ from ia.AgroAgent import get_card_insights
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CONSTANTES AEMET
+# CONSTANTES ALERTAS METEOROLÓGICAS
 # ──────────────────────────────────────────────────────────────────────────────
 _CAP_EVENT_MAP = {
     "calor": "calor", "heat": "calor",
@@ -329,7 +329,7 @@ class WeatherService:
     # ALERTAS — calculadas con Open-Meteo + IA de granizo
     # La caché está en OpenMeteoFacade (get_alerts_data y get_hail_forecast).
     # ──────────────────────────────────────────────
-    def get_aemet_alerts(self, lat: float, lon: float) -> dict:
+    def get_meteo_alerts(self, lat: float, lon: float) -> dict:
         """Calcula alertas meteorológicas usando Open-Meteo + IA de granizo."""
         try:
             meteo_data      = self._meteo.get_alerts_data(lat, lon)
@@ -348,7 +348,14 @@ class WeatherService:
         return predict_hail(lat, lon)
 
     # ──────────────────────────────────────────────
-    # AGRO INSIGHTS
+    # AGRO INSIGHTS — Ollama primero, AgroAgent como fallback
     # ──────────────────────────────────────────────
     def get_agro_insights(self, data: dict, crop_type: str) -> dict:
+        try:
+            from ia.OllamaAgent import get_card_insights_llm
+            llm_result = get_card_insights_llm(data, crop_type)
+            if llm_result:
+                return llm_result
+        except Exception as e:
+            print(f"[WeatherService] OllamaAgent no disponible, usando AgroAgent: {e}")
         return get_card_insights(data, crop_type)

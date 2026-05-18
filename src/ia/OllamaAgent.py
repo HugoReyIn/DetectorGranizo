@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 OLLAMA_URL     = "http://localhost:11434/api/generate"
 OLLAMA_MODEL   = "llama3.2"
-OLLAMA_TIMEOUT = 60
+OLLAMA_TIMEOUT = 120    
 
 
 # ──────────────────────────────────────────
